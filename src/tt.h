@@ -59,13 +59,14 @@ private:
   uint8_t  depth8;
 };
 
+const unsigned TTClusterSize = 3;
+const uint32_t keyWidth = 21;
+const uint32_t keyMask = (1 << keyWidth) - 1;
+
 /// TTCluster is a 32 bytes cluster of TT entries consisting of:
 ///
 /// 3 21-bit keys packed into 8 bytes
 /// 3 x TTEntry (3 x 8 bytes)
-
-const unsigned TTClusterSize = 3;
-const uint32_t mask21 = 0x1FFFFFUL;
 
 struct TTCluster {
 

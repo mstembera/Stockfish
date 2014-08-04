@@ -70,11 +70,11 @@ void TranspositionTable::clear() {
 const TTEntry* TranspositionTable::probe(const Key key) const {
 
     TTCluster* cl = get_cluster(key);
-    uint32_t key21 = key >> 43;
+    uint32_t key21 = key >> (64 - keyWidth);
 
     for (unsigned i = 0; i < TTClusterSize; ++i)
     {
-        uint32_t eKey = (cl->keys >> (21 * i)) & mask21;
+        uint32_t eKey = (cl->keys >> (keyWidth * i)) & keyMask;
 
         if (eKey == key21)
         {
@@ -98,14 +98,14 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
 
     TTEntry *tte, *replace;
-    uint32_t key21 = key >> 43; // Use the high 21 bits as key inside the cluster
+    uint32_t key21 = key >> (64 - keyWidth); // Use the high 21 bits as key inside the cluster
 
     TTCluster *cl = get_cluster(key);
     tte = replace = cl->entry;
 
     for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
     {
-        uint32_t eKey = (cl->keys >> (21 * i)) & mask21;
+        uint32_t eKey = (cl->keys >> (keyWidth * i)) & keyMask;
 
         if (!eKey || eKey == key21) // Empty or overwrite old
         {
@@ -124,8 +124,8 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
     }
 
     // update clusters keys
-    uint64_t bitShift = 21 * (replace - cl->entry);
-    cl->keys = (cl->keys & ~(uint64_t(mask21) << bitShift)) | (uint64_t(key21) << bitShift);
+    uint64_t bitShift = keyWidth * (replace - cl->entry);
+    cl->keys = (cl->keys & ~(uint64_t(keyMask) << bitShift)) | (uint64_t(key21) << bitShift);
 
     replace->save(v, b, d, m, generation, statV);
 }
