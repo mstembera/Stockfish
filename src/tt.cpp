@@ -69,17 +69,21 @@ void TranspositionTable::clear() {
 
 const TTEntry* TranspositionTable::probe(const Key key) const {
 
-  TTEntry* tte = first_entry(key);
-  uint16_t key16 = key >> 48;
+    TTCluster* cl = get_cluster(key);
+    uint32_t key21 = key >> 43;
 
-  for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
-      if (tte->key16 == key16)
-      {
-          tte->genBound8 = generation | tte->bound(); // Refresh
-          return tte;
-      }
+    for (unsigned i = 0; i < TTClusterSize; ++i)
+    {
+        uint32_t eKey = (cl->keys >> (21 * i)) & mask21;
 
-  return NULL;
+        if (eKey == key21)
+        {
+            TTEntry* tte = &cl->entry[i];
+            tte->genBound8 = generation | tte->bound(); // Refresh
+            return tte;
+        }
+    }
+    return NULL;
 }
 
 
@@ -93,28 +97,35 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 
 void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
 
-  TTEntry *tte, *replace;
-  uint16_t key16 = key >> 48; // Use the high 16 bits as key inside the cluster
+    TTEntry *tte, *replace;
+    uint32_t key21 = key >> 43; // Use the high 21 bits as key inside the cluster
 
-  tte = replace = first_entry(key);
+    TTCluster *cl = get_cluster(key);
+    tte = replace = cl->entry;
 
-  for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
-  {
-      if (!tte->key16 || tte->key16 == key16) // Empty or overwrite old
-      {
-          if (!m)
-              m = tte->move(); // Preserve any existing ttMove
+    for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
+    {
+        uint32_t eKey = (cl->keys >> (21 * i)) & mask21;
 
-          replace = tte;
-          break;
-      }
+        if (!eKey || eKey == key21) // Empty or overwrite old
+        {
+            if (!m)
+                m = tte->move(); // Preserve any existing ttMove
 
-      // Implement replace strategy
-      if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte->depth8 < replace->depth8) < 0)
-          replace = tte;
-  }
+            replace = tte;
+            break;
+        }
 
-  replace->save(key16, v, b, d, m, generation, statV);
+        // Implement replace strategy
+        if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
+            - ((replace->genBound8 & 0xFC) == generation)
+            - (tte->depth8 < replace->depth8) < 0)
+            replace = tte;
+    }
+
+    // update clusters keys
+    uint64_t bitShift = 21 * (replace - cl->entry);
+    cl->keys = (cl->keys & ~(uint64_t(mask21) << bitShift)) | (uint64_t(key21) << bitShift);
+
+    replace->save(v, b, d, m, generation, statV);
 }

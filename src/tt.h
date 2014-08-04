@@ -23,9 +23,8 @@
 #include "misc.h"
 #include "types.h"
 
-/// The TTEntry is the 10 bytes transposition table entry, defined as below:
+/// The TTEntry is the 8 byte transposition table entry, as defined below:
 ///
-/// key        16 bit
 /// move       16 bit
 /// value      16 bit
 /// eval value 16 bit
@@ -44,9 +43,8 @@ struct TTEntry {
 private:
   friend class TranspositionTable;
 
-  void save(uint16_t k, Value v, Bound b, Depth d, Move m, uint8_t g, Value ev) {
+  void save(Value v, Bound b, Depth d, Move m, uint8_t g, Value ev) {
 
-    key16     = (uint16_t)k;
     move16    = (uint16_t)m;
     value16   = (int16_t)v;
     evalValue = (int16_t)ev;
@@ -54,7 +52,6 @@ private:
     genBound8 = g | (uint8_t)b;
   }
 
-  uint16_t key16;
   uint16_t move16;
   int16_t  value16;
   int16_t  evalValue;
@@ -64,16 +61,18 @@ private:
 
 /// TTCluster is a 32 bytes cluster of TT entries consisting of:
 ///
-/// 3 x TTEntry (3 x 10 bytes)
-/// padding     (2 bytes)
+/// 3 21-bit keys packed into 8 bytes
+/// 3 x TTEntry (3 x 8 bytes)
 
 const unsigned TTClusterSize = 3;
+const uint32_t mask21 = 0x1FFFFFUL;
 
 struct TTCluster {
 
+  uint64_t keys;
   TTEntry entry[TTClusterSize];
-  char padding[2];
 };
+
 
 /// A TranspositionTable consists of a power of 2 number of clusters and each
 /// cluster consists of TTClusterSize number of TTEntry. Each non-empty entry
@@ -88,7 +87,7 @@ public:
   void new_search() { generation += 4; } // Lower 2 bits are used by Bound
 
   const TTEntry* probe(const Key key) const;
-  TTEntry* first_entry(const Key key) const;
+  TTCluster* get_cluster(const Key key) const;
   void resize(size_t mbSize);
   void clear();
   void store(const Key key, Value v, Bound type, Depth d, Move m, Value statV);
@@ -103,13 +102,13 @@ private:
 extern TranspositionTable TT;
 
 
-/// TranspositionTable::first_entry() returns a pointer to the first entry of
+/// TranspositionTable::get_cluster() returns a pointer to
 /// a cluster given a position. The lowest order bits of the key are used to
 /// get the index of the cluster inside the table.
 
-inline TTEntry* TranspositionTable::first_entry(const Key key) const {
+inline TTCluster* TranspositionTable::get_cluster(const Key key) const {
 
-  return &table[(size_t)key & (clusterCount - 1)].entry[0];
+  return &table[(size_t)key & (clusterCount - 1)];
 }
 
 #endif // #ifndef TT_H_INCLUDED
