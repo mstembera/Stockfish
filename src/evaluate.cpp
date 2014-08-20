@@ -101,7 +101,7 @@ namespace {
   // MobilityBonus[PieceType][attacked] contains bonuses for middle and end
   // game, indexed by piece type and number of attacked squares not occupied by
   // friendly pieces.
-  const Score MobilityBonus[][32] = {
+  Score MobilityBonus[][32] = {
     {}, {},
     { S(-65,-50), S(-42,-30), S(-9,-10), S( 3,  0), S(15, 10), S(27, 20), // Knights
       S( 37, 28), S( 42, 31), S(44, 33) },
@@ -861,6 +861,46 @@ namespace {
 
 
 namespace Eval {
+
+    int interpolate(double x, double minX, double maxX, double minY, double maxY)
+    {
+        double dydx = (maxY - minY) / (maxX - minX);
+        double y = minY + (x - minX) * dydx;
+        return int(y + 0.5);
+    }
+
+    void init_params() {
+
+        MobilityBonus[QUEEN][0] = make_score(Options["qm0_mg"], Options["qm0_eg"]);
+        MobilityBonus[QUEEN][1] = make_score(std::max(Options["qm1_mg"], Options["qm0_mg"]), std::max(Options["qm1_eg"], Options["qm0_eg"]));
+        MobilityBonus[QUEEN][2] = make_score(std::max(Options["qm2_mg"], Options["qm1_mg"]), std::max(Options["qm2_eg"], Options["qm1_eg"]));
+        MobilityBonus[QUEEN][7] = make_score(std::max(Options["qm7_mg"], Options["qm2_mg"]), std::max(Options["qm7_eg"], Options["qm2_eg"]));
+        MobilityBonus[QUEEN][15] = make_score(std::max(Options["qm15_mg"], Options["qm7_mg"]), std::max(Options["qm15_eg"], Options["qm7_eg"]));
+        MobilityBonus[QUEEN][27] = make_score(std::max(Options["qm27_mg"], Options["qm15_mg"]), std::max(Options["qm27_eg"], Options["qm15_eg"]));
+
+        int mgMin, mgMax, egMin, egMax;
+
+        mgMin = mg_value(MobilityBonus[QUEEN][2]), mgMax = mg_value(MobilityBonus[QUEEN][7]);
+        egMin = eg_value(MobilityBonus[QUEEN][2]), egMax = eg_value(MobilityBonus[QUEEN][7]);
+        for (unsigned i = 3; i < 7; i++)
+        {
+            MobilityBonus[QUEEN][i] = make_score(interpolate(i, 2, 7, mgMin, mgMax), interpolate(i, 2, 7, egMin, egMax));
+        }
+
+        mgMin = mg_value(MobilityBonus[QUEEN][7]), mgMax = mg_value(MobilityBonus[QUEEN][15]);
+        egMin = eg_value(MobilityBonus[QUEEN][7]), egMax = eg_value(MobilityBonus[QUEEN][15]);
+        for (unsigned i = 8; i < 15; i++)
+        {
+            MobilityBonus[QUEEN][i] = make_score(interpolate(i, 7, 15, mgMin, mgMax), interpolate(i, 7, 15, egMin, egMax));
+        }
+        
+        mgMin = mg_value(MobilityBonus[QUEEN][15]), mgMax = mg_value(MobilityBonus[QUEEN][27]);
+        egMin = eg_value(MobilityBonus[QUEEN][15]), egMax = eg_value(MobilityBonus[QUEEN][27]);
+        for (unsigned i = 16; i < 27; i++)
+        {
+            MobilityBonus[QUEEN][i] = make_score(interpolate(i, 15, 27, mgMin, mgMax), interpolate(i, 15, 27, egMin, egMax));
+        }
+    }
 
   /// evaluate() is the main evaluation function. It returns a static evaluation
   /// of the position always from the point of view of the side to move.

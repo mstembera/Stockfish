@@ -71,6 +71,18 @@ void init(OptionsMap& o) {
   o["Minimum Thinking Time"]    << Option(20, 0, 5000);
   o["Slow Mover"]               << Option(80, 10, 1000);
   o["UCI_Chess960"]             << Option(false);
+  o["qm0_mg"]                   << Option(-42, -55, -28);
+  o["qm0_eg"]                   << Option(-40, -55, -23);
+  o["qm1_mg"]                   << Option(-28, -42,  -5);
+  o["qm1_eg"]                   << Option(-23, -40,  -7);
+  o["qm2_mg"]                   << Option( -5, -28,   8);
+  o["qm2_eg"]                   << Option( -7, -23,  14);
+  o["qm7_mg"]                   << Option( 18,   9,  22);
+  o["qm7_eg"]                   << Option( 38,  15,  41);
+  o["qm15_mg"]                  << Option( 25,  22,  30);
+  o["qm15_eg"]                  << Option( 41,  38,  45);
+  o["qm27_mg"]                  << Option( 25,  25,  32);
+  o["qm27_eg"]                  << Option( 41,  41,  48);
 }
 
 
