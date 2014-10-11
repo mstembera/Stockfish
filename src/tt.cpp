@@ -99,7 +99,7 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
 
   tte = replace = first_entry(key);
 
-  uint8_t overwrite;
+  bool overwrite;
 
   for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
   {
@@ -119,7 +119,7 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
           replace = tte;
   }
 
-  uint8_t probed = (overwrite << 2) & replace->genProbedBound8; // Preserve probed status
+  uint8_t probed = (overwrite * probedBit) & replace->genProbedBound8; // Preserve probed status
 
   replace->save(key16, v, b, d, m, generation | probed, statV);
 }
