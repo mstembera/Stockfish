@@ -39,7 +39,7 @@ struct TTEntry {
   Value value() const      { return (Value)value16; }
   Value eval_value() const { return (Value)evalValue; }
   Depth depth() const      { return (Depth)depth8; }
-  Bound bound() const      { return (Bound)(genBound8 & 0x3); }
+  Bound bound() const      { return (Bound)(genProbeBound8 & 0x3); }
 
 private:
   friend class TranspositionTable;
@@ -50,7 +50,7 @@ private:
     move16    = (uint16_t)m;
     value16   = (int16_t)v;
     evalValue = (int16_t)ev;
-    genBound8 = (uint8_t)(g | b);
+    genProbeBound8 = (uint8_t)(g | b);
     depth8    = (int8_t)d;
   }
 
@@ -58,7 +58,7 @@ private:
   uint16_t move16;
   int16_t  value16;
   int16_t  evalValue;
-  uint8_t  genBound8;
+  uint8_t  genProbeBound8;
   int8_t   depth8;
 };
 
@@ -74,6 +74,8 @@ struct TTCluster {
   char padding[2];
 };
 
+const uint8_t probeBits = 0xC;
+
 /// A TranspositionTable consists of a power of 2 number of clusters and each
 /// cluster consists of TTClusterSize number of TTEntry. Each non-empty entry
 /// contains information of exactly one position. The size of a cluster should
@@ -84,7 +86,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { free(mem); }
-  void new_search() { generation += 4; } // Lower 2 bits are used by Bound
+  void new_search() { generation += 16; } // Lowest 2 bits are used by Bound; Next 2 bits for probe count
 
   const TTEntry* probe(const Key key) const;
   TTEntry* first_entry(const Key key) const;
@@ -96,7 +98,7 @@ private:
   size_t clusterCount;
   TTCluster* table;
   void* mem;
-  uint8_t generation; // Size must be not bigger than TTEntry::genBound8
+  uint8_t generation; // Size must be not bigger than TTEntry::genProbeBound8
 };
 
 extern TranspositionTable TT;

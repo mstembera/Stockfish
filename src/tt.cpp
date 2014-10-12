@@ -19,6 +19,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 #include "bitboard.h"
 #include "tt.h"
@@ -75,7 +76,8 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
   for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
       if (tte->key16 == key16)
       {
-          tte->genBound8 = uint8_t(generation | tte->bound()); // Refresh
+          uint8_t probeCount = std::min(12, (tte->genProbeBound8 & probeBits) + 4);
+          tte->genProbeBound8 = generation | probeCount | (uint8_t)tte->bound(); // Refresh and increment probe count
           return tte;
       }
 
@@ -89,7 +91,8 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 /// When a new entry is written and there are no empty entries available in the
 /// cluster, it replaces the least valuable of the entries. A TTEntry t1 is considered
 /// to be more valuable than a TTEntry t2 if t1 is from the current search and t2
-/// is from a previous search, or if the depth of t1 is bigger than the depth of t2.
+/// is from a previous search, or if the depth of t1 is bigger than the depth of t2,
+/// or if t1 has been probed more times than t2.
 
 void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
 
@@ -98,9 +101,11 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
 
   tte = replace = first_entry(key);
 
+  bool overwrite;
+
   for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
   {
-      if (!tte->key16 || tte->key16 == key16) // Empty or overwrite old
+      if ((overwrite = (tte->key16 == key16)) || !tte->key16) // Overwrite old or empty
       {
           if (!m)
               m = tte->move(); // Preserve any existing ttMove
@@ -110,11 +115,13 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       }
 
       // Implement replace strategy
-      if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte->depth8 < replace->depth8) < 0)
+      if (  ((    tte->genProbeBound8 & 0xF0) == generation || tte->bound() == BOUND_EXACT)
+          - ((replace->genProbeBound8 & 0xF0) == generation)
+          - (16 * tte->depth8 + (tte->genProbeBound8 & probeBits) < 16 * replace->depth8 + (replace->genProbeBound8 & probeBits)) < 0)
           replace = tte;
   }
 
-  replace->save(key16, v, b, d, m, generation, statV);
+  uint8_t probeCount = (overwrite * probeBits) & replace->genProbeBound8; // Preserve probe count
+
+  replace->save(key16, v, b, d, m, generation | probeCount, statV);
 }
