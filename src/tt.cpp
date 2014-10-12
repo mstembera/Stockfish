@@ -115,7 +115,7 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       // Implement replace strategy
       if (  ((    tte->genProbedBound8 & 0xF8) == generation || tte->bound() == BOUND_EXACT)
           - ((replace->genProbedBound8 & 0xF8) == generation)
-          - (4 * tte->depth8 + (tte->genProbedBound8 & probedBit) < 4 * replace->depth8 + (replace->genProbedBound8 & probedBit)) < 0)
+          - (8 * tte->depth8 + (tte->genProbedBound8 & probedBit) < 8 * replace->depth8 + (replace->genProbedBound8 & probedBit)) < 0)
           replace = tte;
   }
 
