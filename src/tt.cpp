@@ -89,7 +89,8 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 /// When a new entry is written and there are no empty entries available in the
 /// cluster, it replaces the least valuable of the entries. A TTEntry t1 is considered
 /// to be more valuable than a TTEntry t2 if t1 is from the current search and t2
-/// is from a previous search, or if the depth of t1 is bigger than the depth of t2.
+/// is from a previous search, or if the depth of t1 is bigger than the depth of t2,
+/// or if t1 is more recent than t2.
 
 void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
 
@@ -110,9 +111,9 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       }
 
       // Implement replace strategy
-      if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte->depth8 < replace->depth8) < 0)
+      if (  (((    tte->genBound8 & 0xFC) == generation) + (    tte->bound() == BOUND_EXACT))
+          - (((replace->genBound8 & 0xFC) == generation) + (replace->bound() == BOUND_EXACT))
+          - (tte->depth8 + (tte->genBound8 & 0xFC) < replace->depth8 + (replace->genBound8 & 0xFC)) < 0)
           replace = tte;
   }
 
