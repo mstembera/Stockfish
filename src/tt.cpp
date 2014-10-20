@@ -94,10 +94,10 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 
 void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
 
-  TTEntry *tte, *replace;
+  TTEntry *tte, *replace, *first;
   uint16_t key16 = key >> 48; // Use the high 16 bits as key inside the cluster
 
-  tte = replace = first_entry(key);
+  first = tte = replace = first_entry(key);
 
   for (unsigned i = 0; i < TTClusterSize; ++i, ++tte)
   {
@@ -113,9 +113,11 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       // Implement replace strategy
       if (  (((    tte->genBound8 & 0xFC) == generation) + (    tte->bound() == BOUND_EXACT))
           - (((replace->genBound8 & 0xFC) == generation) + (replace->bound() == BOUND_EXACT))
-          - (tte->depth8 + (tte->genBound8 >> 2) < replace->depth8 + (replace->genBound8 >> 2)) < 0)
+          - (tte->depth8 + (tte->genBound8 & 0xFC) < replace->depth8 + (replace->genBound8 & 0xFC)) < 0)
           replace = tte;
   }
 
-  replace->save(key16, v, b, d, m, generation, statV);
+  *replace = *first;
+
+  first->save(key16, v, b, d, m, generation, statV);
 }
