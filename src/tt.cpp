@@ -57,9 +57,18 @@ void TranspositionTable::resize(size_t mbSize) {
 /// with zeroes. It is called whenever the table is resized, or when the
 /// user asks the program to clear the table (from the UCI interface).
 
+#include "uci.h"
+int w1 = 10, w2 = 5, w3 = 10, w4 = 10, w5 = 10;
+
 void TranspositionTable::clear() {
 
   std::memset(table, 0, clusterCount * sizeof(TTCluster));
+
+  w1 = Options["w1"];
+  w2 = Options["w2"];
+  w3 = Options["w3"];
+  w4 = Options["w4"];
+  w5 = Options["w5"];
 }
 
 
@@ -110,9 +119,10 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       }
 
       // Implement replace strategy
-      if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte->depth8 < replace->depth8) < 0)
+      if (  (((    tte->genBound8 & 0xFC) == generation) + (    tte->bound() == BOUND_EXACT))
+          - (((replace->genBound8 & 0xFC) == generation) + (replace->bound() == BOUND_EXACT))
+          - (w1 * tte->depth8     + w2 * (tte->genBound8 & 0xFC)     + w3 * (tte->value16 != VALUE_NONE)     + w4 * (tte->evalValue != VALUE_NONE)     + w5 * !!tte->move16 < 
+             w1 * replace->depth8 + w2 * (replace->genBound8 & 0xFC) + w3 * (replace->value16 != VALUE_NONE) + w4 * (replace->evalValue != VALUE_NONE) + w5 * !!replace->move16) < 0) 
           replace = tte;
   }
 
