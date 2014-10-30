@@ -110,9 +110,10 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       }
 
       // Implement replace strategy
-      if (  ((    tte->genBound8 & 0xFC) == generation || tte->bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte->depth8 < replace->depth8) < 0)
+      if (  (((    tte->genBound8 & 0xFC) == generation) + (    tte->bound() == BOUND_EXACT))
+          - (((replace->genBound8 & 0xFC) == generation) + (replace->bound() == BOUND_EXACT))
+          - (47 * tte->depth8     + 13 * (    tte->genBound8 & 0xFC) + 27 * (    tte->value16 != VALUE_NONE) + 45 * (    tte->evalValue != VALUE_NONE) + 39 * !!tte->move16 < 
+             47 * replace->depth8 + 13 * (replace->genBound8 & 0xFC) + 27 * (replace->value16 != VALUE_NONE) + 45 * (replace->evalValue != VALUE_NONE) + 39 * !!replace->move16) < 0) 
           replace = tte;
   }
 
