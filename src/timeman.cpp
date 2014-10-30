@@ -95,6 +95,7 @@ void TimeManager::init(const Search::LimitsType& limits, int currentPly, Color u
 
   // Initialize unstablePvFactor to 1 and search times to maximum values
   unstablePvFactor = 1;
+  recapFactor = 1;
   optimumSearchTime = maximumSearchTime = std::max(limits.time[us], minThinkingTime);
 
   // We calculate optimum time usage for different hypothetical "moves to go"-values and choose the

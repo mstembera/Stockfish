@@ -243,6 +243,7 @@ namespace {
     Stack stack[MAX_PLY_PLUS_6], *ss = stack+2; // To allow referencing (ss-2)
     int depth;
     Value bestValue, alpha, beta, delta;
+    static Position lastPos;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -256,6 +257,7 @@ namespace {
     Gains.clear();
     Countermoves.clear();
     Followupmoves.clear();
+    TimeMgr.fast_recapture(0);
 
     size_t multiPV = Options["MultiPV"];
     Skill skill(Options["Skill Level"], RootMoves.size());
@@ -360,9 +362,34 @@ namespace {
         // Do we have time for the next iteration? Can we stop searching now?
         if (Limits.use_time_management() && !Signals.stop && !Signals.stopOnPonderhit)
         {
-            // Take some extra time if the best move has changed
             if (depth > 4 && multiPV == 1)
+            {
+                // Take some extra time if the best move has changed
                 TimeMgr.pv_instability(BestMoveChanges);
+
+                // Reduce time for easy recaptures
+                TimeMgr.fast_recapture(0);
+                if (   RootMoves.size() > 1 && pos.piece_on(to_sq(RootMoves[1].pv[0])) == NO_PIECE
+                    && BestMoveChanges < 0.05 && 10 * (Time::now() - SearchTime) > TimeMgr.available_time())
+                {
+                    Piece toPieceLast = lastPos.piece_on(to_sq(RootMoves[0].pv[0]));
+                    Piece toPiece = pos.piece_on(to_sq(RootMoves[0].pv[0]));
+                    Piece toPieceNext = pos.piece_on(from_sq(RootMoves[0].pv[0]));
+                    
+                    if (   toPiece != toPieceLast && toPiece != NO_PIECE && toPieceLast != NO_PIECE
+                        && (   abs(PieceValue[MG][toPiece] - PieceValue[MG][toPieceLast]) <= BishopValueMg - KnightValueMg
+                            || PieceValue[MG][toPiece] - PieceValue[MG][toPieceNext] > BishopValueMg - KnightValueMg)
+                        && !pos.gives_check(RootMoves[1].pv[0], CheckInfo(pos)))
+                        TimeMgr.fast_recapture(-0.85);
+
+                    //REMOVE - explanation of conditions:
+                    //1) 2nd best move is NOT also a capture
+                    //2) at least 10% of normal time has already been used
+                    //3) the piece being recaptured has the "same" value as the previously captured piece
+                    //OR the recapturing piece has a lower value than the piece being recaptured
+                    //4) 2nd best move is NOT a check
+                }
+            }
 
             // Stop the search if only one legal move is available or all
             // of the available time has been used.
@@ -378,6 +405,11 @@ namespace {
             }
         }
     }
+
+    // Save the position after our move
+    StateInfo si;
+    lastPos = pos;
+    lastPos.do_move(RootMoves[0].pv[0], si);
   }
 
 
