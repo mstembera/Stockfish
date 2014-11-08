@@ -221,7 +221,7 @@ namespace {
     ei.attackedBy[Us][ALL_PIECES] = ei.attackedBy[Us][PAWN] = ei.pi->pawn_attacks(Us);
 
     // Init king safety tables only if we are going to use them
-    if (pos.non_pawn_material(Us) >= QueenValueMg)
+    if (pos.non_pawn_material(Us) >= 3 * KnightValueMg)
     {
         ei.kingRing[Them] = b | shift_bb<Down>(b);
         b &= ei.attackedBy[Us][PAWN];
