@@ -142,6 +142,16 @@ void Search::init() {
   }
 }
 
+int w1 = 50, w2 = 50, w3 = 50, w4 = 50;
+
+void Search::init2() {
+
+    w1 = Options["w1"];
+    w2 = Options["w2"];
+    w3 = Options["w3"];
+    w4 = Options["w4"];
+}
+
 
 /// Search::perft() is our utility to verify move generation. All the leaf nodes
 /// up to the given depth are generated and counted and the sum returned.
@@ -271,7 +281,7 @@ namespace {
             // Reset aspiration window starting size
             if (depth >= 5 * ONE_PLY)
             {
-                delta = Value(16);
+                delta = Value(16 + 16 * (w1 - 50) / 50);
                 alpha = std::max(RootMoves[PVIdx].prevScore - delta,-VALUE_INFINITE);
                 beta  = std::min(RootMoves[PVIdx].prevScore + delta, VALUE_INFINITE);
             }
@@ -312,7 +322,7 @@ namespace {
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
-                    beta = (alpha + beta) / 2;
+                    beta = (w2 * alpha + w3 * beta) / 100;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
                     Signals.failedLowAtRoot = true;
@@ -320,13 +330,13 @@ namespace {
                 }
                 else if (bestValue >= beta)
                 {
-                    alpha = (alpha + beta) / 2;
+                    alpha = (w3 * alpha + w2 * beta) / 100;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                 }
                 else
                     break;
 
-                delta += delta / 2;
+                delta += w4 * delta / 100;
 
                 assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
             }

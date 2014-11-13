@@ -119,6 +119,7 @@ extern Time::point SearchTime;
 extern StateStackPtr SetupStates;
 
 void init();
+void init2();
 void think();
 template<bool Root> uint64_t perft(Position& pos, Depth depth);
 
