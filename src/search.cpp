@@ -142,13 +142,12 @@ void Search::init() {
   }
 }
 
-int w1 = 50, w2 = 50, w3 = 50, w4 = 50;
+int w1 = 67, w2 = 49, w4 = 56;
 
 void Search::init2() {
 
     w1 = Options["w1"];
     w2 = Options["w2"];
-    w3 = Options["w3"];
     w4 = Options["w4"];
 }
 
@@ -322,7 +321,7 @@ namespace {
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
-                    beta = (w2 * alpha + w3 * beta) / 100;
+                    beta = (w2 * alpha  +  (100 - w2) * beta) / 100;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
                     Signals.failedLowAtRoot = true;
@@ -330,13 +329,13 @@ namespace {
                 }
                 else if (bestValue >= beta)
                 {
-                    alpha = (w3 * alpha + w2 * beta) / 100;
+                    alpha = ((100 - w2) * alpha  +  w2 * beta) / 100;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                 }
                 else
                     break;
 
-                delta += w4 * delta / 100;
+                delta = (100 + w4) * delta / 100;
 
                 assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
             }
