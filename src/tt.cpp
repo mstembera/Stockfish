@@ -75,7 +75,7 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
   for (unsigned i = 0; i < TTClusterSize; ++i)
       if (tte[i].key16 == key16)
       {
-          tte[i].genBound8 = uint8_t(generation | tte[i].bound()); // Refresh
+          tte[i].genBound8 = uint8_t(generation | (tte[i].genBound8 & 0x7)); // Refresh
           return &tte[i];
       }
 
@@ -89,9 +89,10 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
 /// When a new entry is written and there are no empty entries available in the
 /// cluster, it replaces the least valuable of the entries. A TTEntry t1 is considered
 /// to be more valuable than a TTEntry t2 if t1 is from the current search and t2
-/// is from a previous search, or if the depth of t1 is bigger than the depth of t2.
+/// is from a previous search, or if the depth of t1 is bigger than the depth of t2,
+/// or if t1 has a higher priority set than t2.
 
-void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV) {
+void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m, Value statV, uint8_t priority) {
 
   TTEntry* const tte = first_entry(key);
   const uint16_t key16 = key >> 48; // Use the high 16 bits as key inside the cluster
@@ -100,17 +101,17 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
       if (!tte[i].key16 || tte[i].key16 == key16) // Empty or overwrite old
       {
           // Save preserving any existing ttMove
-          tte[i].save(key16, v, b, d, m ? m : tte[i].move(), generation, statV);
+          tte[i].save(key16, v, b, d, m ? m : tte[i].move(), generation, statV, priority);
           return;
       }
 
   // Implement replace strategy
   TTEntry* replace = tte;
   for (unsigned i = 1; i < TTClusterSize; ++i)
-      if (  ((  tte[i].genBound8 & 0xFC) == generation || tte[i].bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
-          - (tte[i].depth8 < replace->depth8) < 0)
+      if (  (((  tte[i].genBound8 & 0xF8) == generation) + (tte[i].bound()   == BOUND_EXACT))
+          - (((replace->genBound8 & 0xF8) == generation) + (replace->bound() == BOUND_EXACT))
+          - (8 * tte[i].depth8 + (tte[i].genBound8 & TTHighPriority) < 8 * replace->depth8 + (replace->genBound8 & TTHighPriority)) < 0)
           replace = &tte[i];
 
-  replace->save(key16, v, b, d, m, generation, statV);
+  replace->save(key16, v, b, d, m, generation, statV, priority);
 }

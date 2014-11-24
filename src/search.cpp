@@ -509,7 +509,7 @@ namespace {
         eval = ss->staticEval =
         (ss-1)->currentMove != MOVE_NULL ? evaluate(pos) : -(ss-1)->staticEval + 2 * Eval::Tempo;
 
-        TT.store(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval);
+        TT.store(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TTLowPriority);
     }
 
     if (   !pos.captured_piece_type()
@@ -995,7 +995,7 @@ moves_loop: // When in check and at SpNode search starts from here
     TT.store(posKey, value_to_tt(bestValue, ss->ply),
              bestValue >= beta  ? BOUND_LOWER :
              PvNode && bestMove ? BOUND_EXACT : BOUND_UPPER,
-             depth, bestMove, ss->staticEval);
+             depth, bestMove, ss->staticEval, TTHighPriority);
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1094,7 +1094,7 @@ moves_loop: // When in check and at SpNode search starts from here
         {
             if (!tte)
                 TT.store(pos.key(), value_to_tt(bestValue, ss->ply), BOUND_LOWER,
-                         DEPTH_NONE, MOVE_NONE, ss->staticEval);
+                         DEPTH_NONE, MOVE_NONE, ss->staticEval, TTLowPriority);
 
             return bestValue;
         }
@@ -1193,7 +1193,7 @@ moves_loop: // When in check and at SpNode search starts from here
               else // Fail high
               {
                   TT.store(posKey, value_to_tt(value, ss->ply), BOUND_LOWER,
-                           ttDepth, move, ss->staticEval);
+                           ttDepth, move, ss->staticEval, TTLowPriority);
 
                   return value;
               }
@@ -1208,7 +1208,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
     TT.store(posKey, value_to_tt(bestValue, ss->ply),
              PvNode && bestValue > oldAlpha ? BOUND_EXACT : BOUND_UPPER,
-             ttDepth, bestMove, ss->staticEval);
+             ttDepth, bestMove, ss->staticEval, TTLowPriority);
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1389,7 +1389,7 @@ void RootMove::insert_pv_in_tt(Position& pos) {
       tte = TT.probe(pos.key());
 
       if (!tte || tte->move() != pv[idx]) // Don't overwrite correct entries
-          TT.store(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, pv[idx], VALUE_NONE);
+          TT.store(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, pv[idx], VALUE_NONE, TTHighPriority);
 
       assert(MoveList<LEGAL>(pos).contains(pv[idx]));
 
