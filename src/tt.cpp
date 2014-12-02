@@ -75,7 +75,7 @@ const TTEntry* TranspositionTable::probe(const Key key) const {
   for (unsigned i = 0; i < TTClusterSize; ++i)
       if (tte[i].key16 == key16)
       {
-          tte[i].genBound8 = uint8_t(generation | tte[i].bound()); // Refresh
+          tte[i].genAltBound8 = uint8_t(generation | (tte[i].genAltBound8 & 0xF)); // Refresh
           return &tte[i];
       }
 
@@ -107,8 +107,8 @@ void TranspositionTable::store(const Key key, Value v, Bound b, Depth d, Move m,
   // Implement replace strategy
   TTEntry* replace = tte;
   for (unsigned i = 1; i < TTClusterSize; ++i)
-      if (  ((  tte[i].genBound8 & 0xFC) == generation || tte[i].bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation)
+      if (  ((  tte[i].genAltBound8 & 0xF0) == generation || tte[i].bound() == BOUND_EXACT)
+          - ((replace->genAltBound8 & 0xF0) == generation)
           - (tte[i].depth8 < replace->depth8) < 0)
           replace = &tte[i];
 

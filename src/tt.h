@@ -23,55 +23,62 @@
 #include "misc.h"
 #include "types.h"
 
-/// The TTEntry is the 10 bytes transposition table entry, defined as below:
+/// The TTEntry is the 8 bytes transposition table entry, defined as below:
 ///
 /// key        16 bit
-/// move       16 bit
-/// value      16 bit
-/// eval value 16 bit
+/// move       16 bit (or alternately eval value)
+/// value      16 bit (or alternately eval value)
 /// generation  6 bit
 /// bound type  2 bit
 /// depth       8 bit
 
 struct TTEntry {
 
-  Move  move()  const      { return (Move )move16; }
-  Value value() const      { return (Value)value16; }
-  Value eval_value() const { return (Value)evalValue; }
+  static const uint8_t altMoveBit  = 0x4;
+  static const uint8_t altValueBit = 0x8;
+  union su16 { int16_t s; uint16_t u; };
+
+  Move  move()  const      { return (genAltBound8 & altMoveBit)  ? MOVE_NONE  : (Move)move16.u; }
+  Value value() const      { return (genAltBound8 & altValueBit) ? VALUE_NONE : (Value)value16; }
+  Value eval_value() const { return (genAltBound8 & (altMoveBit|altValueBit)) ? (genAltBound8 & altValueBit) ? (Value)value16 : (Value)move16.s : VALUE_NONE; }
   Depth depth() const      { return (Depth)depth8; }
-  Bound bound() const      { return (Bound)(genBound8 & 0x3); }
+  Bound bound() const      { return (Bound)(genAltBound8 & 0x3); }
 
 private:
   friend class TranspositionTable;
 
   void save(uint16_t k, Value v, Bound b, Depth d, Move m, uint8_t g, Value ev) {
 
-    key16     = (uint16_t)k;
-    move16    = (uint16_t)m;
-    value16   = (int16_t)v;
-    evalValue = (int16_t)ev;
-    genBound8 = (uint8_t)(g | b);
-    depth8    = (int8_t)d;
+      key16        = (uint16_t)k;
+      move16.u     = (uint16_t)m;
+      value16      = (int16_t)v;
+      genAltBound8 = g | (uint8_t)b;
+      depth8       = (int8_t)d;
+
+      if (ev != VALUE_NONE) //If either v or m are blank use them to store ev
+      {
+          if (v == VALUE_NONE) 
+              value16  = (int16_t)ev, genAltBound8 |= altValueBit;
+          else if (!m) 
+              move16.s = (int16_t)ev, genAltBound8 |= altMoveBit;
+      }
   }
 
   uint16_t key16;
-  uint16_t move16;
+  su16     move16;
   int16_t  value16;
-  int16_t  evalValue;
-  uint8_t  genBound8;
+  uint8_t  genAltBound8;
   int8_t   depth8;
 };
 
 /// TTCluster is a 32 bytes cluster of TT entries consisting of:
 ///
-/// 3 x TTEntry (3 x 10 bytes)
-/// padding     (2 bytes)
+/// 4 x TTEntry (4 x 8 bytes)
 
-const unsigned TTClusterSize = 3;
+static const unsigned TTClusterSize = 4;
 
 struct TTCluster {
   TTEntry entry[TTClusterSize];
-  char padding[2];
 };
 
 /// A TranspositionTable consists of a power of 2 number of clusters and each
@@ -84,7 +91,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { free(mem); }
-  void new_search() { generation += 4; } // Lower 2 bits are used by Bound
+  void new_search() { generation += 16; } // Lowest 2 bits are used by Bound; Next 2 bits denote alternate storage use
 
   const TTEntry* probe(const Key key) const;
   TTEntry* first_entry(const Key key) const;
@@ -96,7 +103,7 @@ private:
   size_t clusterCount;
   TTCluster* table;
   void* mem;
-  uint8_t generation; // Size must be not bigger than TTEntry::genBound8
+  uint8_t generation; // Size must be not bigger than TTEntry::genAltBound8
 };
 
 extern TranspositionTable TT;
