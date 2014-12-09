@@ -295,6 +295,21 @@ namespace {
     Depth depth;
     Value bestValue, alpha, beta, delta;
 
+    static Key ExpectedPosKey(0);
+    static std::vector<Move> previousPV;
+    Move pv3[3] = { MOVE_NONE, MOVE_NONE, MOVE_NONE };
+    int stablePV3Cnt = 0;
+
+    // Instant move
+    if (ExpectedPosKey == pos.key() && !Limits.ponder)
+    { 
+        Signals.stop = true;
+
+        RootMoves[0].pv.resize(previousPV.size() - 2);
+        for (size_t i = 0; i < RootMoves[0].pv.size(); ++i)
+            RootMoves[0].pv[i] = previousPV[i + 2];
+    }
+
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
     depth = DEPTH_ZERO;
@@ -434,6 +449,41 @@ namespace {
                     Signals.stop = true;
             }
         }
+
+        // keep track if the first 3 PV moves are stable
+        if (RootMoves[0].pv.size() >= 3)
+        {
+            if (pv3[0] == RootMoves[0].pv[0] && pv3[1] == RootMoves[0].pv[1] && pv3[2] == RootMoves[0].pv[2])
+                stablePV3Cnt++;
+            else
+            {
+                stablePV3Cnt = 0;
+                pv3[0] = RootMoves[0].pv[0]; pv3[1] = RootMoves[0].pv[1]; pv3[2] = RootMoves[0].pv[2];
+            }
+        }
+        else
+        {
+            stablePV3Cnt = 0;
+            pv3[0] = pv3[1] = pv3[2] = MOVE_NONE;
+        }
+    }
+
+ 
+    // Save the PV and the key of the next expected position
+    if (stablePV3Cnt >= 5)
+    {
+        assert(RootMoves[0].pv.size() >= 3);
+        StateInfo si0, si1;
+        Position ExpectedPos = pos;
+        ExpectedPos.do_move(RootMoves[0].pv[0], si0);
+        ExpectedPos.do_move(RootMoves[0].pv[1], si1);
+        ExpectedPosKey = ExpectedPos.key();
+        previousPV = RootMoves[0].pv;
+    }
+    else
+    {
+        ExpectedPosKey = 0;
+        previousPV.clear();
     }
   }
 
