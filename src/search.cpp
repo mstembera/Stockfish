@@ -470,7 +470,7 @@ namespace {
 
  
     // Save the PV and the key of the next expected position
-    if (stablePV3Cnt >= 6)
+    if (stablePV3Cnt >= 5)
     {
         assert(RootMoves[0].pv.size() >= 3);
         StateInfo si0, si1;
