@@ -43,10 +43,9 @@ struct TTEntry {
 
   void save(Key k, Value v, Bound b, Depth d, Move m, Value ev, uint8_t g, bool overwrite) {
 
-    k >>= 48;
+    key16      = (uint16_t)(k >> 48);
     if (m || overwrite) // preserve any existing ttMove
         move16 = (uint16_t)m;
-    key16      = (uint16_t)k;
     value16    = (int16_t)v;
     evalValue  = (int16_t)ev;
     genBound8  = (uint8_t)(g | b);
