@@ -23,6 +23,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <set>
 
 #include "evaluate.h"
 #include "misc.h"
@@ -295,20 +296,27 @@ namespace {
     Depth depth;
     Value bestValue, alpha, beta, delta;
 
-    static Key ExpectedPosKey(0);
+    static std::vector<Key> expectedPosKey;
     static std::vector<Move> previousPV;
-    Move pv3[3] = { MOVE_NONE, MOVE_NONE, MOVE_NONE };
+    std::set<uint32_t> m0m1Transpositions;
+    Move move3rd = MOVE_NONE;
     int stablePV3Cnt = 0;
 
     // Instant move
-    if (ExpectedPosKey == pos.key() && !Limits.ponder)
-    { 
-        Signals.stop = true;
+    for (unsigned i = 0; i < expectedPosKey.size(); ++i)
+        if (expectedPosKey[i] == pos.key() && !Limits.ponder)
+        {
+            Signals.stop = true;
 
-        RootMoves[0].pv.resize(previousPV.size() - 2);
-        for (size_t i = 0; i < RootMoves[0].pv.size(); ++i)
-            RootMoves[0].pv[i] = previousPV[i + 2];
-    }
+            RootMoves[0].pv.resize(previousPV.size() - 2);
+            for (size_t i = 0; i < RootMoves[0].pv.size(); ++i)
+                RootMoves[0].pv[i] = previousPV[i + 2];
+
+            break;  
+        }
+
+    expectedPosKey.clear();
+    previousPV.clear();
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -450,40 +458,50 @@ namespace {
             }
         }
 
-        // keep track if the first 3 PV moves are stable
+        // keep track if the 3rd PV move is stable
         if (RootMoves[0].pv.size() >= 3)
         {
-            if (pv3[0] == RootMoves[0].pv[0] && pv3[1] == RootMoves[0].pv[1] && pv3[2] == RootMoves[0].pv[2])
+            if (move3rd == RootMoves[0].pv[2])
+            {
                 stablePV3Cnt++;
+            }
             else
             {
                 stablePV3Cnt = 0;
-                pv3[0] = RootMoves[0].pv[0]; pv3[1] = RootMoves[0].pv[1]; pv3[2] = RootMoves[0].pv[2];
+                m0m1Transpositions.clear();
             }
+
+            move3rd = RootMoves[0].pv[2];
+            m0m1Transpositions.insert(((uint32_t)RootMoves[0].pv[0] << 16) | (uint32_t)RootMoves[0].pv[1]);
         }
         else
         {
             stablePV3Cnt = 0;
-            pv3[0] = pv3[1] = pv3[2] = MOVE_NONE;
+            move3rd = MOVE_NONE;
+            m0m1Transpositions.clear();
         }
     }
 
  
-    // Save the PV and the key of the next expected position
-    if (stablePV3Cnt >= 6)
+    // Save the PV and the keys of the next expected positions
+    if (stablePV3Cnt >= 5)
     {
         assert(RootMoves[0].pv.size() >= 3);
-        StateInfo si0, si1;
-        Position ExpectedPos = pos;
-        ExpectedPos.do_move(RootMoves[0].pv[0], si0);
-        ExpectedPos.do_move(RootMoves[0].pv[1], si1);
-        ExpectedPosKey = ExpectedPos.key();
+        for (std::set<uint32_t>::const_iterator it = m0m1Transpositions.begin(); it != m0m1Transpositions.end(); ++it)
+        {
+            Move m0 = (Move)(*it >> 16);
+            if (m0 == RootMoves[0].pv[0])
+            {
+                Move m1 = (Move)(*it & 0xFFFF);
+                StateInfo si0, si1;
+                Position expectedPos = pos;
+                expectedPos.do_move(m0, si0);
+                expectedPos.do_move(m1, si1);
+                expectedPosKey.push_back(expectedPos.key());
+            }
+        }
+
         previousPV = RootMoves[0].pv;
-    }
-    else
-    {
-        ExpectedPosKey = 0;
-        previousPV.clear();
     }
   }
 
