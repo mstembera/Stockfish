@@ -41,10 +41,10 @@ struct TTEntry {
   Depth depth() const      { return (Depth)depth8; }
   Bound bound() const      { return (Bound)(genBound8 & 0x3); }
 
-  void save(Key k, Value v, Bound b, Depth d, Move m, Value ev, uint8_t g) {
+  void save(Key k, Value v, Bound b, Depth d, Move m, Value ev, uint8_t g, bool overwrite) {
 
     k >>= 48;
-    if (m || k != key16) // preserve any existing ttMove
+    if (m || overwrite) // preserve any existing ttMove
         move16 = (uint16_t)m;
     key16      = (uint16_t)k;
     value16    = (int16_t)v;

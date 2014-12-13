@@ -568,7 +568,7 @@ namespace {
 
                 tte->save(posKey, value_to_tt(value, ss->ply), BOUND_EXACT,
                           std::min(DEPTH_MAX - ONE_PLY, depth + 6 * ONE_PLY),
-                          MOVE_NONE, VALUE_NONE, TT.get_generation());
+                          MOVE_NONE, VALUE_NONE, TT.get_generation(), !ttHit);
 
                 return value;
             }
@@ -598,7 +598,7 @@ namespace {
         eval = ss->staticEval =
         (ss-1)->currentMove != MOVE_NULL ? evaluate(pos) : -(ss-1)->staticEval + 2 * Eval::Tempo;
 
-        tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.get_generation());
+        tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.get_generation(), !ttHit);
     }
 
     if (ss->skipEarlyPruning)
@@ -1084,7 +1084,7 @@ moves_loop: // When in check and at SpNode search starts from here
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               bestValue >= beta ? BOUND_LOWER :
               PvNode && bestMove ? BOUND_EXACT : BOUND_UPPER,
-              depth, bestMove, ss->staticEval, TT.get_generation());
+              depth, bestMove, ss->staticEval, TT.get_generation(), !ttHit);
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1184,7 +1184,7 @@ moves_loop: // When in check and at SpNode search starts from here
         {
             if (!ttHit)
                 tte->save(pos.key(), value_to_tt(bestValue, ss->ply), BOUND_LOWER,
-                          DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.get_generation());
+                          DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.get_generation(), !ttHit);
 
             return bestValue;
         }
@@ -1283,7 +1283,7 @@ moves_loop: // When in check and at SpNode search starts from here
               else // Fail high
               {
                   tte->save(posKey, value_to_tt(value, ss->ply), BOUND_LOWER,
-                            ttDepth, move, ss->staticEval, TT.get_generation());
+                            ttDepth, move, ss->staticEval, TT.get_generation(), !ttHit);
 
                   return value;
               }
@@ -1298,7 +1298,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               PvNode && bestValue > oldAlpha ? BOUND_EXACT : BOUND_UPPER,
-              ttDepth, bestMove, ss->staticEval, TT.get_generation());
+              ttDepth, bestMove, ss->staticEval, TT.get_generation(), !ttHit);
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1480,7 +1480,7 @@ void RootMove::insert_pv_in_tt(Position& pos) {
       TTEntry* tte = TT.probe(pos.key(), ttHit);
 
       if (!ttHit || tte->move() != pv[idx]) // Don't overwrite correct entries
-          tte->save(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, pv[idx], VALUE_NONE, TT.get_generation());
+          tte->save(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, pv[idx], VALUE_NONE, TT.get_generation(), !ttHit);
 
       assert(MoveList<LEGAL>(pos).contains(pv[idx]));
 
