@@ -52,6 +52,16 @@ struct TTEntry {
     genBound8 = (uint8_t)(g | b);
     depth8    = (int8_t)d;
   }
+  
+  void init() {
+
+    key16      = 0;
+    move16     = MOVE_NONE;
+    value16    = VALUE_NONE;
+    eval16     = VALUE_NONE;
+    genBound8  = BOUND_NONE;
+    depth8     = DEPTH_NONE;
+  }
 
 private:
   friend class TranspositionTable;
@@ -73,8 +83,9 @@ private:
 
 class TranspositionTable {
 
-  static const int CacheLineSize = 64;
-  static const int TTClusterSize = 3;
+  static const int     CacheLineSize = 64;
+  static const int     TTClusterSize = 3;
+  static const uint8_t PendingSave   = 0x4;
 
   struct TTCluster {
     TTEntry entry[TTClusterSize];
@@ -83,7 +94,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { free(mem); }
-  void new_search() { generation8 += 4; } // Lower 2 bits are used by Bound
+  void new_search() { generation8 += 8; } // Lowest 2 bits are used by Bound, 3rd bit by PendingSave
   uint8_t generation() const { return generation8; }
   TTEntry* probe(const Key key, bool& found) const;
   void resize(size_t mbSize);

@@ -17,7 +17,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstring>   // For std::memset
 #include <iostream>
 
 #include "bitboard.h"
@@ -42,7 +41,7 @@ void TranspositionTable::resize(size_t mbSize) {
   clusterCount = newClusterCount;
 
   free(mem);
-  mem = calloc(clusterCount * sizeof(TTCluster) + CacheLineSize - 1, 1);
+  mem = malloc(clusterCount * sizeof(TTCluster) + CacheLineSize - 1);
 
   if (!mem)
   {
@@ -52,16 +51,19 @@ void TranspositionTable::resize(size_t mbSize) {
   }
 
   table = (TTCluster*)((uintptr_t(mem) + CacheLineSize - 1) & ~(CacheLineSize - 1));
+  clear();
 }
 
 
-/// TranspositionTable::clear() overwrites the entire transposition table
-/// with zeros. It is called whenever the table is resized, or when the
+/// TranspositionTable::clear() initializes the entire transposition table
+/// with defaults. It is called whenever the table is resized, or when the
 /// user asks the program to clear the table (from the UCI interface).
 
 void TranspositionTable::clear() {
 
-  std::memset(table, 0, clusterCount * sizeof(TTCluster));
+  for (unsigned i = 0; i < clusterCount; ++i)
+      for (int j = 0; j < TTClusterSize; ++j)
+          table[i].entry[j].init();
 }
 
 
@@ -70,7 +72,7 @@ void TranspositionTable::clear() {
 /// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
 /// to be replaced later. A TTEntry t1 is considered to be more valuable than a
 /// TTEntry t2 if t1 is from the current search and t2 is from a previous search,
-/// or if the depth of t1 is bigger than the depth of t2.
+/// or if the depth of t1 is bigger than the depth of t2, or if the PendingSave bit has been set.
 
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
@@ -78,21 +80,26 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   const uint16_t key16 = key >> 48;  // Use the high 16 bits as key inside the cluster
 
   for (int i = 0; i < TTClusterSize; ++i)
-      if (!tte[i].key16 || tte[i].key16 == key16)
+      if (!tte[i].key16)
       {
-          if (tte[i].key16)
-              tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
-
-          return found = (bool)tte[i].key16, &tte[i];
+          tte[i].key16 = key16; // Tag any empty entry as taken
+          tte[i].genBound8 = generation8 | PendingSave;
+          return found = false, &tte[i];
+      }
+      else if(tte[i].key16 == key16)
+      {
+          tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & 0x7)); // Refresh
+          return found = true, &tte[i];
       }
 
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
   for (int i = 1; i < TTClusterSize; ++i)
-      if (  ((  tte[i].genBound8 & 0xFC) == generation8 || tte[i].bound() == BOUND_EXACT)
-          - ((replace->genBound8 & 0xFC) == generation8)
-          - (tte[i].depth8 < replace->depth8) < 0)
+      if (  ((  tte[i].genBound8 & 0xF8) == generation8 || tte[i].bound() == BOUND_EXACT)
+          - ((replace->genBound8 & 0xF8) == generation8)
+          - (tte[i].depth8 + (tte[i].genBound8 & PendingSave) < replace->depth8 + (replace->genBound8 & PendingSave)) < 0)
           replace = &tte[i];
 
+  replace->genBound8 |= PendingSave;
   return found = false, replace;
 }
