@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2014 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstring>   // For std::memset
 #include <iostream>
 
 #include "bitboard.h"
@@ -31,6 +32,8 @@ TranspositionTable TT; // Our global transposition table
 
 void TranspositionTable::resize(size_t mbSize) {
 
+  assert(sizeof(TTCluster) == CacheLineSize / 2);
+
   size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(TTCluster));
 
   if (newClusterCount == clusterCount)
@@ -39,7 +42,7 @@ void TranspositionTable::resize(size_t mbSize) {
   clusterCount = newClusterCount;
 
   free(mem);
-  mem = malloc(clusterCount * sizeof(TTCluster) + CACHE_LINE_SIZE - 1);
+  mem = calloc(clusterCount * sizeof(TTCluster) + CacheLineSize - 1, 1);
 
   if (!mem)
   {
@@ -48,20 +51,17 @@ void TranspositionTable::resize(size_t mbSize) {
       exit(EXIT_FAILURE);
   }
 
-  table = (TTCluster*)((uintptr_t(mem) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1));
-  clear();
+  table = (TTCluster*)((uintptr_t(mem) + CacheLineSize - 1) & ~(CacheLineSize - 1));
 }
 
 
-/// TranspositionTable::clear() initializes the entire transposition table
-/// with defaults. It is called whenever the table is resized, or when the
+/// TranspositionTable::clear() overwrites the entire transposition table
+/// with zeros. It is called whenever the table is resized, or when the
 /// user asks the program to clear the table (from the UCI interface).
 
 void TranspositionTable::clear() {
 
-  for (unsigned i = 0; i < clusterCount; ++i)
-      for (unsigned j = 0; j < TTClusterSize; ++j)
-          table[i].entry[j].init();
+  std::memset(table, 0, clusterCount * sizeof(TTCluster));
 }
 
 
@@ -77,18 +77,18 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   TTEntry* const tte = first_entry(key);
   const uint16_t key16 = key >> 48;  // Use the high 16 bits as key inside the cluster
 
-  for (unsigned i = 0; i < TTClusterSize; ++i)
+  for (int i = 0; i < TTClusterSize; ++i)
       if (!tte[i].key16 || tte[i].key16 == key16)
       {
-          found = (bool)tte[i].key16;
-          tte[i].key16 = key16; // Tag any empty entry as taken
-          tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
-          return &tte[i];
+          if (tte[i].key16)
+              tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+
+          return found = (bool)tte[i].key16, &tte[i];
       }
 
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
-  for (unsigned i = 1; i < TTClusterSize; ++i)
+  for (int i = 1; i < TTClusterSize; ++i)
       if (  ((  tte[i].genBound8 & 0xFC) == generation8 || tte[i].bound() == BOUND_EXACT)
           - ((replace->genBound8 & 0xFC) == generation8)
           - (tte[i].depth8 < replace->depth8) < 0)
