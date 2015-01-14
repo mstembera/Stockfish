@@ -53,6 +53,16 @@ struct TTEntry {
     depth8    = (int8_t)d;
   }
 
+  void init() {
+
+    key16     = 0;
+    move16    = MOVE_NONE;
+    value16   = VALUE_NONE;
+    eval16    = VALUE_NONE;
+    genBound8 = BOUND_NONE;
+    depth8    = DEPTH_NONE;
+  }
+
 private:
   friend class TranspositionTable;
 

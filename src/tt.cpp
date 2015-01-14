@@ -17,7 +17,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstring>   // For std::memset
 #include <iostream>
 
 #include "bitboard.h"
@@ -42,7 +41,7 @@ void TranspositionTable::resize(size_t mbSize) {
   clusterCount = newClusterCount;
 
   free(mem);
-  mem = calloc(clusterCount * sizeof(TTCluster) + CacheLineSize - 1, 1);
+  mem = malloc(clusterCount * sizeof(TTCluster) + CacheLineSize - 1);
 
   if (!mem)
   {
@@ -52,16 +51,19 @@ void TranspositionTable::resize(size_t mbSize) {
   }
 
   table = (TTCluster*)((uintptr_t(mem) + CacheLineSize - 1) & ~(CacheLineSize - 1));
+  clear();
 }
 
 
-/// TranspositionTable::clear() overwrites the entire transposition table
-/// with zeros. It is called whenever the table is resized, or when the
+/// TranspositionTable::clear() initializes the entire transposition table
+/// with defaults. It is called whenever the table is resized, or when the
 /// user asks the program to clear the table (from the UCI interface).
 
 void TranspositionTable::clear() {
 
-  std::memset(table, 0, clusterCount * sizeof(TTCluster));
+  for (size_t i = 0; i < clusterCount; ++i)
+      for (int j = 0; j < TTClusterSize; ++j)
+          table[i].entry[j].init();
 }
 
 
@@ -80,10 +82,10 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   for (int i = 0; i < TTClusterSize; ++i)
       if (!tte[i].key16 || tte[i].key16 == key16)
       {
-          if (tte[i].key16)
-              tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
-
-          return found = (bool)tte[i].key16, &tte[i];
+          found = (bool)tte[i].key16;
+          tte[i].key16 = key16; // Tag any empty entry as taken
+          tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+          return &tte[i];
       }
 
   // Find an entry to be replaced according to the replacement strategy
