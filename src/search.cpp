@@ -1472,12 +1472,12 @@ moves_loop: // When in check and at SpNode search starts from here
 /// inserts the PV back into the TT. This makes sure the old PV moves are searched
 /// first, even if the old TT entries have been overwritten.
 
-void RootMove::insert_pv_in_tt(Position& pos) {
+void RootMove::insert_pv_in_tt(Position& rootPos) const {
 
-  StateInfo state[MAX_PLY], *st = state;
-  size_t idx = 0;
+  Position posCopy, &pos = (pv.size() >= 2) ? posCopy = rootPos : rootPos;
+  StateInfo state[MAX_PLY];
 
-  for ( ; idx < pv.size(); ++idx)
+  for (size_t idx = 0; idx < pv.size(); ++idx)
   {
       bool ttHit;
       TTEntry* tte = TT.probe(pos.key(), ttHit);
@@ -1487,10 +1487,11 @@ void RootMove::insert_pv_in_tt(Position& pos) {
 
       assert(MoveList<LEGAL>(pos).contains(pv[idx]));
 
-      pos.do_move(pv[idx], *st++);
+      pos.do_move(pv[idx], state[idx]);
   }
 
-  while (idx) pos.undo_move(pv[--idx]);
+  if (pv.size() == 1)
+      pos.undo_move(pv[0]);
 }
 
 
