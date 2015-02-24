@@ -34,9 +34,28 @@
 
 using std::string;
 
+Value PawnValueMg   = Value(198);
+Value KnightValueMg = Value(817);
+Value BishopValueMg = Value(836);
+Value RookValueMg   = Value(1270);
+Value QueenValueMg  = Value(2521);
+
+Value PawnValuePh   = Value(198);
+Value KnightValuePh = Value(817);
+Value BishopValuePh = Value(836);
+Value RookValuePh   = Value(1270);
+Value QueenValuePh  = Value(2521);
+
+Value MidgameLimit  = Value(15581);
+Value EndgameLimit  = Value(3998);
+
+
 Value PieceValue[PHASE_NB][PIECE_NB] = {
 { VALUE_ZERO, PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg },
 { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg } };
+
+Value PiecePhaseValue[PIECE_NB] = {
+  VALUE_ZERO, PawnValuePh, KnightValuePh, BishopValuePh, RookValuePh, QueenValuePh };
 
 namespace Zobrist {
 
@@ -128,6 +147,45 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
   return os;
 }
 
+inline Value rescale_option(int x, int y)
+{
+    const int min = 70 * y / 100;
+    const int max = 130 * y / 100;
+
+    return Value(min + (x * (max - min) + 50) / 100);
+}
+
+void Position::init2() {
+
+    PawnValueMg   = rescale_option(Options["Pm"], 198);
+    KnightValueMg = rescale_option(Options["Km"], 817);
+    BishopValueMg = rescale_option(Options["Bm"], 836);
+    RookValueMg   = rescale_option(Options["Rm"], 1270);
+    QueenValueMg  = rescale_option(Options["Qm"], 2521);
+
+    PawnValuePh   = rescale_option(Options["Pp"], 198);
+    KnightValuePh = rescale_option(Options["Kp"], 817);
+    BishopValuePh = rescale_option(Options["Bp"], 836);
+    RookValuePh   = rescale_option(Options["Rp"], 1270);
+    QueenValuePh  = rescale_option(Options["Qp"], 2521);
+
+    MidgameLimit  = rescale_option(Options["Ml"], 15581);
+    EndgameLimit  = rescale_option(Options["El"], 3998);
+
+
+    PieceValue[MG][W_PAWN]    = PieceValue[MG][B_PAWN]    = PawnValueMg;
+    PieceValue[MG][W_KNIGHT]  = PieceValue[MG][B_KNIGHT]  = KnightValueMg;
+    PieceValue[MG][W_BISHOP]  = PieceValue[MG][B_BISHOP]  = BishopValueMg;
+    PieceValue[MG][W_ROOK]    = PieceValue[MG][B_ROOK]    = RookValueMg;
+    PieceValue[MG][W_QUEEN]   = PieceValue[MG][B_QUEEN]   = QueenValueMg;
+
+    PiecePhaseValue[W_PAWN]   = PiecePhaseValue[B_PAWN]   = PawnValuePh;
+    PiecePhaseValue[W_KNIGHT] = PiecePhaseValue[B_KNIGHT] = KnightValuePh;
+    PiecePhaseValue[W_BISHOP] = PiecePhaseValue[B_BISHOP] = BishopValuePh;
+    PiecePhaseValue[W_ROOK]   = PiecePhaseValue[B_ROOK]   = RookValuePh;
+    PiecePhaseValue[W_QUEEN]  = PiecePhaseValue[B_QUEEN]  = QueenValuePh;
+}
+
 
 /// Position::init() initializes at startup the various arrays used to compute
 /// hash keys and the piece square tables. The latter is a two-step operation:
@@ -136,6 +194,9 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
 /// changing the sign of the white scores.
 
 void Position::init() {
+
+
+  Position::init2();
 
   PRNG rng(1070372);
 
@@ -164,6 +225,7 @@ void Position::init() {
   {
       PieceValue[MG][make_piece(BLACK, pt)] = PieceValue[MG][pt];
       PieceValue[EG][make_piece(BLACK, pt)] = PieceValue[EG][pt];
+      PiecePhaseValue[make_piece(BLACK, pt)] = PiecePhaseValue[pt];
 
       Score v = make_score(PieceValue[MG][pt], PieceValue[EG][pt]);
 
@@ -363,6 +425,7 @@ void Position::set_state(StateInfo* si) const {
 
   si->key = si->pawnKey = si->materialKey = 0;
   si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
+  si->nonPawnPhase[WHITE]    = si->nonPawnPhase[BLACK]    = VALUE_ZERO;
   si->psq = SCORE_ZERO;
 
   si->checkersBB = attackers_to(king_square(sideToMove)) & pieces(~sideToMove);
@@ -396,7 +459,10 @@ void Position::set_state(StateInfo* si) const {
 
   for (Color c = WHITE; c <= BLACK; ++c)
       for (PieceType pt = KNIGHT; pt <= QUEEN; ++pt)
+      {
           si->nonPawnMaterial[c] += pieceCount[c][pt] * PieceValue[MG][pt];
+          si->nonPawnPhase[c]    += pieceCount[c][pt] * PiecePhaseValue[pt];
+      }
 }
 
 
@@ -455,7 +521,7 @@ const string Position::fen() const {
 
 Phase Position::game_phase() const {
 
-  Value npm = st->nonPawnMaterial[WHITE] + st->nonPawnMaterial[BLACK];
+  Value npm = st->nonPawnPhase[WHITE] + st->nonPawnPhase[BLACK];
 
   npm = std::max(EndgameLimit, std::min(npm, MidgameLimit));
 
@@ -766,7 +832,10 @@ void Position::do_move(Move m, StateInfo& newSt, bool moveIsCheck) {
           st->pawnKey ^= Zobrist::psq[them][PAWN][capsq];
       }
       else
+      {
           st->nonPawnMaterial[them] -= PieceValue[MG][captured];
+          st->nonPawnPhase[them]    -= PiecePhaseValue[captured];
+      }
 
       // Update board and piece lists
       remove_piece(capsq, them, captured);
@@ -837,6 +906,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool moveIsCheck) {
 
           // Update material
           st->nonPawnMaterial[us] += PieceValue[MG][promotion];
+          st->nonPawnPhase[us]    += PiecePhaseValue[promotion];
       }
 
       // Update pawn hash key and prefetch access to pawnsTable
@@ -1213,6 +1283,8 @@ bool Position::pos_is_ok(int* step) const {
           || st->materialKey != si.materialKey
           || st->nonPawnMaterial[WHITE] != si.nonPawnMaterial[WHITE]
           || st->nonPawnMaterial[BLACK] != si.nonPawnMaterial[BLACK]
+          || st->nonPawnPhase[WHITE] != si.nonPawnPhase[WHITE]
+          || st->nonPawnPhase[BLACK] != si.nonPawnPhase[BLACK]
           || st->psq != si.psq
           || st->checkersBB != si.checkersBB)
           return false;
