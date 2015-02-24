@@ -34,13 +34,11 @@
 
 using std::string;
 
-Value PawnValueMg   = Value(198);
 Value KnightValueMg = Value(817);
 Value BishopValueMg = Value(836);
 Value RookValueMg   = Value(1270);
 Value QueenValueMg  = Value(2521);
 
-Value PawnValuePh   = Value(198);
 Value KnightValuePh = Value(817);
 Value BishopValuePh = Value(836);
 Value RookValuePh   = Value(1270);
@@ -55,7 +53,7 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
 { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg } };
 
 Value PiecePhaseValue[PIECE_NB] = {
-  VALUE_ZERO, PawnValuePh, KnightValuePh, BishopValuePh, RookValuePh, QueenValuePh };
+  VALUE_ZERO, VALUE_ZERO, KnightValuePh, BishopValuePh, RookValuePh, QueenValuePh };
 
 namespace Zobrist {
 
@@ -157,13 +155,11 @@ inline Value rescale_option(int x, int y)
 
 void Position::init2() {
 
-    PawnValueMg   = rescale_option(Options["Pm"], 198);
     KnightValueMg = rescale_option(Options["Km"], 817);
     BishopValueMg = rescale_option(Options["Bm"], 836);
     RookValueMg   = rescale_option(Options["Rm"], 1270);
     QueenValueMg  = rescale_option(Options["Qm"], 2521);
 
-    PawnValuePh   = rescale_option(Options["Pp"], 198);
     KnightValuePh = rescale_option(Options["Kp"], 817);
     BishopValuePh = rescale_option(Options["Bp"], 836);
     RookValuePh   = rescale_option(Options["Rp"], 1270);
@@ -173,13 +169,11 @@ void Position::init2() {
     EndgameLimit  = rescale_option(Options["El"], 3998);
 
 
-    PieceValue[MG][W_PAWN]    = PieceValue[MG][B_PAWN]    = PawnValueMg;
     PieceValue[MG][W_KNIGHT]  = PieceValue[MG][B_KNIGHT]  = KnightValueMg;
     PieceValue[MG][W_BISHOP]  = PieceValue[MG][B_BISHOP]  = BishopValueMg;
     PieceValue[MG][W_ROOK]    = PieceValue[MG][B_ROOK]    = RookValueMg;
     PieceValue[MG][W_QUEEN]   = PieceValue[MG][B_QUEEN]   = QueenValueMg;
 
-    PiecePhaseValue[W_PAWN]   = PiecePhaseValue[B_PAWN]   = PawnValuePh;
     PiecePhaseValue[W_KNIGHT] = PiecePhaseValue[B_KNIGHT] = KnightValuePh;
     PiecePhaseValue[W_BISHOP] = PiecePhaseValue[B_BISHOP] = BishopValuePh;
     PiecePhaseValue[W_ROOK]   = PiecePhaseValue[B_ROOK]   = RookValuePh;

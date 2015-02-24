@@ -185,13 +185,12 @@ enum Value {
   VALUE_ENSURE_INTEGER_SIZE_P = INT_MAX,
   VALUE_ENSURE_INTEGER_SIZE_N = INT_MIN,
 
-  /*PawnValueMg   = 198,*/   PawnValueEg   = 258,
+  PawnValueMg     = 198,     PawnValueEg   = 258,
   /*KnightValueMg = 817,*/   KnightValueEg = 846,
   /*BishopValueMg = 836,*/   BishopValueEg = 857,
   /*RookValueMg   = 1270,*/  RookValueEg   = 1278,
   /*QueenValueMg  = 2521,*/  QueenValueEg  = 2558
 
-  //PawnValuePh   = 198,
   //KnightValuePh = 817,
   //BishopValuePh = 836,
   //RookValuePh   = 1270,
@@ -199,13 +198,11 @@ enum Value {
   //MidgameLimit  = 15581, EndgameLimit  = 3998
 };
 
-extern Value PawnValueMg;
 extern Value KnightValueMg;
 extern Value BishopValueMg;
 extern Value RookValueMg;
 extern Value QueenValueMg;
 
-extern Value PawnValuePh;
 extern Value KnightValuePh;
 extern Value BishopValuePh;
 extern Value RookValuePh;
