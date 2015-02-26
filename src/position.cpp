@@ -38,6 +38,9 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
 { VALUE_ZERO, PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg },
 { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg } };
 
+const Value PiecePhaseValue[PIECE_TYPE_NB] = {
+  VALUE_ZERO, VALUE_ZERO,  KnightValuePh, BishopValuePh, RookValuePh, QueenValuePh, VALUE_ZERO, VALUE_ZERO };
+
 namespace Zobrist {
 
   Key psq[COLOR_NB][PIECE_TYPE_NB][SQUARE_NB];
@@ -362,7 +365,7 @@ void Position::set_castling_right(Color c, Square rfrom) {
 void Position::set_state(StateInfo* si) const {
 
   si->key = si->pawnKey = si->materialKey = 0;
-  si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
+  si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = si->nonPawnPhase = VALUE_ZERO;
   si->psq = SCORE_ZERO;
 
   si->checkersBB = attackers_to(king_square(sideToMove)) & pieces(~sideToMove);
@@ -396,7 +399,10 @@ void Position::set_state(StateInfo* si) const {
 
   for (Color c = WHITE; c <= BLACK; ++c)
       for (PieceType pt = KNIGHT; pt <= QUEEN; ++pt)
+      {
           si->nonPawnMaterial[c] += pieceCount[c][pt] * PieceValue[MG][pt];
+          si->nonPawnPhase       += pieceCount[c][pt] * PiecePhaseValue[pt];
+      }
 }
 
 
@@ -455,9 +461,7 @@ const string Position::fen() const {
 
 Phase Position::game_phase() const {
 
-  Value npm = st->nonPawnMaterial[WHITE] + st->nonPawnMaterial[BLACK];
-
-  npm = std::max(EndgameLimit, std::min(npm, MidgameLimit));
+  Value npm = std::max(EndgameLimit, std::min(st->nonPawnPhase, MidgameLimit));
 
   return Phase(((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit));
 }
@@ -766,7 +770,10 @@ void Position::do_move(Move m, StateInfo& newSt, bool moveIsCheck) {
           st->pawnKey ^= Zobrist::psq[them][PAWN][capsq];
       }
       else
+      {
           st->nonPawnMaterial[them] -= PieceValue[MG][captured];
+          st->nonPawnPhase          -= PiecePhaseValue[captured];
+      }
 
       // Update board and piece lists
       remove_piece(capsq, them, captured);
@@ -837,6 +844,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool moveIsCheck) {
 
           // Update material
           st->nonPawnMaterial[us] += PieceValue[MG][promotion];
+          st->nonPawnPhase        += PiecePhaseValue[promotion];
       }
 
       // Update pawn hash key and prefetch access to pawnsTable
@@ -1213,6 +1221,7 @@ bool Position::pos_is_ok(int* step) const {
           || st->materialKey != si.materialKey
           || st->nonPawnMaterial[WHITE] != si.nonPawnMaterial[WHITE]
           || st->nonPawnMaterial[BLACK] != si.nonPawnMaterial[BLACK]
+          || st->nonPawnPhase != si.nonPawnPhase
           || st->psq != si.psq
           || st->checkersBB != si.checkersBB)
           return false;
