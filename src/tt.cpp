@@ -73,8 +73,8 @@ void TranspositionTable::clear() {
 TTEntry* TranspositionTable::probe(const Key key, bool& found, Value& flipEval) const {
 
   TTEntry* const tte = first_entry(key);
-    const uint16_t key16 = key >> 48, flipKey16 = key16 ^ (1<<15);  // Use the high 16 bits as key inside the cluster
-    flipEval = VALUE_NONE;
+  const uint16_t key16 = key >> 48, flipKey16 = key16 ^ (1<<15);  // Use the high 16 bits as key inside the cluster
+  flipEval = VALUE_NONE;
 
   for (int i = 0; i < ClusterSize; ++i)
       if (!tte[i].key16 || tte[i].key16 == key16)
@@ -85,7 +85,10 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found, Value& flipEval) 
           return found = (bool)tte[i].key16, &tte[i];
       }
       else if (tte[i].key16 == flipKey16)
+      {
           flipEval = tte[i].eval();
+          tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+      }
 
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
