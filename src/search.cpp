@@ -279,6 +279,8 @@ namespace {
     Stack stack[MAX_PLY+4], *ss = stack+2; // To allow referencing (ss-2) and (ss+2)
     Depth depth;
     Value bestValue, alpha, beta, delta;
+    int hashFull = 0;
+    TimePoint hashTime = now();
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -287,7 +289,7 @@ namespace {
     bestValue = delta = alpha = -VALUE_INFINITE;
     beta = VALUE_INFINITE;
 
-    TT.new_search();
+    TT.new_generation();
     History.clear();
     Gains.clear();
     Countermoves.clear();
@@ -351,12 +353,21 @@ namespace {
                 if (Signals.stop)
                     break;
 
+                // hash update
+                if (now() - hashTime > 250)
+                {
+                    hashTime = now();
+                    hashFull = TT.hashfull();
+                    if (hashFull > 800)
+                        TT.new_generation();
+                }
+
                 // When failing high/low give some update (without cluttering
                 // the UI) before a re-search.
                 if (   multiPV == 1
                     && (bestValue <= alpha || bestValue >= beta)
                     && now() - SearchTime > 3000)
-                    sync_cout << UCI::pv(pos, depth, alpha, beta) << sync_endl;
+                    sync_cout << UCI::pv(pos, depth, alpha, beta, hashFull) << sync_endl;
 
                 // In case of failing low/high increase aspiration window and
                 // re-search, otherwise exit the loop.
@@ -389,7 +400,7 @@ namespace {
                           << " time " << now() - SearchTime << sync_endl;
 
             else if (PVIdx + 1 == multiPV || now() - SearchTime > 3000)
-                sync_cout << UCI::pv(pos, depth, alpha, beta) << sync_endl;
+                sync_cout << UCI::pv(pos, depth, alpha, beta, hashFull) << sync_endl;
         }
 
         // If skill level is enabled and time is up, pick a sub-optimal best move
@@ -1404,7 +1415,7 @@ moves_loop: // When in check and at SpNode search starts from here
 /// UCI::pv() formats PV information according to the UCI protocol. UCI requires
 /// that all (if any) unsearched PV lines are sent using a previous search score.
 
-string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
+  string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta, int hashfull) {
 
   std::stringstream ss;
   TimePoint elapsed = now() - SearchTime + 1;
@@ -1441,12 +1452,9 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
           ss << (v >= beta ? " lowerbound" : v <= alpha ? " upperbound" : "");
 
       ss << " nodes "    << pos.nodes_searched()
-         << " nps "      << pos.nodes_searched() * 1000 / elapsed;
-
-      if (elapsed > 1000) // Earlier makes little sense
-          ss << " hashfull " << TT.hashfull();
-
-      ss << " tbhits "   << TB::Hits
+         << " nps "      << pos.nodes_searched() * 1000 / elapsed
+         << " hashfull " << hashfull
+         << " tbhits "   << TB::Hits
          << " time "     << elapsed
          << " pv";
 

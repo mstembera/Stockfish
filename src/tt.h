@@ -85,7 +85,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { free(mem); }
-  void new_search() { generation8 += 4; } // Lower 2 bits are used by Bound
+  void new_generation() { generation8 += 4; } // Lower 2 bits are used by Bound
   uint8_t generation() const { return generation8; }
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
