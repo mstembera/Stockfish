@@ -455,7 +455,7 @@ namespace {
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth, predictedDepth;
-    Value bestValue, value, ttValue, eval, nullValue, futilityValue;
+    Value bestValue, value, ttValue, eval, nullValue, futilityValue, flipEval;
     bool ttHit, inCheck, givesCheck, singularExtensionNode, improving;
     bool captureOrPromotion, dangerous, doFullDepthSearch;
     int moveCount, quietCount;
@@ -516,7 +516,7 @@ namespace {
     // TT value, so we use a different position key in case of an excluded move.
     excludedMove = ss->excludedMove;
     posKey = excludedMove ? pos.exclusion_key() : pos.key();
-    tte = TT.probe(posKey, ttHit);
+    tte = TT.probe(posKey, ttHit, flipEval);
     ss->ttMove = ttMove = RootNode ? RootMoves[PVIdx].pv[0] : ttHit ? tte->move() : MOVE_NONE;
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
 
@@ -584,6 +584,10 @@ namespace {
         if (ttValue != VALUE_NONE)
             if (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER))
                 eval = ttValue;
+    }
+    else if (flipEval != VALUE_NONE)
+    {
+		eval = ss->staticEval = -flipEval + 2 * Eval::Tempo;
     }
     else
     {
@@ -712,7 +716,7 @@ namespace {
         search<PvNode ? PV : NonPV, false>(pos, ss, alpha, beta, d / 2, true);
         ss->skipEarlyPruning = false;
 
-        tte = TT.probe(posKey, ttHit);
+        tte = TT.probe(posKey, ttHit, flipEval);
         ttMove = ttHit ? tte->move() : MOVE_NONE;
     }
 
@@ -1106,7 +1110,7 @@ moves_loop: // When in check and at SpNode search starts from here
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, bestMove;
-    Value bestValue, value, ttValue, futilityValue, futilityBase, oldAlpha;
+    Value bestValue, value, ttValue, futilityValue, futilityBase, oldAlpha, flipEval;
     bool ttHit, givesCheck, evasionPrunable;
     Depth ttDepth;
 
@@ -1134,7 +1138,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
     // Transposition table lookup
     posKey = pos.key();
-    tte = TT.probe(posKey, ttHit);
+    tte = TT.probe(posKey, ttHit, flipEval);
     ttMove = ttHit ? tte->move() : MOVE_NONE;
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
 
@@ -1167,6 +1171,10 @@ moves_loop: // When in check and at SpNode search starts from here
             if (ttValue != VALUE_NONE)
                 if (tte->bound() & (ttValue > bestValue ? BOUND_LOWER : BOUND_UPPER))
                     bestValue = ttValue;
+        }
+        else if (flipEval != VALUE_NONE)
+        {
+            ss->staticEval = bestValue = -flipEval + 2 * Eval::Tempo;
         }
         else
             ss->staticEval = bestValue =
@@ -1471,7 +1479,8 @@ void RootMove::insert_pv_in_tt(Position& pos) {
   {
       assert(MoveList<LEGAL>(pos).contains(m));
 
-      TTEntry* tte = TT.probe(pos.key(), ttHit);
+      Value flipEval;
+      TTEntry* tte = TT.probe(pos.key(), ttHit, flipEval);
 
       if (!ttHit || tte->move() != m) // Don't overwrite correct entries
           tte->save(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, m, VALUE_NONE, TT.generation());
@@ -1497,7 +1506,8 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     assert(pv.size() == 1);
 
     pos.do_move(pv[0], st, pos.gives_check(pv[0], CheckInfo(pos)));
-    TTEntry* tte = TT.probe(pos.key(), ttHit);
+    Value flipEval;
+    TTEntry* tte = TT.probe(pos.key(), ttHit, flipEval);
     pos.undo_move(pv[0]);
 
     if (ttHit)
