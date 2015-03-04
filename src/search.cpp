@@ -280,7 +280,7 @@ namespace {
     Depth depth;
     Value bestValue, alpha, beta, delta;
     int hashFull = 0;
-    TimePoint hashTime = now();
+    size_t hashUpdateNodes = 0;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -353,10 +353,10 @@ namespace {
                 if (Signals.stop)
                     break;
 
-                // hash update
-                if (now() - hashTime > 250)
+                // Update hash when we searched at least an additional 10% of capacity.
+                if (10 * (pos.nodes_searched() - hashUpdateNodes) > TT.entry_count())
                 {
-                    hashTime = now();
+                    hashUpdateNodes = pos.nodes_searched();
                     hashFull = TT.hashfull();
                     if (hashFull > 800)
                         TT.new_generation();

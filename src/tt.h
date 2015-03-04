@@ -90,6 +90,7 @@ public:
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
   void resize(size_t mbSize);
+  size_t entry_count() const { return ClusterSize * clusterCount; }
   void clear();
 
   // The lowest order bits of the key are used to get the index of the cluster
