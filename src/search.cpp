@@ -1415,7 +1415,7 @@ moves_loop: // When in check and at SpNode search starts from here
 /// UCI::pv() formats PV information according to the UCI protocol. UCI requires
 /// that all (if any) unsearched PV lines are sent using a previous search score.
 
-  string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta, int hashfull) {
+string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta, int hashfull) {
 
   std::stringstream ss;
   TimePoint elapsed = now() - SearchTime + 1;
