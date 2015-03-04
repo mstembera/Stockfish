@@ -280,7 +280,7 @@ namespace {
     Depth depth;
     Value bestValue, alpha, beta, delta;
     int hashFull = 0;
-    size_t hashUpdateNodes = 0;
+    uint64_t hashUpdateNodes = 0;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
