@@ -23,11 +23,14 @@
 /// The TimeManager class computes the optimal time to think depending on the
 /// maximum available time, the game move number and other parameters.
 
+extern double tm1;
+extern double tm2;
+
 class TimeManager {
 public:
   void init(const Search::LimitsType& limits, Color us, int ply);
-  void pv_instability(double bestMoveChanges) { unstablePvFactor = 1 + bestMoveChanges; }
-  int available_time() const { return int(optimumSearchTime * unstablePvFactor * 0.76); }
+  void pv_instability(double bestMoveChanges) { unstablePvFactor = 1 + bestMoveChanges * tm1; }
+  int available_time() const { return int(optimumSearchTime * unstablePvFactor * tm2); }
   int maximum_time() const { return maximumSearchTime; }
 
 private:

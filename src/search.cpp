@@ -181,6 +181,16 @@ void Search::init() {
   }
 }
 
+double tm1 = 1.0;
+double tm2 = 0.76;
+double tm3 = 0.5;
+
+void Search::init_params() {
+
+    tm1 = Options["tm1"] / 20.0;  //.2 to 5.0
+    tm2 = Options["tm2"] / 50.0;  //.2 to 2.0
+    tm3 = Options["tm3"] / 100.0; //.1 to 1.0
+}
 
 /// Search::perft() is our utility to verify move generation. All the leaf nodes
 /// up to the given depth are generated and counted and the sum returned.
@@ -352,7 +362,7 @@ namespace {
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
     {
         // Age out PV variability metric
-        BestMoveChanges *= 0.5;
+        BestMoveChanges *= tm3;
 
         // Save the last iteration's scores before first PV line is searched and
         // all the move scores except the (new) PV are set to -VALUE_INFINITE.

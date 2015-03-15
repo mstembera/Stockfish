@@ -109,6 +109,7 @@ void init();
 void think();
 template<bool Root> uint64_t perft(Position& pos, Depth depth);
 
+void init_params();
 } // namespace Search
 
 #endif // #ifndef SEARCH_H_INCLUDED
