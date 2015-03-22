@@ -26,8 +26,8 @@
 class TimeManager {
 public:
   void init(const Search::LimitsType& limits, Color us, int ply);
-  void pv_instability(double bestMoveChanges) { unstablePvFactor = 1 + bestMoveChanges * 1.8; }
-  int available_time() const { return int(optimumSearchTime * unstablePvFactor * 0.72); }
+  void pv_instability(double bestMoveChanges) { unstablePvFactor = 1 + bestMoveChanges * 0.7; }
+  int available_time() const { return int(optimumSearchTime * unstablePvFactor * 0.76); }
   int maximum_time() const { return maximumSearchTime; }
 
 private:
