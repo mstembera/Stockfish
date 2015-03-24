@@ -26,7 +26,7 @@
 class TimeManager {
 public:
   void init(const Search::LimitsType& limits, Color us, int ply);
-  void search_adjust(double delta) { searchFactor = 1 + delta; }
+  void search_factor(double delta) { searchFactor = 1 + delta; }
   int available_time() const { return int(optimumSearchTime * searchFactor * 0.76); }
   int maximum_time() const { return maximumSearchTime; }
 
