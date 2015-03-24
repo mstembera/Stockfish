@@ -460,7 +460,7 @@ namespace {
             {
                 // Take some extra time if the best move has changed
                 if (depth > 4 * ONE_PLY && multiPV == 1)
-                    TimeMgr.search_adjust(BestMoveChanges + failHLTime);
+                    TimeMgr.search_factor(BestMoveChanges + failHLTime);
 
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
