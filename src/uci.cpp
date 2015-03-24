@@ -179,7 +179,7 @@ void UCI::loop(int argc, char* argv[]) {
                     << "\nuciok"  << sync_endl;
 
       else if (token == "isready")    sync_cout << "readyok" << sync_endl;
-      else if (token == "ucinewgame") TT.clear();
+      else if (token == "ucinewgame") { TT.clear(); Position::init(); }
       else if (token == "go")         go(pos, is);
       else if (token == "position")   position(pos, is);
       else if (token == "setoption")  setoption(is);

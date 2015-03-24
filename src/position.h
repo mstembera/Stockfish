@@ -54,6 +54,7 @@ struct StateInfo {
   Key    pawnKey;
   Key    materialKey;
   Value  nonPawnMaterial[COLOR_NB];
+  Value  phaseValue;
   int    castlingRights;
   int    rule50;
   int    pliesFromNull;
@@ -79,6 +80,7 @@ class Position {
 
 public:
   static void init();
+  static void init2();
 
   Position() = default; // To define the global object RootPos
   Position(const Position&) = delete;
