@@ -356,7 +356,7 @@ namespace {
     {
         // Age out PV variability metric
         BestMoveChanges *= 0.5;
-		double failHLTime = 0;
+        double failHLTime = 0;
 
         // Save the last iteration's scores before first PV line is searched and
         // all the move scores except the (new) PV are set to -VALUE_INFINITE.
@@ -416,13 +416,13 @@ namespace {
 
                     Signals.failedLowAtRoot = true;
                     Signals.stopOnPonderhit = false;
-					failHLTime = -0.2;
+                    failHLTime = -0.2;
                 }
                 else if (bestValue >= beta)
                 {
                     alpha = (alpha + beta) / 2;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
-					failHLTime = -0.2;
+                    failHLTime = -0.2;
                 }
                 else
                     break;
