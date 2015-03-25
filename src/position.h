@@ -54,6 +54,7 @@ struct StateInfo {
   Key    pawnKey;
   Key    materialKey;
   Value  nonPawnMaterial[COLOR_NB];
+  Value  phaseValue;
   int    castlingRights;
   int    rule50;
   int    pliesFromNull;

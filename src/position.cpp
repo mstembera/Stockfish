@@ -38,6 +38,9 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
 { VALUE_ZERO, PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg },
 { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg } };
 
+const Value PhaseValue[PIECE_TYPE_NB] = {
+  VALUE_ZERO, PawnValuePh, KnightValuePh, BishopValuePh, RookValuePh, QueenValuePh, VALUE_ZERO, VALUE_ZERO };
+
 namespace Zobrist {
 
   Key psq[COLOR_NB][PIECE_TYPE_NB][SQUARE_NB];
@@ -362,7 +365,7 @@ void Position::set_castling_right(Color c, Square rfrom) {
 void Position::set_state(StateInfo* si) const {
 
   si->key = si->pawnKey = si->materialKey = 0;
-  si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
+  si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = si->phaseValue = VALUE_ZERO;
   si->psq = SCORE_ZERO;
 
   si->checkersBB = attackers_to(king_square(sideToMove)) & pieces(~sideToMove);
@@ -397,6 +400,10 @@ void Position::set_state(StateInfo* si) const {
   for (Color c = WHITE; c <= BLACK; ++c)
       for (PieceType pt = KNIGHT; pt <= QUEEN; ++pt)
           si->nonPawnMaterial[c] += pieceCount[c][pt] * PieceValue[MG][pt];
+
+  for (Color c = WHITE; c <= BLACK; ++c)
+      for (PieceType pt = PAWN; pt <= QUEEN; ++pt)
+          si->phaseValue += pieceCount[c][pt] * PhaseValue[pt];
 }
 
 
@@ -455,9 +462,7 @@ const string Position::fen() const {
 
 Phase Position::game_phase() const {
 
-  Value npm = st->nonPawnMaterial[WHITE] + st->nonPawnMaterial[BLACK];
-
-  npm = std::max(EndgameLimit, std::min(npm, MidgameLimit));
+  Value npm = std::max(EndgameLimit, std::min(st->phaseValue, MidgameLimit));
 
   return Phase(((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit));
 }
@@ -754,6 +759,8 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
       else
           st->nonPawnMaterial[them] -= PieceValue[MG][captured];
 
+      st->phaseValue -= PhaseValue[captured];
+
       // Update board and piece lists
       remove_piece(them, captured, capsq);
 
@@ -801,7 +808,6 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
           st->epSquare = (from + to) / 2;
           k ^= Zobrist::enpassant[file_of(st->epSquare)];
       }
-
       else if (type_of(m) == PROMOTION)
       {
           PieceType promotion = promotion_type(m);
@@ -823,6 +829,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 
           // Update material
           st->nonPawnMaterial[us] += PieceValue[MG][promotion];
+          st->phaseValue          += PhaseValue[promotion] - PhaseValue[PAWN];
       }
 
       // Update pawn hash key and prefetch access to pawnsTable

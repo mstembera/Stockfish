@@ -191,13 +191,13 @@ enum Value : int {
   VALUE_MATE_IN_MAX_PLY  =  VALUE_MATE - 2 * MAX_PLY,
   VALUE_MATED_IN_MAX_PLY = -VALUE_MATE + 2 * MAX_PLY,
 
-  PawnValueMg   = 198,   PawnValueEg   = 258,
-  KnightValueMg = 817,   KnightValueEg = 846,
-  BishopValueMg = 836,   BishopValueEg = 857,
-  RookValueMg   = 1270,  RookValueEg   = 1278,
-  QueenValueMg  = 2521,  QueenValueEg  = 2558,
+  PawnValueMg   = 200,   PawnValueEg   = 252,   PawnValuePh   = 9,
+  KnightValueMg = 835,   KnightValueEg = 859,   KnightValuePh = 826,
+  BishopValueMg = 869,   BishopValueEg = 871,   BishopValuePh = 801,
+  RookValueMg   = 1231,  RookValueEg   = 1341,  RookValuePh   = 1254,
+  QueenValueMg  = 2498,  QueenValueEg  = 2666,  QueenValuePh  = 2581,
 
-  MidgameLimit  = 15581, EndgameLimit  = 3998
+  MidgameLimit  = 16794, EndgameLimit  = 3484
 };
 
 enum PieceType {
