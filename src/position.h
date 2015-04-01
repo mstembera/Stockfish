@@ -80,7 +80,7 @@ class Position {
 public:
   static void init();
 
-  Position() = default; // To define the global object RootPos
+  Position() { st = &startState; } // To define the global object RootPos
   Position(const Position&) = delete;
   Position(const Position& pos, Thread* th) { *this = pos; thisThread = th; }
   Position(const std::string& f, bool c960, Thread* th) { set(f, c960, th); }
@@ -166,6 +166,7 @@ public:
   int rule50_count() const;
   Score psq_score() const;
   Value non_pawn_material(Color c) const;
+  bool is_reachable(const Position& destPos) const;
 
   // Position consistency check, for debugging
   bool pos_is_ok(int* failedStep = nullptr) const;

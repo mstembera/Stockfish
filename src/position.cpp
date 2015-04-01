@@ -1099,6 +1099,16 @@ bool Position::is_draw() const {
 }
 
 
+/// Position::is_reachable() returns true if the destination position is
+/// theoretically reachable from this position. (False negatives are possible.)
+
+bool Position::is_reachable(const Position& destPos) const
+{
+    return material_key()     == destPos.material_key()
+        && pawn_key()         == destPos.pawn_key()
+        && st->castlingRights == destPos.st->castlingRights;
+}
+
 /// Position::flip() flips position with the white and black sides reversed. This
 /// is only useful for debugging e.g. for finding evaluation symmetry bugs.
 

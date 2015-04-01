@@ -334,7 +334,11 @@ namespace {
     bestValue = delta = alpha = -VALUE_INFINITE;
     beta = VALUE_INFINITE;
 
-    TT.new_search();
+    static Position previousPos;
+    if (!pos.is_reachable(previousPos))
+        TT.new_search();
+    previousPos = pos;
+
     History.clear();
     CounterMovesHistory.clear();
     Gains.clear();
