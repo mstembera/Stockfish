@@ -23,6 +23,8 @@
 #include "movepick.h"
 #include "thread.h"
 
+int w0 = 50;
+
 namespace {
 
   enum Stages {
@@ -166,8 +168,8 @@ void MovePicker::score<QUIETS>() {
   const HistoryStats& cmh = counterMovesHistory[pos.piece_on(prevSq)][prevSq];
 
   for (auto& m : *this)
-      m.value =  history[pos.moved_piece(m)][to_sq(m)]
-               + cmh[pos.moved_piece(m)][to_sq(m)];
+      m.value =  history[pos.moved_piece(m)][to_sq(m)] * w0
+               + cmh[pos.moved_piece(m)][to_sq(m)] * (100 - w0);
 }
 
 template<>
@@ -353,3 +355,9 @@ Move MovePicker::next_move<false>() {
 /// safe so must be lock protected by the caller.
 template<>
 Move MovePicker::next_move<true>() { return ss->splitPoint->movePicker->next_move<false>(); }
+
+#include "uci.h"
+void MovePicker::init()
+{
+    w0 = Options["w0"];
+}

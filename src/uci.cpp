@@ -29,6 +29,7 @@
 #include "timeman.h"
 #include "tt.h"
 #include "uci.h"
+#include "movepick.h"
 
 using namespace std;
 
@@ -183,6 +184,7 @@ void UCI::loop(int argc, char* argv[]) {
       {
           TT.clear();
           Time.availableNodes = 0;
+          MovePicker::init();
       }
       else if (token == "isready")    sync_cout << "readyok" << sync_endl;
       else if (token == "go")         go(pos, is);

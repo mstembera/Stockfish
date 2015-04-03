@@ -89,6 +89,8 @@ public:
 
   template<bool SpNode> Move next_move();
 
+  static void init();
+
 private:
   template<GenType> void score();
   void generate_next_stage();
