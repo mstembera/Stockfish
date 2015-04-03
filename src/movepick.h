@@ -90,6 +90,7 @@ public:
   template<bool SpNode> Move next_move();
 
   static void init();
+  static void init(int  o);
 
 private:
   template<GenType> void score();

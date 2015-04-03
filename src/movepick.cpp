@@ -23,7 +23,7 @@
 #include "movepick.h"
 #include "thread.h"
 
-int w0 = 50;
+int w0 = 35;
 
 namespace {
 
@@ -360,4 +360,9 @@ Move MovePicker::next_move<true>() { return ss->splitPoint->movePicker->next_mov
 void MovePicker::init()
 {
     w0 = Options["w0"];
+}
+
+void MovePicker::init(int o)
+{
+    w0 = o;
 }
