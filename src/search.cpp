@@ -489,7 +489,7 @@ namespace {
 
     // Clear any candidate easy move that wasn't stable for the last search
     // iterations; the second condition prevents consecutive fast moves.
-    if (EasyMove.stableCnt < 6 || Time.elapsed() < Time.available())
+    if (EasyMove.stableCnt < 6 || Time.elapsed() < 7 * Time.available() / 10)
         EasyMove.clear();
 
     // If skill level is enabled, swap best PV line with the sub-optimal one
