@@ -961,7 +961,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
           if (   (!PvNode && cutNode)
               || (  History[pos.piece_on(to_sq(move))][to_sq(move)]
-                  + CounterMovesHistory[pos.piece_on(prevMoveSq)][prevMoveSq]
+                  + 3 * CounterMovesHistory[pos.piece_on(prevMoveSq)][prevMoveSq]
                                        [pos.piece_on(to_sq(move))][to_sq(move)] < VALUE_ZERO))
               ss->reduction += ONE_PLY;
 
