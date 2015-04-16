@@ -166,8 +166,8 @@ void MovePicker::score<QUIETS>() {
   const HistoryStats& cmh = counterMovesHistory[pos.piece_on(prevSq)][prevSq];
 
   for (auto& m : *this)
-      m.value =  history[pos.moved_piece(m)][to_sq(m)]
-               + cmh[pos.moved_piece(m)][to_sq(m)] * 3;
+      m.value = abs(history[pos.moved_piece(m)][to_sq(m)]) * history[pos.moved_piece(m)][to_sq(m)]
+              + abs(cmh[pos.moved_piece(m)][to_sq(m)]) * cmh[pos.moved_piece(m)][to_sq(m)] * 3;
 }
 
 template<>
