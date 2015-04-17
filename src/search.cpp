@@ -469,7 +469,7 @@ namespace {
                     || Time.elapsed() > Time.available()
                     || (   RootMoves[0].pv[0] == easyMove
                         && BestMoveChanges < 0.03
-                        && Time.elapsed() > Time.available() / 10))
+                        && Time.elapsed() > Time.available() / 6))
                 {
                     // If we are allowed to ponder do not stop the search now but
                     // keep pondering until the GUI sends "ponderhit" or "stop".
