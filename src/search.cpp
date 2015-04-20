@@ -358,7 +358,6 @@ namespace {
     {
         // Age out PV variability metric
         BestMoveChanges = (depth <= 3 * ONE_PLY) ? 0 : BestMoveChanges * 0.5;
-        BestMoveChanges *= 0.5;
 
         // Save the last iteration's scores before first PV line is searched and
         // all the move scores except the (new) PV are set to -VALUE_INFINITE.
