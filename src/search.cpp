@@ -334,7 +334,6 @@ namespace {
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
     depth = DEPTH_ZERO;
-    BestMoveChanges = 0;
     bestValue = delta = alpha = -VALUE_INFINITE;
     beta = VALUE_INFINITE;
 
@@ -358,6 +357,7 @@ namespace {
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
     {
         // Age out PV variability metric
+        BestMoveChanges = (depth <= 3 * ONE_PLY) ? 0 : BestMoveChanges * 0.5;
         BestMoveChanges *= 0.5;
 
         // Save the last iteration's scores before first PV line is searched and
@@ -464,12 +464,15 @@ namespace {
 
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
-                // from the previous search and just did a fast verification.
+                // from the previous search and just did a fast verification
+                // or the best move is 100% stable and we used over 1/2 the time.
                 if (   RootMoves.size() == 1
                     || Time.elapsed() > Time.available()
                     || (   RootMoves[0].pv[0] == easyMove
                         && BestMoveChanges < 0.03
-                        && Time.elapsed() > Time.available() / 10))
+                        && Time.elapsed() > Time.available() / 10)
+                    || (   BestMoveChanges == 0
+                        && Time.elapsed() > Time.available() / 2))
                 {
                     // If we are allowed to ponder do not stop the search now but
                     // keep pondering until the GUI sends "ponderhit" or "stop".
