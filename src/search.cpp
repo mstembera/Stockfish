@@ -180,6 +180,23 @@ void Search::init() {
   }
 }
 
+int w0 = 50;
+double w1 = 0.80;
+
+void Search::init2() {
+
+    w0 = Options["w0"];
+    w1 = (double)Options["w1"] / 100.0;
+}
+
+void Search::set_w0(int o) {
+    w0 = o;
+}
+
+void Search::set_w1(int o) {
+    w1 = (double)o / 100.0;
+}
+
 
 /// Search::perft() is our utility to verify move generation. All the leaf nodes
 /// up to the given depth are generated and counted and the sum returned.
@@ -334,7 +351,6 @@ namespace {
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
     depth = DEPTH_ZERO;
-    BestMoveChanges = 0;
     bestValue = delta = alpha = -VALUE_INFINITE;
     beta = VALUE_INFINITE;
 
@@ -358,7 +374,7 @@ namespace {
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
     {
         // Age out PV variability metric
-        BestMoveChanges *= 0.5;
+        BestMoveChanges = (depth <= 3 * ONE_PLY) ? 0 : BestMoveChanges * 0.5;
 
         // Save the last iteration's scores before first PV line is searched and
         // all the move scores except the (new) PV are set to -VALUE_INFINITE.
@@ -469,7 +485,9 @@ namespace {
                     || Time.elapsed() > Time.available()
                     || (   RootMoves[0].pv[0] == easyMove
                         && BestMoveChanges < 0.03
-                        && Time.elapsed() > Time.available() / 10))
+                        && Time.elapsed() > Time.available() / 10)
+                    || ( BestMoveChanges == 0
+                        && Time.elapsed() > w0 * Time.available() / 100))
                 {
                     // If we are allowed to ponder do not stop the search now but
                     // keep pondering until the GUI sends "ponderhit" or "stop".

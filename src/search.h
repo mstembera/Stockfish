@@ -105,6 +105,9 @@ extern Position RootPos;
 extern StateStackPtr SetupStates;
 
 void init();
+void init2();
+void set_w0(int o);
+void set_w1(int o);
 void think();
 template<bool Root> uint64_t perft(Position& pos, Depth depth);
 
