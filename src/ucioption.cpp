@@ -67,15 +67,15 @@ void init(OptionsMap& o) {
   o["Skill Level"]           << Option(20, 0, 20);
   o["Move Overhead"]         << Option(30, 0, 5000);
   o["Minimum Thinking Time"] << Option(20, 0, 5000);
-  o["Slow Mover"]            << Option(80, 60, 100);
+  o["Slow Mover"]            << Option(82, 60, 100);
   o["nodestime"]             << Option(0, 0, 10000);
   o["UCI_Chess960"]          << Option(false);
   o["SyzygyPath"]            << Option("<empty>", on_tb_path);
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
-  o["w0"]                    << Option(50, 10, 100, on_w0);
-  o["w1"]                    << Option(80, 60, 100, on_w1);
+  o["w0"]                    << Option(55, 10, 100, on_w0);
+  o["w1"]                    << Option(82, 60, 100, on_w1);
 }
 
 

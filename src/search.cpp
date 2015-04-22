@@ -180,8 +180,8 @@ void Search::init() {
   }
 }
 
-int w0 = 50;
-double w1 = 0.80;
+int w0 = 55;
+double w1 = 0.82;
 
 void Search::init2() {
 
