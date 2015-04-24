@@ -471,7 +471,7 @@ namespace {
                         && BestMoveChanges < 0.03
                         && Time.elapsed() > Time.available() / 10)
                     || (   BestMoveChanges == 0
-                        && Time.elapsed() > Time.available() / 2))
+                        && Time.elapsed() > 2 * Time.available() / 3))
                 {
                     // If we are allowed to ponder do not stop the search now but
                     // keep pondering until the GUI sends "ponderhit" or "stop".
