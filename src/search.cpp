@@ -463,8 +463,8 @@ namespace {
 
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
-                // from the previous search and just did a fast verification
-                // or the best move is 100% stable and we used over 1/2 the time.
+                // from the previous search and just did a fast verification or the
+                // best move is 100% stable and we used over 2/3 of available time.
                 if (   RootMoves.size() == 1
                     || Time.elapsed() > Time.available()
                     || (   RootMoves[0].pv[0] == easyMove
