@@ -468,7 +468,11 @@ namespace {
             {
                 // Take some extra time if the best move has changed
                 if (depth > 4 * ONE_PLY && multiPV == 1)
-                    Time.pv_instability(BestMoveChanges);
+                {
+                    // Use up to 20% more time if we are 100 centipawns or more behind.
+                    double dt = (double)(20 * std::max(std::min(-RootMoves[0].score, PawnValueEg), VALUE_ZERO)) / double(100*PawnValueEg);
+                    Time.pv_instability(BestMoveChanges + dt);
+                }
 
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
