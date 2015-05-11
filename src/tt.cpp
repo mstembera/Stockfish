@@ -95,6 +95,22 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   return found = false, replace;
 }
 
+/// Returns the evaluation of a position with the side to move flipped.
+
+Value TranspositionTable::flip_eval(const Key key) const {
+
+    TTEntry* const tte = first_entry(key);
+    const uint16_t key16 = (key >> 48) ^ (1 << 15);  // Use the high 16 bits as key inside the cluster
+
+    for (int i = 0; i < ClusterSize; ++i)
+        if (tte[i].key16 == key16)
+        {
+            tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+            return tte[i].eval();
+        }
+        
+    return VALUE_NONE;
+}
 
 /// Returns an approximation of the hashtable occupation during a search. The
 /// hash is x permill full, as per UCI protocol.

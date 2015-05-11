@@ -153,7 +153,7 @@ void Position::init() {
       }
   }
 
-  Zobrist::side = rng.rand<Key>();
+  Zobrist::side = 1ULL << 63;
   Zobrist::exclusion  = rng.rand<Key>();
 }
 

@@ -661,11 +661,16 @@ namespace {
             if (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER))
                 eval = ttValue;
     }
+    else if ((ss - 1)->currentMove == MOVE_NULL)
+    {
+        eval = ss->staticEval = 2 * Eval::Tempo - (ss - 1)->staticEval;
+        tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval, TT.generation());
+    }
+    else if ((eval = TT.flip_eval(posKey)) != VALUE_NONE)
+        eval = ss->staticEval = 2 * Eval::Tempo - eval;
     else
     {
-        eval = ss->staticEval =
-        (ss-1)->currentMove != MOVE_NULL ? evaluate(pos) : -(ss-1)->staticEval + 2 * Eval::Tempo;
-
+        eval = ss->staticEval = evaluate(pos);
         tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.generation());
     }
 
@@ -1248,9 +1253,12 @@ moves_loop: // When in check and at SpNode search starts from here
                 if (tte->bound() & (ttValue > bestValue ? BOUND_LOWER : BOUND_UPPER))
                     bestValue = ttValue;
         }
+        else if ((ss - 1)->currentMove == MOVE_NULL)
+            ss->staticEval = bestValue = 2 * Eval::Tempo - (ss - 1)->staticEval;
+        else if ((bestValue = TT.flip_eval(posKey)) != VALUE_NONE)
+            ss->staticEval = bestValue = 2 * Eval::Tempo - bestValue;
         else
-            ss->staticEval = bestValue =
-            (ss-1)->currentMove != MOVE_NULL ? evaluate(pos) : -(ss-1)->staticEval + 2 * Eval::Tempo;
+            ss->staticEval = bestValue = evaluate(pos);
 
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)
