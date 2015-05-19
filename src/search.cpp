@@ -350,6 +350,13 @@ namespace {
 
     TT.new_search();
 
+    if (pos.captured_piece_type() >= KNIGHT)
+    {
+        History.clear();
+        CounterMovesHistory.clear();
+        Countermoves.clear();
+    }
+
     size_t multiPV = Options["MultiPV"];
     Skill skill(Options["Skill Level"]);
 
