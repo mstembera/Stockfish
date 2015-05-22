@@ -43,22 +43,43 @@ struct TTEntry {
 
   void save(Key k, Value v, Bound b, Depth d, Move m, Value ev, uint8_t g) {
 
-    // Preserve any existing move for the same position
-    if (m || (k >> 48) != key16)
+    if (key16 != (k >> 48))
+    {
+        key16  = (uint16_t)(k >> 48);
         move16 = (uint16_t)m;
 
-    // Don't overwrite more valuable entries
-    if (  (k >> 48) != key16
-        || d > depth8 - 2
-        || g != (genBound8 & 0xFC)
-        || b == BOUND_EXACT)
-    {
-        key16     = (uint16_t)(k >> 48);
-        value16   = (int16_t)v;
-        eval16    = (int16_t)ev;
-        genBound8 = (uint8_t)(g | b);
-        depth8    = (int8_t)d;
+        if (v != VALUE_NONE)
+        {
+            value16   = (int16_t)v;
+            genBound8 = (uint8_t)(g | b);
+            depth8    = (int8_t)d;
+        }
+        else
+        {
+            // Use eval in place of missing value
+            value16   = (int16_t)ev;
+            genBound8 = (uint8_t)(g | BOUND_EXACT);
+            depth8    = (int8_t)DEPTH_NONE;
+        }
     }
+    else
+    {   // Preserve any existing move for the same position
+        if (m)
+            move16 = (uint16_t)m;
+
+        // Don't overwrite more valuable entries
+        if (   d > depth8 - 2 - 2 * (g != (genBound8 & 0xFC))
+            || b == BOUND_EXACT)
+        {
+            value16   = (int16_t)v;
+            genBound8 = (uint8_t)(g | b);
+            depth8    = (int8_t)d;
+        }
+        else
+            genBound8 = uint8_t(g | (genBound8 & 0x3)); // Refresh
+    }
+
+    eval16 = (int16_t)ev;
   }
 
 private:
