@@ -105,21 +105,34 @@ namespace {
 
     void update(Position& pos, const std::vector<Move>& newPv) {
 
-      assert(newPv.size() >= 3);
-
-      // Keep track of how many times in a row 3rd ply remains stable
-      stableCnt = (newPv[2] == pv[2]) ? stableCnt + 1 : 0;
-
-      if (!std::equal(newPv.begin(), newPv.begin() + 3, pv))
+      if (newPv.size() >= 3)
       {
-          std::copy(newPv.begin(), newPv.begin() + 3, pv);
+          // Keep track of how many times in a row 3rd ply remains stable
+          if (newPv[2] != pv[2])
+          {
+              pv[2] = newPv[2];
+              stableCnt = 0;
+          }
+          else
+              stableCnt++;
 
-          StateInfo st[2];
-          pos.do_move(newPv[0], st[0], pos.gives_check(newPv[0], CheckInfo(pos)));
-          pos.do_move(newPv[1], st[1], pos.gives_check(newPv[1], CheckInfo(pos)));
-          expectedPosKey = pos.key();
-          pos.undo_move(newPv[1]);
-          pos.undo_move(newPv[0]);
+          if (!std::equal(newPv.begin(), newPv.begin() + 2, pv))
+          {
+              std::copy(newPv.begin(), newPv.begin() + 2, pv);
+
+              StateInfo st[2];
+              pos.do_move(newPv[0], st[0], pos.gives_check(newPv[0], CheckInfo(pos)));
+              pos.do_move(newPv[1], st[1], pos.gives_check(newPv[1], CheckInfo(pos)));
+              expectedPosKey = pos.key();
+              pos.undo_move(newPv[1]);
+              pos.undo_move(newPv[0]);
+          }
+      }
+      else
+      {   // unknown pv so reduce count and clear position
+          stableCnt = std::min(std::max(stableCnt - 1, 0), 4);
+          expectedPosKey = 0;
+          pv[0] = pv[1] = MOVE_NONE;
       }
     }
 
@@ -485,11 +498,8 @@ namespace {
                         Signals.stop = true;
                 }
             }
-
-            if (RootMoves[0].pv.size() >= 3)
-                EasyMove.update(pos, RootMoves[0].pv);
-            else
-                EasyMove.clear();
+    
+            EasyMove.update(pos, RootMoves[0].pv);
         }
     }
 
