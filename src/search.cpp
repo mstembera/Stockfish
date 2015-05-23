@@ -1052,7 +1052,7 @@ moves_loop: // When in check and at SpNode search starts from here
               // iteration. This information is used for time management: When
               // the best move changes frequently, we allocate some more time.
               if (moveCount > 1)
-                  ++BestMoveChanges;
+                  Time.pv_instability_increase(++BestMoveChanges * 1.5);
           }
           else
               // All other moves but the PV are set to the lowest value: this is
@@ -1744,7 +1744,7 @@ void check_time() {
                              &&  elapsed > Time.available() * 75 / 100;
 
       if (   stillAtFirstMove
-          || elapsed > Time.maximum() - 2 * TimerThread::Resolution)
+          || elapsed > std::min(Time.maximum() - 2 * TimerThread::Resolution, Time.available() * 2))
           Signals.stop = true;
   }
   else if (Limits.movetime && elapsed >= Limits.movetime)
