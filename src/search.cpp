@@ -1744,7 +1744,7 @@ void check_time() {
                              &&  elapsed > Time.available() * 75 / 100;
 
       if (   stillAtFirstMove
-          || elapsed > std::min(Time.maximum() - 2 * TimerThread::Resolution, Time.available() * 2))
+          || elapsed > std::min(Time.maximum() - 2 * TimerThread::Resolution, Time.available() * 3))
           Signals.stop = true;
   }
   else if (Limits.movetime && elapsed >= Limits.movetime)
