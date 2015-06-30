@@ -156,7 +156,7 @@ template<>
 void MovePicker::score<QUIETS>() {
 
   Square prevSq = to_sq((ss-1)->currentMove);
-  const HistoryStats& cmh = counterMovesHistory[pos.piece_on(prevSq)][prevSq];
+  const HistoryStats& cmh = counterMovesHistory[type_of(pos.piece_on(prevSq))][prevSq];
 
   for (auto& m : *this)
       m.value =  history[pos.moved_piece(m)][to_sq(m)]

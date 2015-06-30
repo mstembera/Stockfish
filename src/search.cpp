@@ -955,13 +955,13 @@ moves_loop: // When in check and at SpNode search starts from here
 
           if (   (!PvNode && cutNode)
               || (   History[pos.piece_on(to_sq(move))][to_sq(move)] < VALUE_ZERO
-                  && CounterMovesHistory[pos.piece_on(prevMoveSq)][prevMoveSq]
+                  && CounterMovesHistory[type_of(pos.piece_on(prevMoveSq))][prevMoveSq]
                                         [pos.piece_on(to_sq(move))][to_sq(move)] <= VALUE_ZERO))
               ss->reduction += ONE_PLY;
 
           if (    move == countermove
               || (   History[pos.piece_on(to_sq(move))][to_sq(move)] > VALUE_ZERO
-                  && CounterMovesHistory[pos.piece_on(prevMoveSq)][prevMoveSq]
+                  && CounterMovesHistory[type_of(pos.piece_on(prevMoveSq))][prevMoveSq]
                                         [pos.piece_on(to_sq(move))][to_sq(move)] > VALUE_ZERO))
               ss->reduction = std::max(DEPTH_ZERO, ss->reduction - ONE_PLY);
 
@@ -1408,7 +1408,7 @@ moves_loop: // When in check and at SpNode search starts from here
     Value bonus = Value((depth / ONE_PLY) * (depth / ONE_PLY));
 
     Square prevSq = to_sq((ss-1)->currentMove);
-    HistoryStats& cmh = CounterMovesHistory[pos.piece_on(prevSq)][prevSq];
+    HistoryStats& cmh = CounterMovesHistory[type_of(pos.piece_on(prevSq))][prevSq];
 
     History.update(pos.moved_piece(move), to_sq(move), bonus);
 
@@ -1431,7 +1431,7 @@ moves_loop: // When in check and at SpNode search starts from here
     if (is_ok((ss-2)->currentMove) && (ss-1)->currentMove == (ss-1)->ttMove)
     {
         Square prevPrevSq = to_sq((ss-2)->currentMove);
-        HistoryStats& ttMoveCmh = CounterMovesHistory[pos.piece_on(prevPrevSq)][prevPrevSq];
+        HistoryStats& ttMoveCmh = CounterMovesHistory[type_of(pos.piece_on(prevPrevSq))][prevPrevSq];
         ttMoveCmh.update(pos.piece_on(prevSq), prevSq, -bonus - 2 * depth / ONE_PLY - 1);
     }
   }
