@@ -325,24 +325,29 @@ void Search::think() {
   std::cout << sync_endl;
 }
 
+
 namespace {
 
-  bool easy_recapture(Position& pos, const std::vector<Move>& pv)
-  {
-      bool result = false;
-      if (pv.size() >= 2 && pos.captured_piece_type() >= PAWN)
-      {
-          if (pos.capture(pv[0]))
-          {
-              StateInfo st;
-              pos.do_move(pv[0], st, pos.gives_check(pv[0], CheckInfo(pos)));
-              result = !pos.capture(pv[1]) && !pos.gives_check(pv[1], CheckInfo(pos));
-              pos.undo_move(pv[0]);
-          }
-      }
+    bool easy_recapture(Position& pos, const std::vector<Move>& pv)
+    {
+        bool result = false;
 
-      return result;
-  }
+        if (pv.size() >= 2 && pos.capture(pv[0]))
+        {
+            StateInfo st;
+            PieceType pt1 = pos.captured_piece_type();
+            pos.do_move(pv[0], st, pos.gives_check(pv[0], CheckInfo(pos)));
+            PieceType pt2 = pos.captured_piece_type();
+
+            result =    (pt2 >= pt1 || (pt2 == KNIGHT && pt1 == BISHOP))
+                     && !pos.capture(pv[1])
+                     && !pos.gives_check(pv[1], CheckInfo(pos));
+
+            pos.undo_move(pv[0]);
+        }
+
+        return result;
+    }
 
   // id_loop() is the main iterative deepening loop. It calls search() repeatedly
   // with increasing depth until the allocated thinking time has been consumed,
@@ -493,7 +498,7 @@ namespace {
                         && BestMoveChanges < 0.03
                         && Time.elapsed() > Time.available() / 10)
                     || (   BestMoveChanges < 0.03
-                        && Time.elapsed() > Time.available() / 5
+                        && Time.elapsed() > Time.available() / 6
                         && easy_recapture(pos, RootMoves[0].pv)))
                 {
                     // If we are allowed to ponder do not stop the search now but
