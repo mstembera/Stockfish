@@ -149,18 +149,20 @@ namespace {
   const Score ThreatenedByHangingPawn = S(40, 60);
 
   // Assorted bonuses and penalties used by evaluation
-  const Score KingOnOne          = S( 2, 58);
-  const Score KingOnMany         = S( 6,125);
-  const Score RookOnPawn         = S( 7, 27);
-  const Score RookOnOpenFile     = S(43, 21);
-  const Score RookOnSemiOpenFile = S(19, 10);
-  const Score BishopPawns        = S( 8, 12);
-  const Score MinorBehindPawn    = S(16,  0);
-  const Score TrappedRook        = S(92,  0);
-  const Score Unstoppable        = S( 0, 20);
-  const Score Hanging            = S(31, 26);
-  const Score PawnAttackThreat   = S(20, 20);
-  const Score PawnSafePush       = S( 5,  5);
+  const Score KingOnOne            = S( 2, 58);
+  const Score KingOnMany           = S( 6,125);
+  const Score RookOnPawn           = S( 7, 27);
+  const Score RookOnOpenFile       = S(43, 21);
+  const Score RookOnSemiOpenFile   = S(19, 10);
+  const Score RookBehindPasserUs   = S(10, 10);
+  const Score RookBehindPasserThem = S(10, 10);
+  const Score BishopPawns          = S( 8, 12);
+  const Score MinorBehindPawn      = S(16,  0);
+  const Score TrappedRook          = S(92,  0);
+  const Score Unstoppable          = S( 0, 20);
+  const Score Hanging              = S(31, 26);
+  const Score PawnAttackThreat     = S(20, 20);
+  const Score PawnSafePush         = S( 5,  5);
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
   // a friendly pawn on b2/g2 (b7/g7 for black). This can obviously only
@@ -312,6 +314,18 @@ namespace {
             // Bonus when on an open or semi-open file
             if (ei.pi->semiopen_file(Us, file_of(s)))
                 score += ei.pi->semiopen_file(Them, file_of(s)) ? RookOnOpenFile : RookOnSemiOpenFile;
+            else
+            {
+                // Behind our passed pawn
+                Bitboard passerUs = ei.pi->passed_pawns(Us) & file_bb(s);
+                if (passerUs && relative_rank(Us, lsb(passerUs)) > relative_rank(Us, s))
+                    score += RookBehindPasserUs;
+            }
+
+            // Behind their passed pawn
+            Bitboard passerThem = ei.pi->passed_pawns(Them) & file_bb(s);
+            if (passerThem && relative_rank(Us, lsb(passerThem)) < relative_rank(Us, s))
+                score += RookBehindPasserThem;
 
             // Penalize when trapped by the king, even more if king cannot castle
             if (mob <= 3 && !ei.pi->semiopen_file(Us, file_of(s)))
