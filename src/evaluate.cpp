@@ -703,8 +703,8 @@ namespace {
 
     // Pawns blocked or on ranks 2 and 3. Will be excluded from the mobility area
     Bitboard excludedPawns[] = {
-      pos.pieces(WHITE, PAWN) & (shift_bb<DELTA_S>(pos.pieces(PAWN)) | Rank2BB | Rank3BB),
-      pos.pieces(BLACK, PAWN) & (shift_bb<DELTA_N>(pos.pieces(PAWN)) | Rank7BB | Rank6BB)
+      pos.pieces(WHITE, PAWN) & (shift_bb<DELTA_S>(pos.pieces(BLACK)) | Rank2BB | Rank3BB),
+      pos.pieces(BLACK, PAWN) & (shift_bb<DELTA_N>(pos.pieces(WHITE)) | Rank7BB | Rank6BB)
     };
 
     // Do not include in mobility squares protected by enemy pawns, or occupied
