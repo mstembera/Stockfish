@@ -128,8 +128,41 @@ namespace {
     Move pv[3];
   };
 
+
+  struct ReplyMoveManager {
+
+    void clear() {
+        posKey = 0;
+        m = MOVE_NONE;
+    }
+
+    Move get() const {
+        return m;
+    }
+
+    Move get(Key key) const {
+        return posKey == key ? m : MOVE_NONE;
+    }
+
+    void update(Position& pos, const std::vector<Move>& pv) {
+
+        assert(pv.size() >= 2);
+
+        StateInfo st;
+        pos.do_move(pv[0], st, pos.gives_check(pv[0], CheckInfo(pos)));
+        posKey = pos.key();
+        pos.undo_move(pv[0]);
+
+        m = pv[1];
+    }
+
+    Key posKey;
+    Move m;
+  };
+
   size_t PVIdx;
   EasyMoveManager EasyMove;
+  ReplyMoveManager ReplyMove;
   double BestMoveChanges;
   Value DrawValue[COLOR_NB];
   HistoryStats History;
@@ -340,6 +373,7 @@ namespace {
 
     Move easyMove = EasyMove.get(pos.key());
     EasyMove.clear();
+    ReplyMove.clear();
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -464,9 +498,14 @@ namespace {
         {
             if (!Signals.stop && !Signals.stopOnPonderhit)
             {
-                // Take some extra time if the best move has changed
+                // Adjust time if the best move or best reply have changed
                 if (depth > 4 * ONE_PLY && multiPV == 1)
-                    Time.pv_instability(BestMoveChanges);
+                {
+                    double dt = (RootMoves[0].pv.size() >= 2 && ReplyMove.get() == RootMoves[0].pv[1])
+                        ? -0.15 : 0.30;
+
+                    Time.pv_instability(BestMoveChanges + dt);
+                }
 
                 // Stop the search if only one legal move is available or all
                 // of the available time has been used or we matched an easyMove
@@ -490,6 +529,11 @@ namespace {
                 EasyMove.update(pos, RootMoves[0].pv);
             else
                 EasyMove.clear();
+
+            if (RootMoves[0].pv.size() >= 2)
+                ReplyMove.update(pos, RootMoves[0].pv);
+            else
+                ReplyMove.clear();
         }
     }
 
@@ -1066,6 +1110,11 @@ moves_loop: // When in check and at SpNode search starts from here
                   &&  EasyMove.get(pos.key())
                   && (move != EasyMove.get(pos.key()) || moveCount > 1))
                   EasyMove.clear();
+
+              if (    PvNode
+                  &&  ReplyMove.get(pos.key())
+                  && (move != ReplyMove.get(pos.key()) || moveCount > 1))
+                  ReplyMove.clear();
 
               bestMove = SpNode ? splitPoint->bestMove = move : move;
 
