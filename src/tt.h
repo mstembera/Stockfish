@@ -49,7 +49,7 @@ struct TTEntry {
 
     // Don't overwrite more valuable entries
     if (  (k >> 48) != key16
-        || d > depth8 - 2
+        || d >= depth8
         || g != (genBound8 & 0xFC)
         || b == BOUND_EXACT)
     {
