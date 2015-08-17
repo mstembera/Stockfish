@@ -124,8 +124,8 @@ namespace {
       S( 94, 99), S( 96,100), S(99,111), S(99,112) }
   };
 
-  // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and bishops
-  // outposts, bigger if outpost piece is supported by a pawn.
+  // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and
+  // bishops outposts, bigger if outpost piece is supported by a pawn.
   const Score Outpost[][2] = {
     { S(28, 7), S(42,11) }, // Knights
     { S(12, 3), S(18, 5) }  // Bishops
@@ -146,15 +146,11 @@ namespace {
     S(0, 0), S(0, 0), S(107, 138), S(84, 122), S(114, 203), S(121, 217)
   };
 
-  // PassedPawnsBonusMg[Rank] and PassedPawnsBonusEg[Rank]
-  //contains bonuses for midgame and endgame for passed pawns according to
-  //the rank of the pawn.
-  const Value PassedPawnsBonusMg[6] = {
-    V(0), V(1), V(34), V(90), V(214), V(328)
-  };
-
-  const Value PassedPawnsBonusEg[6] = {
-    V(7), V(14), V(37), V(63), V(134), V(189)
+  // Passed[mg/eg][rank] contains midgame and endgame bonuses for passed pawns.
+  // We don't use a Score because we process the two components independently.
+  const Value Passed[][RANK_NB] = {
+    { V(0), V( 1), V(34), V(90), V(214), V(328) },
+    { V(7), V(14), V(37), V(63), V(134), V(189) }
   };
 
   const Score ThreatenedByHangingPawn = S(40, 60);
@@ -171,7 +167,6 @@ namespace {
   const Score Unstoppable        = S( 0, 20);
   const Score Hanging            = S(31, 26);
   const Score PawnAttackThreat   = S(20, 20);
-  const Score PawnSafePush       = S( 5,  5);
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
   // a friendly pawn on b2/g2 (b7/g7 for black). This can obviously only
@@ -531,7 +526,7 @@ namespace {
             score += more_than_one(b) ? KingOnMany : KingOnOne;
     }
 
-    // Add a small bonus for safe pawn pushes
+    // Bonus if some pawns can safely push and attack an enemy piece
     b = pos.pieces(Us, PAWN) & ~TRank7BB;
     b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
 
@@ -539,10 +534,6 @@ namespace {
         & ~ei.attackedBy[Them][PAWN]
         & (ei.attackedBy[Us][ALL_PIECES] | ~ei.attackedBy[Them][ALL_PIECES]);
 
-    if (b)
-        score += popcount<Full>(b) * PawnSafePush;
-
-    // Add another bonus if the pawn push attacks an enemy piece
     b =  (shift_bb<Left>(b) | shift_bb<Right>(b))
        &  pos.pieces(Them)
        & ~ei.attackedBy[Us][PAWN];
@@ -578,8 +569,7 @@ namespace {
         int r = relative_rank(Us, s) - RANK_2;
         int rr = r * (r - 1);
 
-        Value mbonus = PassedPawnsBonusMg[r],
-              ebonus = PassedPawnsBonusEg[r];
+        Value mbonus = Passed[MG][r], ebonus = Passed[EG][r];
 
         if (rr)
         {
