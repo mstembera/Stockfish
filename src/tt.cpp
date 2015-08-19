@@ -67,7 +67,7 @@ void TranspositionTable::clear() {
 /// table. It returns true and a pointer to the TTEntry if the position is found.
 /// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
 /// to be replaced later. 
-//TODO: fix comment to say repValue = depth / age; if it passes.
+//TODO: fix comment to say replaceValue = depth / age; if it passes.
 
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
@@ -86,8 +86,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
   for (int i = 1; i < ClusterSize; ++i)
-      if (  (uint64_t(1-DEPTH_NONE + replace->depth8) << 56) >> (((259 + generation8 - replace->genBound8) & 0xFC) >> 1)
-          > (uint64_t(1-DEPTH_NONE +   tte[i].depth8) << 56) >> (((259 + generation8 -   tte[i].genBound8) & 0xFC) >> 1))
+      if (  (uint64_t(5-DEPTH_NONE + replace->depth8) << 56) >> (((259 + generation8 - replace->genBound8) & 0xFC) >> 2)
+          > (uint64_t(5-DEPTH_NONE +   tte[i].depth8) << 56) >> (((259 + generation8 -   tte[i].genBound8) & 0xFC) >> 2))
           replace = &tte[i];
 
   return found = false, replace;
