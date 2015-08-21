@@ -93,11 +93,14 @@ namespace {
   enum { Mobility, PawnStructure, PassedPawns, Space, KingSafety };
 
   const struct Weight { int mg, eg; } Weights[] = {
-    {289, 344}, {233, 201}, {221, 273}, {46, 0}, {322, 0}
+      {289 * 256, 344 * 256}, {233 * 256, 201 * 256}, {221 * 256, 273 * 256}, {46 * 256, 0}, {322 * 256, 0}
   };
 
   Score operator*(Score s, const Weight& w) {
-    return make_score(mg_value(s) * w.mg / 256, eg_value(s) * w.eg / 256);
+      union { uint16_t u; int16_t s; }
+      mg = { uint16_t(unsigned(mg_value(s) * w.mg) >> 16) },
+      eg = { uint16_t(unsigned(eg_value(s) * w.eg) >> 16) };
+      return make_score(mg.s, eg.s);
   }
 
 
