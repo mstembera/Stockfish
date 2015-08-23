@@ -220,6 +220,25 @@ uint64_t Search::perft(Position& pos, Depth depth) {
 
 template uint64_t Search::perft<true>(Position& pos, Depth depth);
 
+int contempt_from_time(int usTime, int themTime)
+{
+  double contempt = 0;
+
+  if (usTime > themTime && themTime)
+  {
+      const double maxCP = 20, minRatio = 1.0, maxRatio = 1.5;
+      double r = (double)usTime / (double)themTime;
+      contempt = std::max(std::min(maxCP * (r - minRatio) / (maxRatio - minRatio), maxCP), 0.0);
+  }
+  else if (themTime > usTime && usTime)
+  {
+      const double maxCP = 20, minRatio = 1.25, maxRatio = 2.0;
+      double r = (double)themTime / (double)usTime;
+      contempt = -std::max(std::min(maxCP * (r - minRatio) / (maxRatio - minRatio), maxCP), 0.0);
+  }
+
+  return (int)(contempt * (double)PawnValueEg / 100.0);
+}
 
 /// Search::think() is the external interface to Stockfish's search, and is
 /// called by the main thread when the program receives the UCI 'go' command. It
@@ -228,11 +247,15 @@ template uint64_t Search::perft<true>(Position& pos, Depth depth);
 void Search::think() {
 
   Color us = RootPos.side_to_move();
+  Time.init(Limits, ~us, RootPos.game_ply(), now());
+  int themTime = Time.available();
   Time.init(Limits, us, RootPos.game_ply(), now());
+  int usTime = Time.available();
 
+  int timeContempt = contempt_from_time(usTime, themTime);
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
-  DrawValue[ us] = VALUE_DRAW - Value(contempt);
-  DrawValue[~us] = VALUE_DRAW + Value(contempt);
+  DrawValue[ us] = VALUE_DRAW - Value(contempt + timeContempt);
+  DrawValue[~us] = VALUE_DRAW + Value(contempt + timeContempt);
 
   TB::Hits = 0;
   TB::RootInTB = false;
