@@ -212,7 +212,8 @@ namespace {
   }
 
 
-  TUNE(SetRange(-50, 50), TuneBiasMg, TuneBiasEg, SetRange(0, 10), TuneDeltaMg, TuneDeltaEg, post_update);
+  TUNE(SetRange(-50, 50),  TuneBiasMg,  TuneBiasEg, post_update);
+  TUNE(SetRange( 0,  10), TuneDeltaMg, TuneDeltaEg, post_update);
 
 
   #undef S
