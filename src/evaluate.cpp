@@ -173,8 +173,19 @@ namespace {
   // happen in Chess960 games.
   const Score TrappedBishopA1H1 = S(50, 50);
 
+  // mobility bonus for knight double moves
+  const int MBK_NB = 16;
+  const Score MobilityBonusKnight2[MBK_NB] = {
+      S(-2, -8), S(-1, -7), S(-1, -6), S(1, -5), S(2, -4), S( 3, -3), S( 4, -2), S( 5, -2),
+      S( 5, -1), S( 7, -1), S( 7,  0), S(8,  1), S(9,  1), S(10,  2), S(11,  3), S(12,  4)
+  };
+
   #undef S
   #undef V
+
+  // squares reachable by knight in exactly 2 moves
+  Bitboard KnightTwoMove[SQUARE_NB];
+  uint32_t KnightTwoMoveStep[SQUARE_NB];
 
   // SpaceMask[Color] contains the area of the board which is considered
   // by the space evaluation. In the middlegame, each side is given a bonus
@@ -232,7 +243,7 @@ namespace {
   // evaluate_pieces() assigns bonuses and penalties to the pieces of a given color
 
   template<PieceType Pt, Color Us, bool Trace>
-  Score evaluate_pieces(const Position& pos, EvalInfo& ei, Score* mobility, Bitboard* mobilityArea) {
+  Score evaluate_pieces(const Position& pos, EvalInfo& ei, Score* mobility, const Bitboard* mobilityArea) {
 
     Bitboard b;
     Square s;
@@ -276,6 +287,13 @@ namespace {
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
+            // Bonus for knights two move mobility
+            if (Pt == KNIGHT)
+            {
+                uint32_t mobFraction = (uint32_t)popcount<Full>(KnightTwoMove[s] & mobilityArea[Us]) * KnightTwoMoveStep[s] / 256;
+                mobility[Us] += MobilityBonusKnight2[mobFraction];
+            }
+
             // Bonus for outpost square
             if (   relative_rank(Us, s) >= RANK_4
                 && !(pos.pieces(Them, PAWN) & pawn_attack_span(Us, s)))
@@ -340,9 +358,9 @@ namespace {
   }
 
   template<>
-  Score evaluate_pieces<KING, WHITE, false>(const Position&, EvalInfo&, Score*, Bitboard*) { return SCORE_ZERO; }
+  Score evaluate_pieces<KING, WHITE, false>(const Position&, EvalInfo&, Score*, const Bitboard*) { return SCORE_ZERO; }
   template<>
-  Score evaluate_pieces<KING, WHITE,  true>(const Position&, EvalInfo&, Score*, Bitboard*) { return SCORE_ZERO; }
+  Score evaluate_pieces<KING, WHITE,  true>(const Position&, EvalInfo&, Score*, const Bitboard*) { return SCORE_ZERO; }
 
 
   // evaluate_king() assigns bonuses and penalties to a king of a given color
@@ -893,6 +911,20 @@ namespace Eval {
     {
         t = std::min(Peak, std::min(i * i * 27, t + MaxSlope));
         KingDanger[i] = make_score(t / 1000, 0) * Weights[KingSafety];
+    }
+
+    // precompute all squares reachable by knight after exactly two moves
+    for (Square s = SQ_A1; s <= SQ_H8; ++s)
+    {
+        KnightTwoMove[s] = 0;
+        Bitboard b = attacks_bb(W_KNIGHT, s, 0);
+
+        while (b)
+            KnightTwoMove[s] |= attacks_bb(W_KNIGHT, pop_lsb(&b), 0);
+        
+        KnightTwoMove[s] &= ~(1ULL << s);
+
+        KnightTwoMoveStep[s] = (MBK_NB-1) * 256 / popcount<Full>(KnightTwoMove[s]);
     }
   }
 
