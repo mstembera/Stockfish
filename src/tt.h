@@ -23,6 +23,8 @@
 #include "misc.h"
 #include "types.h"
 
+void update_cluster(const struct TTEntry* tte);
+
 /// TTEntry struct is the 10 bytes transposition table entry, defined as below:
 ///
 /// key        16 bit
@@ -58,6 +60,8 @@ struct TTEntry {
         eval16    = (int16_t)ev;
         genBound8 = (uint8_t)(g | b);
         depth8    = (int8_t)d;
+
+        update_cluster(this);
     }
   }
 
@@ -84,14 +88,14 @@ class TranspositionTable {
   static const int CacheLineSize = 64;
   static const int ClusterSize = 3;
 
+public:
   struct Cluster {
     TTEntry entry[ClusterSize];
-    char padding[2]; // Align to the cache line size
+    uint16_t recentId;
   };
 
   static_assert(sizeof(Cluster) == CacheLineSize / 2, "Cluster size incorrect");
 
-public:
  ~TranspositionTable() { free(mem); }
   void new_search() { generation8 += 4; } // Lower 2 bits are used by Bound
   uint8_t generation() const { return generation8; }
@@ -111,6 +115,13 @@ private:
   void* mem;
   uint8_t generation8; // Size must be not bigger than TTEntry::genBound8
 };
+
+inline void update_cluster(const struct TTEntry* tte)
+{
+  typedef TranspositionTable::Cluster TTC;
+  TTC* cl = (TTC*)(uintptr_t(tte) & ~(sizeof(TTC) - 1));
+  cl->recentId = uint16_t(tte - cl->entry);
+}
 
 extern TranspositionTable TT;
 
