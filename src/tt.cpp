@@ -67,7 +67,7 @@ void TranspositionTable::clear() {
 /// table. It returns true and a pointer to the TTEntry if the position is found.
 /// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
 /// to be replaced later. The replace value of an entry is calculated as its depth,
-/// plus 1 if it's the most recent entry in the cluster, minus 8 times its relative age. 
+/// plus 1/2 if it's the most recent entry in the cluster, minus 8 times its relative age. 
 /// TTEntry t1 is considered more valuable than TTEntry t2 if its replace value is 
 /// greater than that of t2.
 
@@ -90,9 +90,9 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
   int recentId = ((Cluster*)tte)->recentId;
-  int minValue = tte->depth8
+  int minValue = tte->depth8 * 2
                + int(recentId == 0) * ONE_PLY
-               - ((259 + generation8 - tte->genBound8) & 0xFC) * 2 * ONE_PLY;
+               - ((259 + generation8 - tte->genBound8) & 0xFC) * 4 * ONE_PLY;
   // Due to our packed storage format for generation and its cyclic
   // nature we add 259 (256 is the modulus plus 3 to keep the lowest
   // two bound bits from affecting the result) to calculate the entry
@@ -100,9 +100,9 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
   for (int i = 1; i < ClusterSize; ++i)
   {
-      int tteValue = tte[i].depth8
+      int tteValue = tte[i].depth8 * 2
                    + int(recentId == i) * ONE_PLY
-                   - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 2 * ONE_PLY;
+                   - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 4 * ONE_PLY;
 
       if (tteValue < minValue)
       {
