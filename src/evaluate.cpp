@@ -190,8 +190,62 @@ namespace {
   // happen in Chess960 games.
   const Score TrappedBishopA1H1 = S(50, 50);
 
+
+
+  // mobility bonus for knight double moves
+  const int MKB_NB = 16;
+  /*const*/ Score MobilityKnightPenalty[MKB_NB] = {
+      S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+      S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)
+  };
+
+  // -50, 50
+  int TuneBiasMg = 0, TuneBiasEg = 0;
+
+  // 0, 100
+  int TuneDeltaMg[MKB_NB] = {
+      5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+  };
+
+  int TuneDeltaEg[MKB_NB] = {
+      5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+  };
+
+  void post_update() {
+ 
+      struct D2 { double m, e; } arr[MKB_NB];
+
+      arr[5].m = TuneBiasMg;
+      arr[5].e = TuneBiasEg;
+
+      for (int i = 4; i >= 0; --i)
+      {
+          arr[i].m = arr[i + 1].m - TuneDeltaMg[i] / 10.0;
+          arr[i].e = arr[i + 1].e - TuneDeltaEg[i] / 10.0;
+      }
+      for (int i = 6; i < MKB_NB; ++i)
+      {
+          arr[i].m = arr[i - 1].m + TuneDeltaMg[i] / 10.0;
+          arr[i].e = arr[i - 1].e + TuneDeltaEg[i] / 10.0;
+      }
+
+      for (int i = 0; i < MKB_NB; ++i)
+      {
+          int mg = int(arr[i].m + (arr[i].m >= 0 ? 0.5 : -0.5));
+          int eg = int(arr[i].e + (arr[i].e >= 0 ? 0.5 : -0.5));
+          MobilityKnightPenalty[i] = make_score(mg, eg);
+      }
+  }
+
+  TUNE(SetRange(-50,  50),  TuneBiasMg,  TuneBiasEg, post_update);
+  TUNE(SetRange( 0,  100), TuneDeltaMg, TuneDeltaEg, post_update);
+
+
   #undef S
   #undef V
+
+  // squares reachable by knight in exactly 2 moves
+  Bitboard knightTwoMove[SQUARE_NB];
 
   // SpaceMask[Color] contains the area of the board which is considered
   // by the space evaluation. In the middlegame, each side is given a bonus
@@ -294,6 +348,13 @@ namespace {
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
+            // Bonus for knights two move mobility
+            if (Pt == KNIGHT)
+            {
+                int mobK2M = std::min(popcount<Full>(knightTwoMove[s] & ~mobilityArea[Us]), MKB_NB-1);
+                mobility[Us] -= MobilityKnightPenalty[mobK2M];
+            }
+
             // Bonus for outpost square
             if (   relative_rank(Us, s) >= RANK_4
                 && !(pos.pieces(Them, PAWN) & pawn_attack_span(Us, s)))
@@ -873,4 +934,16 @@ void Eval::init() {
       t = std::min(Peak, std::min(i * i * 27, t + MaxSlope));
       KingDanger[i] = make_score(t / 1000, 0) * Weights[KingSafety];
   }
+
+    // precompute all squares reachable by knight after exactly two moves
+    for (Square s = SQ_A1; s <= SQ_H8; ++s)
+    {
+        knightTwoMove[s] = 0;
+        Bitboard b = attacks_bb(W_KNIGHT, s, 0);
+
+        while (b)
+            knightTwoMove[s] |= attacks_bb(W_KNIGHT, pop_lsb(&b), 0);
+    }
+
+    post_update();
 }
