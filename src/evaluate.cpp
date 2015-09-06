@@ -190,8 +190,18 @@ namespace {
   // happen in Chess960 games.
   const Score TrappedBishopA1H1 = S(50, 50);
 
+  // Mobility bonus for knight double moves.
+  const int MKP_NB = 16;
+  const Score MobilityKnightPenalty[MKP_NB] = {
+    S(-10,-4), S(-10,-3), S(-9,-2), S(-9,-2), S(-8,-2), S(-8,-1), S(-7, 0), S(-6, 0),
+    S( -6, 1), S( -6, 2), S(-5, 4), S(-4, 4), S(-3, 4), S(-3, 5), S(-2, 5), S( 0, 7)
+  };
+
   #undef S
   #undef V
+
+  // Squares reachable by knight in exactly 2 moves.
+  Bitboard knightTwoMove[SQUARE_NB];
 
   // SpaceMask[Color] contains the area of the board which is considered
   // by the space evaluation. In the middlegame, each side is given a bonus
@@ -294,6 +304,13 @@ namespace {
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
+            // Bonus for knights two move mobility
+            if (Pt == KNIGHT)
+            {
+                int mobK2 = std::min(popcount<Full>(knightTwoMove[s] & ~mobilityArea[Us]), MKP_NB-1);
+                mobility[Us] -= MobilityKnightPenalty[mobK2];
+            }
+
             // Bonus for outpost square
             if (   relative_rank(Us, s) >= RANK_4
                 && !(pos.pieces(Them, PAWN) & pawn_attack_span(Us, s)))
@@ -872,5 +889,15 @@ void Eval::init() {
   {
       t = std::min(Peak, std::min(i * i * 27, t + MaxSlope));
       KingDanger[i] = make_score(t / 1000, 0) * Weights[KingSafety];
+  }
+
+  // precompute all squares reachable by knight after exactly two moves
+  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  {
+      knightTwoMove[s] = 0;
+      Bitboard b = attacks_bb(W_KNIGHT, s, 0);
+
+      while (b)
+          knightTwoMove[s] |= attacks_bb(W_KNIGHT, pop_lsb(&b), 0);
   }
 }
