@@ -330,7 +330,7 @@ int dF = 25;
 int dI = 5;
 
 TUNE(SetRange(2,  40), dS);
-TUNE(SetRange(2, 100), dF);
+TUNE(SetRange(0, 100), dF);
 TUNE(SetRange(0,  40), dI);
 
 namespace {
