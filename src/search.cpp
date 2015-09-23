@@ -325,6 +325,13 @@ void Search::think() {
   std::cout << sync_endl;
 }
 
+int dS = 16;
+int dF = 25;
+int dI = 5;
+
+TUNE(SetRange(2,  40), dS);
+TUNE(SetRange(2, 100), dF);
+TUNE(SetRange(0,  40), dI);
 
 namespace {
 
@@ -377,7 +384,7 @@ namespace {
             // Reset aspiration window starting size
             if (depth >= 5 * ONE_PLY)
             {
-                delta = Value(16);
+                delta = Value(dS);
                 alpha = std::max(RootMoves[PVIdx].previousScore - delta,-VALUE_INFINITE);
                 beta  = std::min(RootMoves[PVIdx].previousScore + delta, VALUE_INFINITE);
             }
@@ -433,7 +440,7 @@ namespace {
                 else
                     break;
 
-                delta += delta / 2;
+                delta += delta * dF / 100 + dI;
 
                 assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
             }
