@@ -130,7 +130,7 @@ static char *map_file(const char *name, const char *suffix, uint64 *mapping)
 static void unmap_file(const char *data, uint64 size)
 {
   if (!data) return;
-  munmap(data, size);
+  munmap(const_cast<char*>(data), size);
 }
 #else
 static void unmap_file(const char *data, uint64 mapping)
