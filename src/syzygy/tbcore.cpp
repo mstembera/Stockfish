@@ -18,6 +18,7 @@
 #include <sys/mman.h>
 #endif
 #include "tbcore.h"
+#include "4men.cpp"
 
 #define TBMAX_PIECE 254
 #define TBMAX_PAWN 256
@@ -38,6 +39,7 @@
 static LOCK_T TB_mutex;
 
 static bool initialized = false;
+static bool internal4men = true;
 static int num_paths = 0;
 static char *path_string = NULL;
 static char **paths = NULL;
@@ -125,13 +127,13 @@ static char *map_file(const char *name, const char *suffix, uint64 *mapping)
 }
 
 #ifndef _WIN32
-static void unmap_file(char *data, uint64 size)
+static void unmap_file(const char *data, uint64 size)
 {
   if (!data) return;
   munmap(data, size);
 }
 #else
-static void unmap_file(char *data, uint64 mapping)
+static void unmap_file(const char *data, uint64 mapping)
 {
   if (!data) return;
   UnmapViewOfFile(data);
@@ -156,7 +158,50 @@ static void add_to_hash(struct TBEntry *ptr, uint64 key)
   }
 }
 
-static char pchr[] = {'K', 'Q', 'R', 'B', 'N', 'P'};
+static const char* get_4men(char* str)
+{
+    if (!strcmp(str, "KBvK")) return (const char*)KBvK;
+    if (!strcmp(str, "KNvK")) return (const char*)KNvK;
+    if (!strcmp(str, "KPvK")) return (const char*)KPvK;
+    if (!strcmp(str, "KQvK")) return (const char*)KQvK;
+    if (!strcmp(str, "KRvK")) return (const char*)KRvK;
+
+    if (!strcmp(str, "KBBvK")) return (const char*)KBBvK;
+    if (!strcmp(str, "KBNvK")) return (const char*)KBNvK;
+    if (!strcmp(str, "KBPvK")) return (const char*)KBPvK;
+    if (!strcmp(str, "KBvKB")) return (const char*)KBvKB;
+    if (!strcmp(str, "KBvKN")) return (const char*)KBvKN;
+    if (!strcmp(str, "KBvKP")) return (const char*)KBvKP;
+    if (!strcmp(str, "KNNvK")) return (const char*)KNNvK;
+    if (!strcmp(str, "KNPvK")) return (const char*)KNPvK;
+    if (!strcmp(str, "KNvKN")) return (const char*)KNvKN;
+    if (!strcmp(str, "KNvKP")) return (const char*)KNvKP;
+    if (!strcmp(str, "KPPvK")) return (const char*)KPPvK;
+    if (!strcmp(str, "KPvKP")) return (const char*)KPvKP;
+    if (!strcmp(str, "KQBvK")) return (const char*)KQBvK;
+    if (!strcmp(str, "KQNvK")) return (const char*)KQNvK;
+    if (!strcmp(str, "KQPvK")) return (const char*)KQPvK;
+    if (!strcmp(str, "KQQvK")) return (const char*)KQQvK;
+    if (!strcmp(str, "KQRvK")) return (const char*)KQRvK;
+    if (!strcmp(str, "KQvKB")) return (const char*)KQvKB;
+    if (!strcmp(str, "KQvKN")) return (const char*)KQvKN;
+    if (!strcmp(str, "KQvKP")) return (const char*)KQvKP;
+    if (!strcmp(str, "KQvKQ")) return (const char*)KQvKQ;
+    if (!strcmp(str, "KQvKR")) return (const char*)KQvKR;
+    if (!strcmp(str, "KRBvK")) return (const char*)KRBvK;
+    if (!strcmp(str, "KRNvK")) return (const char*)KRNvK;
+    if (!strcmp(str, "KRPvK")) return (const char*)KRPvK;
+    if (!strcmp(str, "KRRvK")) return (const char*)KRRvK;
+    if (!strcmp(str, "KRvKB")) return (const char*)KRvKB;
+    if (!strcmp(str, "KRvKN")) return (const char*)KRvKN;
+    if (!strcmp(str, "KRvKP")) return (const char*)KRvKP;
+    if (!strcmp(str, "KRvKR")) return (const char*)KRvKR;
+
+    return nullptr;
+}
+
+
+static const char pchr[] = {'K', 'Q', 'R', 'B', 'N', 'P'};
 
 static void init_tb(char *str)
 {
@@ -167,9 +212,17 @@ static void init_tb(char *str)
   int color;
   char *s;
 
-  fd = open_tb(str, WDLSUFFIX);
-  if (fd == FD_ERR) return;
-  close_tb(fd);
+  if (internal4men)
+  {
+      if (!get_4men(str))
+          return;
+  }
+  else
+  {
+      fd = open_tb(str, WDLSUFFIX);
+      if (fd == FD_ERR) return;
+      close_tb(fd);
+  }
 
   for (i = 0; i < 16; i++)
     pcs[i] = 0;
@@ -280,22 +333,25 @@ void Tablebases::init(const std::string& path)
 
   const char *p = path.c_str();
   if (strlen(p) == 0 || !strcmp(p, "<empty>")) return;
-  path_string = (char *)malloc(strlen(p) + 1);
-  strcpy(path_string, p);
-  num_paths = 0;
-  for (i = 0;; i++) {
-    if (path_string[i] != SEP_CHAR)
-      num_paths++;
-    while (path_string[i] && path_string[i] != SEP_CHAR)
-      i++;
-    if (!path_string[i]) break;
-    path_string[i] = 0;
-  }
-  paths = (char **)malloc(num_paths * sizeof(char *));
-  for (i = j = 0; i < num_paths; i++) {
-    while (!path_string[j]) j++;
-    paths[i] = &path_string[j];
-    while (path_string[j]) j++;
+  if (!(internal4men = !strcmp(p, "<internal-4men>")))
+  {
+      path_string = (char *)malloc(strlen(p) + 1);
+      strcpy(path_string, p);
+      num_paths = 0;
+      for (i = 0;; i++) {
+          if (path_string[i] != SEP_CHAR)
+              num_paths++;
+          while (path_string[i] && path_string[i] != SEP_CHAR)
+              i++;
+          if (!path_string[i]) break;
+          path_string[i] = 0;
+      }
+      paths = (char **)malloc(num_paths * sizeof(char *));
+      for (i = j = 0; i < num_paths; i++) {
+          while (!path_string[j]) j++;
+          paths[i] = &path_string[j];
+          while (path_string[j]) j++;
+      }
   }
 
   LOCK_INIT(TB_mutex);
@@ -1011,26 +1067,33 @@ static struct PairsData *setup_pairs(unsigned char *data, uint64 tb_size, uint64
 static int init_table_wdl(struct TBEntry *entry, char *str)
 {
   ubyte *next;
-  int f, s;
   uint64 tb_size[8];
   uint64 size[8 * 3];
   ubyte flags;
 
   // first mmap the table into memory
+  if (internal4men)
+  {
+      entry->data = get_4men(str);
+      entry->mapping = 0;
+  }
+  else
+      entry->data = map_file(str, WDLSUFFIX, &entry->mapping);
 
-  entry->data = map_file(str, WDLSUFFIX, &entry->mapping);
   if (!entry->data) {
     printf("Could not find %s" WDLSUFFIX, str);
     return 0;
   }
 
-  ubyte *data = (ubyte *)entry->data;
+  ubyte *data = (ubyte *)const_cast<char*>(entry->data);
+
   if (data[0] != WDL_MAGIC[0] ||
       data[1] != WDL_MAGIC[1] ||
       data[2] != WDL_MAGIC[2] ||
       data[3] != WDL_MAGIC[3]) {
     printf("Corrupted table.\n");
-    unmap_file(entry->data, entry->mapping);
+    if (!internal4men)
+        unmap_file(entry->data, entry->mapping);
     entry->data = 0;
     return 0;
   }
@@ -1077,7 +1140,7 @@ static int init_table_wdl(struct TBEntry *entry, char *str)
     }
   } else {
     struct TBEntry_pawn *ptr = (struct TBEntry_pawn *)entry;
-    s = 1 + (ptr->pawns[1] > 0);
+    int f, s = 1 + (ptr->pawns[1] > 0);
     for (f = 0; f < 4; f++) {
       setup_pieces_pawn((struct TBEntry_pawn *)ptr, data, &tb_size[2 * f], f);
       data += ptr->num + s;
@@ -1129,7 +1192,7 @@ static int init_table_wdl(struct TBEntry *entry, char *str)
 
 static int init_table_dtz(struct TBEntry *entry)
 {
-  ubyte *data = (ubyte *)entry->data;
+  ubyte *data = (ubyte *)const_cast<char*>(entry->data); 
   ubyte *next;
   int f, s;
   uint64 tb_size[4];
@@ -1341,7 +1404,8 @@ void load_dtz_table(char *str, uint64 key1, uint64 key2)
 
 static void free_wdl_entry(struct TBEntry *entry)
 {
-  unmap_file(entry->data, entry->mapping);
+  if (!internal4men)
+    unmap_file(entry->data, entry->mapping);
   if (!entry->has_pawns) {
     struct TBEntry_piece *ptr = (struct TBEntry_piece *)entry;
     free(ptr->precomp[0]);

@@ -71,7 +71,7 @@ struct PairsData {
 };
 
 struct TBEntry {
-  char *data;
+  const char *data;
   uint64 key;
   uint64 mapping;
   ubyte ready;
@@ -85,7 +85,7 @@ __attribute__((__may_alias__))
 ;
 
 struct TBEntry_piece {
-  char *data;
+  const char *data;
   uint64 key;
   uint64 mapping;
   ubyte ready;
@@ -100,7 +100,7 @@ struct TBEntry_piece {
 };
 
 struct TBEntry_pawn {
-  char *data;
+  const char *data;
   uint64 key;
   uint64 mapping;
   ubyte ready;
@@ -117,7 +117,7 @@ struct TBEntry_pawn {
 };
 
 struct DTZEntry_piece {
-  char *data;
+  const char *data;
   uint64 key;
   uint64 mapping;
   ubyte ready;
@@ -135,7 +135,7 @@ struct DTZEntry_piece {
 };
 
 struct DTZEntry_pawn {
-  char *data;
+  const char *data;
   uint64 key;
   uint64 mapping;
   ubyte ready;
