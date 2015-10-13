@@ -625,7 +625,7 @@ namespace {
     // TT value, so we use a different position key in case of an excluded move.
     excludedMove = ss->excludedMove;
     posKey = excludedMove ? pos.exclusion_key() : pos.key();
-    tte = TT.probe(posKey, ttHit);
+    tte = TT.probe(posKey, ttHit, thisThread == Threads.main());
     ss->ttMove = ttMove = RootNode ? thisThread->rootMoves[thisThread->PVIdx].pv[0] : ttHit ? tte->move() : MOVE_NONE;
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
 
@@ -669,7 +669,7 @@ namespace {
 
                 tte->save(posKey, value_to_tt(value, ss->ply), BOUND_EXACT,
                           std::min(DEPTH_MAX - ONE_PLY, depth + 6 * ONE_PLY),
-                          MOVE_NONE, VALUE_NONE, TT.generation());
+                          MOVE_NONE, VALUE_NONE, TT.generation(), thisThread == Threads.main());
 
                 return value;
             }
@@ -699,7 +699,7 @@ namespace {
         eval = ss->staticEval =
         (ss-1)->currentMove != MOVE_NULL ? evaluate(pos) : -(ss-1)->staticEval + 2 * Eval::Tempo;
 
-        tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.generation());
+        tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.generation(), thisThread == Threads.main());
     }
 
     if (ss->skipEarlyPruning)
@@ -809,7 +809,7 @@ namespace {
         search<PvNode ? PV : NonPV>(pos, ss, alpha, beta, d, true);
         ss->skipEarlyPruning = false;
 
-        tte = TT.probe(posKey, ttHit);
+        tte = TT.probe(posKey, ttHit, thisThread == Threads.main());
         ttMove = ttHit ? tte->move() : MOVE_NONE;
     }
 
@@ -1099,7 +1099,7 @@ moves_loop: // When in check search starts from here
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               bestValue >= beta ? BOUND_LOWER :
               PvNode && bestMove ? BOUND_EXACT : BOUND_UPPER,
-              depth, bestMove, ss->staticEval, TT.generation());
+              depth, bestMove, ss->staticEval, TT.generation(), thisThread == Threads.main());
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1155,7 +1155,7 @@ moves_loop: // When in check search starts from here
 
     // Transposition table lookup
     posKey = pos.key();
-    tte = TT.probe(posKey, ttHit);
+    tte = TT.probe(posKey, ttHit, pos.this_thread() == Threads.main());
     ttMove = ttHit ? tte->move() : MOVE_NONE;
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply) : VALUE_NONE;
 
@@ -1198,7 +1198,7 @@ moves_loop: // When in check search starts from here
         {
             if (!ttHit)
                 tte->save(pos.key(), value_to_tt(bestValue, ss->ply), BOUND_LOWER,
-                          DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.generation());
+                          DEPTH_NONE, MOVE_NONE, ss->staticEval, TT.generation(), pos.this_thread() == Threads.main());
 
             return bestValue;
         }
@@ -1294,7 +1294,7 @@ moves_loop: // When in check search starts from here
               else // Fail high
               {
                   tte->save(posKey, value_to_tt(value, ss->ply), BOUND_LOWER,
-                            ttDepth, move, ss->staticEval, TT.generation());
+                            ttDepth, move, ss->staticEval, TT.generation(), pos.this_thread() == Threads.main());
 
                   return value;
               }
@@ -1309,7 +1309,7 @@ moves_loop: // When in check search starts from here
 
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               PvNode && bestValue > oldAlpha ? BOUND_EXACT : BOUND_UPPER,
-              ttDepth, bestMove, ss->staticEval, TT.generation());
+              ttDepth, bestMove, ss->staticEval, TT.generation(), pos.this_thread() == Threads.main());
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1500,10 +1500,10 @@ void RootMove::insert_pv_in_tt(Position& pos) {
   {
       assert(MoveList<LEGAL>(pos).contains(m));
 
-      TTEntry* tte = TT.probe(pos.key(), ttHit);
+      TTEntry* tte = TT.probe(pos.key(), ttHit, true);
 
       if (!ttHit || tte->move() != m) // Don't overwrite correct entries
-          tte->save(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, m, VALUE_NONE, TT.generation());
+          tte->save(pos.key(), VALUE_NONE, BOUND_NONE, DEPTH_NONE, m, VALUE_NONE, TT.generation(), true);
 
       pos.do_move(m, *st++, pos.gives_check(m, CheckInfo(pos)));
   }
@@ -1526,7 +1526,7 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     assert(pv.size() == 1);
 
     pos.do_move(pv[0], st, pos.gives_check(pv[0], CheckInfo(pos)));
-    TTEntry* tte = TT.probe(pos.key(), ttHit);
+    TTEntry* tte = TT.probe(pos.key(), ttHit, true);
     pos.undo_move(pv[0]);
 
     if (ttHit)
