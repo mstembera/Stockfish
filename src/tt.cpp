@@ -93,8 +93,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found, uint8_t pvnode) c
       // nature we add 259 (256 is the modulus plus 7 to keep the lowest
       // three bound and pvnode bits from affecting the result) to calculate the
       // entry age correctly even after generation8 overflows into the next cycle.
-      if (  replace->depth8 * 2 + bool(replace->genBound8 & 0x4) - ((263 + generation8 - replace->genBound8) & 0xF8) * 4 * ONE_PLY
-          >   tte[i].depth8 * 2 + bool(  tte[i].genBound8 & 0x4) - ((263 + generation8 -   tte[i].genBound8) & 0xF8) * 4 * ONE_PLY)
+      if (  replace->depth8 * 2 + bool(replace->genBound8 & 0x4) * 3 - ((263 + generation8 - replace->genBound8) & 0xF8) * 4 * ONE_PLY
+          >   tte[i].depth8 * 2 + bool(  tte[i].genBound8 & 0x4) * 3 - ((263 + generation8 -   tte[i].genBound8) & 0xF8) * 4 * ONE_PLY)
           replace = &tte[i];
 
   return found = false, replace;
