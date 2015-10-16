@@ -45,7 +45,7 @@ struct TTEntry {
 
     // Don't overwrite more valuable entries
     if (   g != (genBound8 & 0xFC)
-        || d > depth8 - 2 * ONE_PLY - ((k >> 48) != key16) * 8 * ONE_PLY
+        || (d + (ONE_PLY - DEPTH_NONE)) << (((k >> 48) != key16) * 2) >= depth8 - DEPTH_NONE
         || b == BOUND_EXACT)
     {
         // Preserve any existing move for the same position
