@@ -46,6 +46,7 @@ struct TTEntry {
     // Don't overwrite more valuable entries
     if (  (k >> 48) != key16
         || d > depth8 - 2
+     /* || g != (genBound8 & 0xFC) // Matching non-zero keys are already refreshed by probe() */
         || (b == BOUND_EXACT && bound() != BOUND_EXACT))
     {
         // Preserve any existing move for the same position
