@@ -695,7 +695,7 @@ namespace {
     int pawns           =  pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
     int king_separation =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int asymmetry       =  ei.pi->pawn_asymmetry();
-    int material        =  std::min(pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK), EndgameLimit) * 16 / EndgameLimit;
+    int material        =  std::min(int(pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK)), 4096) * 16 / 4096;
 
     // Compute the initiative bonus for the attacking side
     int attacker_bonus =   8 * (pawns + asymmetry + king_separation) + material - 128;
