@@ -697,7 +697,7 @@ namespace {
     int material        =  std::min(pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK), EndgameLimit) * 16 / EndgameLimit;
 
     // Compute the initiative bonus for the attacking side
-    int attacker_bonus =   8 * (pawns + asymmetry + king_separation) + material - 120;
+    int attacker_bonus =   8 * (pawns + asymmetry + king_separation) + material - 128;
 
     // Now apply the bonus: note that we find the attacking side by extracting the sign 
     // of the endgame value of "positional_score", and that we carefully cap the bonus so
