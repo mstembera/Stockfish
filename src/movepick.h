@@ -51,9 +51,19 @@ struct Stats {
         table[pc][to] = m;
   }
 
-  void update(Piece pc, Square to, Value v) {
+  void updateH(Piece pc, Square to, Value v) {
 
-    table[pc][to] -= table[pc][to] * std::min(abs(int(v)), 512) / 512;
+    if (abs(int(v)) >= 324) 
+        return;
+    table[pc][to] -= table[pc][to] * abs(int(v)) / 324;
+    table[pc][to] += int(v) * 32;
+  }
+
+  void updateCMH(Piece pc, Square to, Value v) {
+
+    if (abs(int(v)) >= 324) 
+        return;
+    table[pc][to] -= table[pc][to] * abs(int(v)) / 512;
     table[pc][to] += int(v) * 64;
   }
 
@@ -82,7 +92,7 @@ public:
   MovePicker(const Position&, Move, const HistoryStats&, const CounterMovesHistoryStats&, Value);
   MovePicker(const Position&, Move, Depth, const HistoryStats&, const CounterMovesHistoryStats&, Move, Search::Stack*);
 
-  template<bool SpNode> Move next_move();
+  Move next_move();
 
 private:
   template<GenType> void score();
