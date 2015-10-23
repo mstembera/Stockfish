@@ -650,7 +650,7 @@ namespace {
                                         :  VALUE_DRAW + 2 * v * drawScore;
 
                 tte->save(posKey, value_to_tt(value, ss->ply), BOUND_EXACT,
-                          std::min(DEPTH_MAX - ONE_PLY, depth + 3 * ONE_PLY),
+                          std::min(DEPTH_MAX - ONE_PLY, depth + 9 * ONE_PLY),
                           MOVE_NONE, VALUE_NONE, TT.generation());
 
                 return value;
