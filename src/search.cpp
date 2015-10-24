@@ -688,6 +688,13 @@ namespace {
                   ss->staticEval, TT.generation());
     }
 
+    // Interpolate eval towards a draw as we approach it
+    if (depth <= ONE_PLY)
+    {
+        int adjust50 = pos.rule50_count() * pos.rule50_count();
+        eval = ((10000 - adjust50) * eval + adjust50 * VALUE_DRAW) / 10000;
+    }
+
     if (ss->skipEarlyPruning)
         goto moves_loop;
 
