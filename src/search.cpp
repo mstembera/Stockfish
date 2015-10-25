@@ -329,6 +329,15 @@ void MainThread::think() {
       wait(Signals.stop);
   }
 
+
+  // Copy the deepest searched root moves
+  for (Thread* th : Threads)
+      if (th->rootDepth > rootDepth)
+      {
+          rootMoves = th->rootMoves;
+          rootDepth = th->rootDepth;
+      }
+
   sync_cout << "bestmove " << UCI::move(rootMoves[0].pv[0], rootPos.is_chess960());
 
   if (rootMoves[0].pv.size() > 1 || rootMoves[0].extract_ponder_from_tt(rootPos))
