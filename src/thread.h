@@ -37,53 +37,6 @@
 struct Thread;
 
 const size_t MAX_THREADS = 128;
-const size_t MAX_SPLITPOINTS_PER_THREAD = 8;
-const size_t MAX_SLAVES_PER_SPLITPOINT = 4;
-
-class Spinlock {
-
-  std::atomic_int lock;
-
-public:
-  Spinlock() { lock = 1; } // Init here to workaround a bug with MSVC 2013
-  void acquire() {
-      while (lock.fetch_sub(1, std::memory_order_acquire) != 1)
-          while (lock.load(std::memory_order_relaxed) <= 0)
-              std::this_thread::yield(); // Be nice to hyperthreading
-  }
-  void release() { lock.store(1, std::memory_order_release); }
-};
-
-
-/// SplitPoint struct stores information shared by the threads searching in
-/// parallel below the same split point. It is populated at splitting time.
-
-struct SplitPoint {
-
-  // Const data after split point has been setup
-  const Position* pos;
-  Search::Stack* ss;
-  Thread* master;
-  Depth depth;
-  Value beta;
-  int nodeType;
-  bool cutNode;
-
-  // Const pointers to shared data
-  MovePicker* movePicker;
-  SplitPoint* parentSplitPoint;
-
-  // Shared variable data
-  Spinlock spinlock;
-  std::bitset<MAX_THREADS> slavesMask;
-  volatile bool allSlavesSearching;
-  volatile uint64_t nodes;
-  volatile Value alpha;
-  volatile Value bestValue;
-  volatile Move bestMove;
-  volatile int moveCount;
-  volatile bool cutoff;
-};
 
 
 /// ThreadBase struct is the base of the hierarchy from where we derive all the
@@ -91,15 +44,16 @@ struct SplitPoint {
 
 struct ThreadBase : public std::thread {
 
+  ThreadBase() { exit = false; }
   virtual ~ThreadBase() = default;
   virtual void idle_loop() = 0;
   void notify_one();
-  void wait_for(volatile const bool& b);
+  void wait(std::atomic<bool>& b);
+  void wait_while(std::atomic<bool>& b);
 
   Mutex mutex;
-  Spinlock spinlock;
   ConditionVariable sleepCondition;
-  volatile bool exit = false;
+  std::atomic<bool> exit;
 };
 
 
@@ -112,22 +66,21 @@ struct Thread : public ThreadBase {
 
   Thread();
   virtual void idle_loop();
-  bool cutoff_occurred() const;
-  bool can_join(const SplitPoint* sp) const;
+  void search(bool isMainThread = false);
 
-  void split(Position& pos, Search::Stack* ss, Value alpha, Value beta, Value* bestValue, Move* bestMove,
-             Depth depth, int moveCount, MovePicker* movePicker, int nodeType, bool cutNode);
-
-  SplitPoint splitPoints[MAX_SPLITPOINTS_PER_THREAD];
   Pawns::Table pawnsTable;
   Material::Table materialTable;
   Endgames endgames;
-  Position* activePosition;
-  size_t idx;
+  size_t idx, PVIdx;
   int maxPly;
-  SplitPoint* volatile activeSplitPoint;
-  volatile size_t splitPointsSize;
-  volatile bool searching;
+  std::atomic<bool> searching;
+
+  Position rootPos;
+  Search::RootMoveVector rootMoves;
+  Depth rootDepth;
+  Search::Stack stack[MAX_PLY+4];
+  HistoryStats history;
+  MovesStats counterMoves;
 };
 
 
@@ -135,9 +88,11 @@ struct Thread : public ThreadBase {
 /// special threads: the main one and the recurring timer.
 
 struct MainThread : public Thread {
+  MainThread() { thinking = true; } // Avoid a race with start_thinking()
   virtual void idle_loop();
   void join();
-  volatile bool thinking = true; // Avoid a race with start_thinking()
+  void think();
+  std::atomic<bool> thinking;
 };
 
 struct TimerThread : public ThreadBase {
@@ -161,10 +116,8 @@ struct ThreadPool : public std::vector<Thread*> {
 
   MainThread* main() { return static_cast<MainThread*>(at(0)); }
   void read_uci_options();
-  Thread* available_slave(const SplitPoint* sp) const;
   void start_thinking(const Position&, const Search::LimitsType&, Search::StateStackPtr&);
-
-  Depth minimumSplitDepth;
+  int64_t nodes_searched();
   TimerThread* timer;
 };
 
