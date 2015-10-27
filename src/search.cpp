@@ -688,6 +688,21 @@ namespace {
                   ss->staticEval, TT.generation());
     }
 
+    // Penalty/bonus for approaching draw
+    if (depth <= ONE_PLY)
+    {
+        int adjust50 = pos.rule50_count();
+
+        if (adjust50 > 60)
+        {
+            adjust50 = (adjust50 - 60) * 8;
+
+            eval = (eval > VALUE_DRAW)
+                 ? std::max(VALUE_DRAW, eval - adjust50)
+                 : std::min(VALUE_DRAW, eval + adjust50);
+        }
+    }
+
     if (ss->skipEarlyPruning)
         goto moves_loop;
 
