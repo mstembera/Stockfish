@@ -87,6 +87,13 @@ void TimeManagement::init(Search::LimitsType& limits, Color us, int ply)
   int slowMover       = Options["Slow Mover"];
   int npmsec          = Options["nodestime"];
 
+  if (limits.inc[us])
+  {
+      double minR = 2.0, maxR = 5.0;
+      double tiRatio = std::min(std::max(sqrt((double)limits.time[us] / (double)limits.inc[us]), minR), maxR);
+      slowMover = int(slowMover * interpolate(tiRatio, minR, maxR, 0.7, 1.0));
+  }
+
   // If we have to play in 'nodes as time' mode, then convert from time
   // to nodes, and use resulting values in time management formulas.
   // WARNING: Given npms (nodes per millisecond) must be much lower then
