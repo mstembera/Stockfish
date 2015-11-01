@@ -329,12 +329,17 @@ void MainThread::think() {
       wait(Signals.stop);
   }
 
-  // Send information from the thread with the deepest completed iteration if the score is better
-  // than main thread score. This makes sure we don't send deeper moves which failed low at root.
+  // Select the best thread based on 1) deepest completed iteration, 2) longest PV,
+  // 3) best score. Only consider threads with scores greater or equal to the main
+  // thread score. This makes sure we don't send deeper moves which failed low at root.
   Thread* bestThread = this;
   for (Thread* th : Threads)
-      if (   th->completedDepth > bestThread->completedDepth
-          && th->rootMoves[0].score > bestThread->rootMoves[0].score)
+      if (   th->rootMoves[0].score >= this->rootMoves[0].score
+          && (   th->completedDepth > bestThread->completedDepth
+              || (   th->completedDepth == bestThread->completedDepth
+                  && (   th->rootMoves[0].pv.size() > bestThread->rootMoves[0].pv.size()
+                      || (   th->rootMoves[0].pv.size() == bestThread->rootMoves[0].pv.size()
+                          && th->rootMoves[0].score > bestThread->rootMoves[0].score)))))
         bestThread = th;
 
   if (bestThread->rootMoves[0].pv[0] != rootMoves[0].pv[0])
