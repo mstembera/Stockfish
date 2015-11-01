@@ -80,12 +80,17 @@ namespace {
 ///  inc >  0 && movestogo == 0 means: x basetime + z increment
 ///  inc >  0 && movestogo != 0 means: x moves in y minutes + z increment
 
-void TimeManagement::init(Search::LimitsType& limits, Color us, int ply)
+void TimeManagement::init(Search::LimitsType& limits, Color us, int ply, Value material)
 {
   int minThinkingTime = Options["Minimum Thinking Time"];
   int moveOverhead    = Options["Move Overhead"];
   int slowMover       = Options["Slow Mover"];
   int npmsec          = Options["nodestime"];
+
+  // Be more conservative with time usage when lots of material remains.
+  double mFraction = double(material) 
+      / double(QueenValueMg * 2 + RookValueMg * 4 + BishopValueMg * 4 + KnightValueMg * 4);
+  slowMover = int(slowMover * interpolate(mFraction, 0.0, 1.0, 1.15, 0.85));
 
   // If we have to play in 'nodes as time' mode, then convert from time
   // to nodes, and use resulting values in time management formulas.

@@ -29,7 +29,7 @@
 
 class TimeManagement {
 public:
-  void init(Search::LimitsType& limits, Color us, int ply);
+  void init(Search::LimitsType& limits, Color us, int ply, Value material);
   void pv_instability(double bestMoveChanges) { unstablePvFactor = 1 + bestMoveChanges; }
   int available() const { return int(optimumTime * unstablePvFactor * 0.76); }
   int maximum() const { return maximumTime; }
