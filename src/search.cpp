@@ -130,6 +130,9 @@ namespace {
   double BestMoveChanges;
   Value DrawValue[COLOR_NB];
   CounterMovesHistoryStats CounterMovesHistory;
+  Mutex lhMutex;
+  Depth maxFinishedDepth = DEPTH_NONE;
+  RootMoveVector maxRootMoveVector;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -372,6 +375,9 @@ void Thread::search(bool isMainThread) {
       EasyMove.clear();
       BestMoveChanges = 0;
       TT.new_search();
+      lhMutex.lock();
+      maxFinishedDepth = DEPTH_NONE;
+      lhMutex.unlock();
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -445,26 +451,43 @@ void Thread::search(bool isMainThread) {
                   && Time.elapsed() > 3000)
                   sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
 
-              // In case of failing low/high increase aspiration window and
-              // re-search, otherwise exit the loop.
-              if (bestValue <= alpha)
+              if (isMainThread && rootDepth >= 5 * ONE_PLY && maxFinishedDepth >= rootDepth)
               {
-                  beta = (alpha + beta) / 2;
-                  alpha = std::max(bestValue - delta, -VALUE_INFINITE);
-
-                  if (isMainThread)
+                  // Instead of researching a fail low/high on the main thread just
+                  // copy the root moves from the deepest finished slave thread so far.
+                  if (bestValue <= alpha || bestValue >= beta)
                   {
-                      Signals.failedLowAtRoot = true;
-                      Signals.stopOnPonderhit = false;
+                      lhMutex.lock();
+                      rootDepth = std::min(rootDepth, maxFinishedDepth);
+                      rootMoves = maxRootMoveVector;
+                      lhMutex.unlock();
                   }
-              }
-              else if (bestValue >= beta)
-              {
-                  alpha = (alpha + beta) / 2;
-                  beta = std::min(bestValue + delta, VALUE_INFINITE);
+
+                  break;
               }
               else
-                  break;
+              {
+                  // In case of failing low/high increase aspiration window and
+                  // re-search, otherwise exit the loop.
+                  if (bestValue <= alpha)
+                  {
+                      beta = (alpha + beta) / 2;
+                      alpha = std::max(bestValue - delta, -VALUE_INFINITE);
+
+                      if (isMainThread)
+                      {
+                          Signals.failedLowAtRoot = true;
+                          Signals.stopOnPonderhit = false;
+                      }
+                  }
+                  else if (bestValue >= beta)
+                  {
+                      alpha = (alpha + beta) / 2;
+                      beta = std::min(bestValue + delta, VALUE_INFINITE);
+                  }
+                  else
+                      break;
+              }
 
               delta += delta / 4 + 5;
 
@@ -486,7 +509,17 @@ void Thread::search(bool isMainThread) {
       }
 
       if (!Signals.stop)
+      {
           completedDepth = rootDepth;
+
+          if (!isMainThread && rootDepth >= 5 * ONE_PLY && rootDepth > maxFinishedDepth)
+          {
+              lhMutex.lock();
+              maxFinishedDepth = rootDepth;
+              maxRootMoveVector = rootMoves;
+              lhMutex.unlock();
+          }
+      }
 
       if (!isMainThread)
           continue;
@@ -540,6 +573,10 @@ void Thread::search(bool isMainThread) {
 
   if (!isMainThread)
       return;
+
+  lhMutex.lock();
+  maxFinishedDepth = DEPTH_NONE;
+  lhMutex.unlock();
 
   // Clear any candidate easy move that wasn't stable for the last search
   // iterations; the second condition prevents consecutive fast moves.
