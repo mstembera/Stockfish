@@ -448,6 +448,7 @@ void Thread::search(bool isMainThread) {
               if (   isMainThread
                   && multiPV == 1
                   && (bestValue <= alpha || bestValue >= beta)
+                  && !(rootDepth >= 5 * ONE_PLY && maxFinishedDepth >= rootDepth)
                   && Time.elapsed() > 3000)
                   sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
 
@@ -458,7 +459,6 @@ void Thread::search(bool isMainThread) {
                   if (bestValue <= alpha || bestValue >= beta)
                   {
                       lhMutex.lock();
-                      rootDepth = std::min(rootDepth, maxFinishedDepth);
                       rootMoves = maxRootMoveVector;
                       lhMutex.unlock();
                   }
