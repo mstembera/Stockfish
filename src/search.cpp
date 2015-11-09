@@ -91,6 +91,8 @@ namespace {
   // stable across multiple search iterations we can fast return the best move.
   struct EasyMoveManager {
 
+    EasyMoveManager() : easyPlayed(false){}
+
     void clear() {
       stableCnt = 0;
       expectedPosKey = 0;
@@ -124,6 +126,7 @@ namespace {
     int stableCnt;
     Key expectedPosKey;
     Move pv[3];
+    bool easyPlayed;
   };
 
   EasyMoveManager EasyMove;
@@ -538,10 +541,30 @@ void Thread::search(bool isMainThread) {
   if (!isMainThread)
       return;
 
+  // Allow a 2nd possible easy move if it's a simple recapture.
+  bool easyRecaptureNext = false;
+  if (  !EasyMove.easyPlayed 
+      && rootMoves[0].pv.size() >= 3
+      && EasyMove.stableCnt >= 6
+      && Time.elapsed() < Time.available())
+  {
+      StateInfo si[2];
+      rootPos.do_move(rootMoves[0].pv[0], si[0], rootPos.gives_check(rootMoves[0].pv[0], CheckInfo(rootPos)));
+      PieceType p1 = type_of(rootPos.piece_on(to_sq(rootMoves[0].pv[1])));
+      rootPos.do_move(rootMoves[0].pv[1], si[1], rootPos.gives_check(rootMoves[0].pv[1], CheckInfo(rootPos)));
+      PieceType p2 = type_of(rootPos.piece_on(to_sq(rootMoves[0].pv[2])));
+
+      easyRecaptureNext = abs(PieceValue[MG][p1] - PieceValue[MG][p2]) <= BishopValueMg - KnightValueMg;
+
+      rootPos.undo_move(rootMoves[0].pv[1]);
+      rootPos.undo_move(rootMoves[0].pv[0]);
+  }
+
   // Clear any candidate easy move that wasn't stable for the last search
   // iterations; the second condition prevents consecutive fast moves.
-  if (EasyMove.stableCnt < 6 || Time.elapsed() < Time.available())
+  if (EasyMove.stableCnt < 6 || (Time.elapsed() < Time.available() && !easyRecaptureNext))
       EasyMove.clear();
+  EasyMove.easyPlayed = Time.elapsed() < Time.available();
 
   // If skill level is enabled, swap best PV line with the sub-optimal one
   if (skill.enabled())
