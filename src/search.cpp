@@ -554,7 +554,9 @@ void Thread::search(bool isMainThread) {
       rootPos.do_move(rootMoves[0].pv[1], si[1], rootPos.gives_check(rootMoves[0].pv[1], CheckInfo(rootPos)));
       PieceType p2 = type_of(rootPos.piece_on(to_sq(rootMoves[0].pv[2])));
 
-      easyRecaptureNext = abs(PieceValue[MG][p1] - PieceValue[MG][p2]) <= BishopValueMg - KnightValueMg;
+      easyRecaptureNext =    p1 != NO_PIECE_TYPE
+                          && p2 != NO_PIECE_TYPE 
+                          && abs(PieceValue[MG][p1] - PieceValue[MG][p2]) <= BishopValueMg - KnightValueMg;
 
       rootPos.undo_move(rootMoves[0].pv[1]);
       rootPos.undo_move(rootMoves[0].pv[0]);
