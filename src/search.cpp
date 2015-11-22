@@ -127,6 +127,7 @@ namespace {
   };
 
   EasyMoveManager EasyMove;
+  std::vector<Move> easyMovesSMP(128, MOVE_NONE);
   double BestMoveChanges;
   Value DrawValue[COLOR_NB];
   CounterMovesHistoryStats CounterMovesHistory;
@@ -327,10 +328,11 @@ void MainThread::search() {
 
   // Check if there are threads with a better score than main thread.
   Thread* bestThread = this;
-  for (Thread* th : Threads)
-      if (   th->completedDepth > bestThread->completedDepth
-          && th->rootMoves[0].score > bestThread->rootMoves[0].score)
-        bestThread = th;
+  if (Time.elapsed() > Time.available())
+      for (Thread* th : Threads)
+          if (   th->completedDepth > bestThread->completedDepth
+              && th->rootMoves[0].score > bestThread->rootMoves[0].score)
+            bestThread = th;
 
   // Send new PV when needed.
   // FIXME: Breaks multiPV, and skill levels
@@ -369,6 +371,7 @@ void Thread::search() {
       EasyMove.clear();
       BestMoveChanges = 0;
       TT.new_search();
+      easyMovesSMP.assign(Threads.size(), MOVE_NONE);
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -507,6 +510,10 @@ void Thread::search() {
               if (rootDepth > 4 * ONE_PLY && multiPV == 1)
                   Time.pv_instability(BestMoveChanges);
 
+              // Reduce time if we have at least 4 threads and 90% or more agree on the same move.
+              uint64_t sameMoveCnt = std::count(easyMovesSMP.begin(), easyMovesSMP.begin() + Threads.size(), easyMovesSMP[0]);
+              bool easySMP = Threads.size() >= 4 && sameMoveCnt >= 9 * (Threads.size() + 1) / 10;
+
               // Stop the search if only one legal move is available or all
               // of the available time has been used or we matched an easyMove
               // from the previous search and just did a fast verification.
@@ -514,7 +521,10 @@ void Thread::search() {
                   || Time.elapsed() > Time.available()
                   || (   rootMoves[0].pv[0] == easyMove
                       && BestMoveChanges < 0.03
-                      && Time.elapsed() > Time.available() / 10))
+                      && Time.elapsed() > Time.available() / 10)
+                  || (   easySMP
+                      && BestMoveChanges < 0.03
+                      && Time.elapsed() > 7 * Time.available() / 10))
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -1046,6 +1056,8 @@ moves_loop: // When in check search starts from here
 
               for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                   rm.pv.push_back(*m);
+
+              easyMovesSMP[thisThread->idx] = move;
 
               // We record how often the best move has been changed in each
               // iteration. This information is used for time management: When
