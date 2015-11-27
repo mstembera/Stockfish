@@ -524,7 +524,7 @@ void Thread::search() {
                       && Time.elapsed() > Time.available() / 10)
                   || (   easySMP
                       && BestMoveChanges < 0.03
-                      && Time.elapsed() > 7 * Time.available() / 10))
+                      && Time.elapsed() > Time.available() / 2))
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
