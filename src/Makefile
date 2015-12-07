@@ -175,7 +175,11 @@ ifeq ($(COMP),mingw)
 			endif
 		endif
 	else
-		CXX=g++
+		ifeq ($(bits),64)
+			CXX=x86_64-w64-mingw32-c++
+		else
+			CXX=i686-w64-mingw32-c++
+		endif
 	endif
 
 	CXXFLAGS += -Wextra -Wshadow
@@ -291,6 +295,10 @@ endif
 ### 3.6. Bits
 ifeq ($(bits),64)
 	CXXFLAGS += -DIS_64BIT
+else
+	ifneq ($(UNAME),Darwin)
+		CXXFLAGS += -m32
+	endif
 endif
 
 ### 3.7 prefetch
