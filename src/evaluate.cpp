@@ -110,13 +110,22 @@ namespace {
   // Evaluation weights, indexed by the corresponding evaluation term
   enum { Mobility, PawnStructure, PassedPawns, Space, KingSafety, Threats };
 
-  const struct Weight { int mg, eg; } Weights[] = {
+  struct Weight { int mg, eg; } Weights[] = {
     {266, 334}, {214, 203}, {193, 262}, {47, 0}, {330, 0}, {404, 241}
   };
 
   Score operator*(Score s, const Weight& w) {
     return make_score(mg_value(s) * w.mg / 256, eg_value(s) * w.eg / 256);
   }
+
+
+  int spaceW = 47;
+  int minS = 12000, maxS = 13000;
+
+  TUNE(SetRange(17, 77), spaceW);
+  TUNE(SetRange(10000, 15000), minS);
+  TUNE(SetRange(10000, 15000), maxS);
+
 
 
   #define V(v) Value(v)
@@ -818,10 +827,31 @@ Value Eval::evaluate(const Position& pos) {
           score -= int(relative_rank(BLACK, frontmost_sq(BLACK, b))) * Unstoppable;
   }
 
+
+
+  // for tuning only
+  if (maxS < minS)
+      maxS = minS;
+  Weights[Space].mg = spaceW;
+      
+
   // Evaluate space for both sides, only during opening
-  if (pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK) >= 12222)
-      score += (  evaluate_space<WHITE>(pos, ei)
-                - evaluate_space<BLACK>(pos, ei)) * Weights[Space];
+  Value minNPM = Value(minS), maxNPM = Value(maxS);
+  Value npm = pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK);
+  if (npm >= minNPM)
+  {
+      Score ss = evaluate_space<WHITE>(pos, ei) - evaluate_space<BLACK>(pos, ei);
+
+      if (npm < maxNPM)
+      {
+          int fraction = interpolate(npm, minNPM, maxNPM, 0, 1024);
+          ss = make_score(mg_value(ss) * Weights[Space].mg * fraction / (1024 * 256), 0);
+      }
+      else
+          ss = ss * Weights[Space];
+
+      score += ss;
+  }
 
   // Evaluate position potential for the winning side
   score += evaluate_initiative(pos, ei.pi->pawn_asymmetry(), eg_value(score));
