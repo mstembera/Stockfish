@@ -120,11 +120,11 @@ namespace {
 
 
   int spaceW = 47;
-  int minS = 12000, maxS = 13000;
+  int minS = 12000, maxS = 12500;
 
   TUNE(SetRange(17, 77), spaceW);
-  TUNE(SetRange(10000, 15000), minS);
-  TUNE(SetRange(10000, 15000), maxS);
+  TUNE(SetRange(11000, 13500), minS);
+  TUNE(SetRange(11000, 13500), maxS);
 
 
 
