@@ -111,7 +111,7 @@ namespace {
   enum { Mobility, PawnStructure, PassedPawns, Space, KingSafety, Threats };
 
   const struct Weight { int mg, eg; } Weights[] = {
-    {266, 334}, {214, 203}, {193, 262}, {47, 0}, {330, 0}, {404, 241}
+    {266, 334}, {214, 203}, {193, 262}, {50, 0}, {330, 0}, {404, 241}
   };
 
   Score operator*(Score s, const Weight& w) {
@@ -819,9 +819,22 @@ Value Eval::evaluate(const Position& pos) {
   }
 
   // Evaluate space for both sides, only during opening
-  if (pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK) >= 12222)
-      score += (  evaluate_space<WHITE>(pos, ei)
-                - evaluate_space<BLACK>(pos, ei)) * Weights[Space];
+  Value minNPM = Value(11915), maxNPM = Value(12390);
+  Value npm = pos.non_pawn_material(WHITE) + pos.non_pawn_material(BLACK);
+  if (npm > minNPM)
+  {
+      Score ss = evaluate_space<WHITE>(pos, ei) - evaluate_space<BLACK>(pos, ei);
+
+      if (npm < maxNPM)
+      {
+          int fraction = interpolate(npm, minNPM, maxNPM, 0, 1024);
+          ss = make_score(mg_value(ss) * Weights[Space].mg * fraction / (1024 * 256), 0);
+      }
+      else
+          ss = ss * Weights[Space];
+
+      score += ss;
+  }
 
   // Evaluate position potential for the winning side
   score += evaluate_initiative(pos, ei.pi->pawn_asymmetry(), eg_value(score));
