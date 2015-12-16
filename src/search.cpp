@@ -577,6 +577,7 @@ namespace {
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
+    bool modifySearch = (thisThread->idx & 0x7) == 3;
     inCheck = pos.checkers();
     moveCount = quietCount =  ss->moveCount = 0;
     bestValue = -VALUE_INFINITE;
@@ -717,7 +718,8 @@ namespace {
     if (   !PvNode
         &&  depth < 4 * ONE_PLY
         &&  eval + razor_margin[depth] <= alpha
-        &&  ttMove == MOVE_NONE)
+        &&  ttMove == MOVE_NONE
+        &&  (!modifySearch || abs(eval) < 2 * VALUE_KNOWN_WIN))
     {
         if (   depth <= ONE_PLY
             && eval + razor_margin[3 * ONE_PLY] <= alpha)
@@ -730,18 +732,21 @@ namespace {
     }
 
     // Step 7. Futility pruning: child node (skipped when in check)
-    if (   !RootNode
+    if (  (!RootNode || (!PvNode && modifySearch))
         &&  depth < 7 * ONE_PLY
         &&  eval - futility_margin(depth) >= beta
         &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
-        &&  pos.non_pawn_material(pos.side_to_move()))
+        &&  pos.non_pawn_material(pos.side_to_move())
+        &&  (!modifySearch || pos.non_pawn_material(~pos.side_to_move())))
         return eval - futility_margin(depth);
 
     // Step 8. Null move search with verification search (is omitted in PV nodes)
     if (   !PvNode
         &&  depth >= 2 * ONE_PLY
         &&  eval >= beta
-        &&  pos.non_pawn_material(pos.side_to_move()))
+        &&  pos.non_pawn_material(pos.side_to_move())
+        && (   !modifySearch
+            || (abs(eval) < 2 * VALUE_KNOWN_WIN && pos.non_pawn_material(~pos.side_to_move())) ))
     {
         ss->currentMove = MOVE_NULL;
 
@@ -783,7 +788,8 @@ namespace {
     // safely prune the previous move.
     if (   !PvNode
         &&  depth >= 5 * ONE_PLY
-        &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
+        &&  abs(beta) < VALUE_MATE_IN_MAX_PLY
+        && (!modifySearch || abs(eval) < 2 * VALUE_KNOWN_WIN))
     {
         Value rbeta = std::min(beta + 200, VALUE_INFINITE);
         Depth rdepth = depth - 4 * ONE_PLY;
@@ -905,7 +911,7 @@ moves_loop: // When in check search starts from here
       newDepth = depth - ONE_PLY + extension;
 
       // Step 13. Pruning at shallow depth
-      if (   !RootNode
+      if (  (!RootNode || (!PvNode && modifySearch))
           && !captureOrPromotion
           && !inCheck
           && !givesCheck
