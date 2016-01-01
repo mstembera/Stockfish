@@ -285,6 +285,13 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
 /// Entry::do_king_safety() calculates a bonus for king safety. It is called only
 /// when king square changes, which is about 20% of total king_safety() calls.
 
+int C0 = 4, C1 = 4, C2 = 10;
+
+TUNE(SetRange(0, 30), C0);
+TUNE(SetRange(0, 30), C1);
+TUNE(SetRange(0, 40), C2);
+
+
 template<Color Us>
 Score Entry::do_king_safety(const Position& pos, Square ksq) {
 
@@ -299,14 +306,19 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   if (relative_rank(Us, ksq) > RANK_4)
       return make_score(0, -16 * minKingPawnDistance);
 
-  Value bonus = shelter_storm<Us>(pos, ksq);
+  Value bonus = shelter_storm<Us>(pos, ksq) + C0;
 
   // If we can castle use the bonus after the castling if it is bigger
-  if (pos.can_castle(MakeCastling<Us, KING_SIDE>::right))
-      bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_G1)));
+  if (!pos.did_castle(Us))
+  {
+      if (pos.can_castle(MakeCastling<Us, KING_SIDE>::right))
+          bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_G1)) - C1);
 
-  if (pos.can_castle(MakeCastling<Us, QUEEN_SIDE>::right))
-      bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_C1)));
+      if (pos.can_castle(MakeCastling<Us, QUEEN_SIDE>::right))
+          bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_C1)) - C1);
+  }
+  else
+      bonus += C2;
 
   return make_score(bonus, -16 * minKingPawnDistance);
 }

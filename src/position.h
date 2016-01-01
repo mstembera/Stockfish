@@ -112,6 +112,7 @@ public:
   // Castling
   int can_castle(Color c) const;
   int can_castle(CastlingRight cr) const;
+  bool did_castle(Color c) const;
   bool castling_impeded(CastlingRight cr) const;
   Square castling_rook_square(CastlingRight cr) const;
 
@@ -206,6 +207,7 @@ private:
   Thread* thisThread;
   StateInfo* st;
   bool chess960;
+  bool castled[COLOR_NB];
 };
 
 extern std::ostream& operator<<(std::ostream& os, const Position& pos);
@@ -273,6 +275,10 @@ inline int Position::can_castle(CastlingRight cr) const {
 
 inline int Position::can_castle(Color c) const {
   return st->castlingRights & ((WHITE_OO | WHITE_OOO) << (2 * c));
+}
+
+inline bool Position::did_castle(Color c) const {
+    return castled[c];
 }
 
 inline bool Position::castling_impeded(CastlingRight cr) const {
