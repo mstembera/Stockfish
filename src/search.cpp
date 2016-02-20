@@ -370,6 +370,11 @@ void MainThread::search() {
 
   previousScore = bestThread->rootMoves[0].score;
 
+  for (Thread* th : Threads)
+  {
+      th->history = bestThread->history;
+  }
+
   // Send new PV when needed
   if (bestThread != this)
       sync_cout << UCI::pv(bestThread->rootPos, bestThread->completedDepth, -VALUE_INFINITE, VALUE_INFINITE) << sync_endl;
