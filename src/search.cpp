@@ -409,6 +409,9 @@ void Thread::search() {
       TT.new_search();
   }
 
+  if (this->idx >= (2 * Threads.size() + 2) / 3)
+      history.clear();
+
   size_t multiPV = Options["MultiPV"];
   Skill skill(Options["Skill Level"]);
 
