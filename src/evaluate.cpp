@@ -686,7 +686,7 @@ namespace {
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
-    int app = available_pawn_push<WHITE>(pos) - available_pawn_push<BLACK>(pos);
+    int app = available_pawn_push<WHITE>(pos) + available_pawn_push<BLACK>(pos);
 
     // Compute the initiative bonus for the attacking side
     int initiative = 8 * (asymmetry + kingDistance - 15) + 12 * pawns + app;
