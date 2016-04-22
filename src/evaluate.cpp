@@ -664,6 +664,20 @@ namespace {
   }
 
 
+  template<Color Us>
+  inline int available_pawn_push(const Position& pos) {
+
+    const Color Them = (Us == WHITE ? BLACK : WHITE);
+    const Square Up = (Us == WHITE ? DELTA_N : DELTA_S);
+    const Bitboard TRank2BB = (Us == WHITE ? Rank2BB : Rank7BB);
+    const Bitboard TRank7BB = (Us == WHITE ? Rank7BB : Rank2BB);
+
+    Bitboard b = pos.pieces(Us, PAWN) & ~TRank7BB;
+    b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces(Them, PAWN)));
+
+    return b ? 10 : 0;
+  }
+
   // evaluate_initiative() computes the initiative correction value for the
   // position, i.e., second order bonus/malus based on the known attacking/defending
   // status of the players.
@@ -672,9 +686,10 @@ namespace {
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
+    int app = available_pawn_push<WHITE>(pos) - available_pawn_push<BLACK>(pos);
 
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (asymmetry + kingDistance - 15) + 12 * pawns;
+    int initiative = 8 * (asymmetry + kingDistance - 15) + 12 * pawns + app;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
