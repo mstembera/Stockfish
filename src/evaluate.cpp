@@ -673,7 +673,7 @@ namespace {
     const Bitboard TRank7BB = (Us == WHITE ? Rank7BB : Rank2BB);
 
     Bitboard b = pos.pieces(Us, PAWN) & ~TRank7BB;
-    b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces(Them, PAWN)));
+    b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB))) & ~pos.pieces(Them, PAWN);
 
     return b ? 10 : 0;
   }
