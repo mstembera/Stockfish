@@ -431,8 +431,9 @@ void Thread::search() {
       for (RootMove& rm : rootMoves)
           rm.previousScore = rm.score;
 
+      size_t smpWidePV = multiPV;
       // MultiPV loop. We perform a full root search for each PV line
-      for (PVIdx = 0; PVIdx < multiPV && !Signals.stop; ++PVIdx)
+      for (PVIdx = 0; PVIdx < smpWidePV && !Signals.stop; ++PVIdx)
       {
           // Reset aspiration window starting size
           if (rootDepth >= 5 * ONE_PLY)
@@ -502,12 +503,19 @@ void Thread::search() {
               assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
           }
 
-          // Sort the PV lines searched so far and update the GUI
+          // Sort the PV lines searched so far
           std::stable_sort(rootMoves.begin(), rootMoves.begin() + PVIdx + 1);
 
           if (!mainThread)
-              break;
+          {
+              // Every other helper thread searches additional PVs if the main PV is unstable
+              if (this->idx & 0x1)
+                  smpWidePV = std::min(multiPV + size_t(Threads.main()->bestMoveChanges), rootMoves.size());
 
+              continue;
+          }
+
+          // Update the GUI
           if (Signals.stop)
               sync_cout << "info nodes " << Threads.nodes_searched()
                         << " time " << Time.elapsed() << sync_endl;
