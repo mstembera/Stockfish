@@ -139,8 +139,8 @@ void MovePicker::score<CAPTURES>() {
 }
 
 
-int w0 = 50, w1 = 50, w2 = 50, w3 = 50;
-TUNE(SetRange(0, 100), w0, w1, w2, w3);
+int w1 = 5, w2 = 5, w3 = 5;
+TUNE(SetRange(0, 20), w1, w2, w3);
 
 template<>
 void MovePicker::score<QUIETS>() {
@@ -152,7 +152,7 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
   for (auto& m : *this)
-      m.value =        w0 * history[pos.moved_piece(m)][to_sq(m)]
+      m.value =         5 * history[pos.moved_piece(m)][to_sq(m)]
                + (cm ? w1 *   (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
                + (fm ? w2 *   (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
                + (f2 ? w3 *   (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
