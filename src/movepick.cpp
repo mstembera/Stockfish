@@ -38,15 +38,13 @@ namespace {
   // Our insertion sort, which is guaranteed to be stable, as it should be
   void insertion_sort(ExtMove* begin, ExtMove* end)
   {
-    ExtMove tmp, *p, *q;
-
-    for (p = begin + 1; p < end; ++p)
-    {
-        tmp = *p;
-        for (q = p; q != begin && *(q-1) < tmp; --q)
-            *q = *(q-1);
-        *q = tmp;
-    }
+      for (ExtMove* p = end-2; p >= begin; --p)
+      {
+          ExtMove tmp = *p, *q = p;
+          for (; q < end-1 && tmp < *(q+1); ++q)
+              *q = *(q+1);
+          *q = tmp;
+      }
   }
 
   // pick_best() finds the best move in the range (begin, end) and moves it to
@@ -142,16 +140,31 @@ template<>
 void MovePicker::score<QUIETS>() {
 
   const HistoryStats& history = pos.this_thread()->history;
-
   const CounterMoveStats* cm = (ss-1)->counterMoves;
   const CounterMoveStats* fm = (ss-2)->counterMoves;
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
-  for (auto& m : *this)
-      m.value =      history[pos.moved_piece(m)][to_sq(m)]
-               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
+  ExtMove *b = begin(), *p = b, *e = end();
+  while (p < e)
+  {
+      p->value = history[pos.moved_piece(*p)][to_sq(*p)]
+           + (cm ? (*cm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+           + (fm ? (*fm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+           + (f2 ? (*f2)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO);
+
+      // Partition good quiets at the beginning, bad quiets at the end,
+      // and leave zero quiets in place.
+      if (p->value == VALUE_ZERO)
+          ++p;
+      else if (p->value > VALUE_ZERO)
+          std::swap(*p++, *b++);
+      else
+          std::swap(*p, *--e);
+  }
+  
+  insertion_sort(begin(), b);
+  if (depth >= 3 * ONE_PLY)
+      insertion_sort(e, end());
 }
 
 template<>
@@ -200,11 +213,8 @@ void MovePicker::generate_next_stage() {
       break;
 
   case ALL_QUIETS:
-      endGoodQuiets = endMoves = generate<QUIETS>(pos, moves);
+      endMoves = generate<QUIETS>(pos, moves);
       score<QUIETS>();
-      if (depth < 3 * ONE_PLY)
-          endGoodQuiets = std::partition(cur, endMoves, [](const ExtMove& m) { return m.value > VALUE_ZERO; });
-      insertion_sort(cur, endGoodQuiets);
       break;
 
   case BAD_CAPTURES:
