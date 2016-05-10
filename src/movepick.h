@@ -99,7 +99,7 @@ private:
   ExtMove killers[3];
   Square recaptureSquare;
   Value threshold;
-  int stage;
+  int stage, goodQuietsCnt;
   ExtMove* endBadCaptures = moves + MAX_MOVES - 1;
   ExtMove moves[MAX_MOVES], *cur = moves, *endMoves = moves;
 };

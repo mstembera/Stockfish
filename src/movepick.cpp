@@ -49,6 +49,16 @@ namespace {
     }
   }
 
+  void partial_stable_sort(ExtMove* begin, ExtMove* end, int N)
+  {
+      assert(end - begin >= N);
+
+      for (ExtMove* p = begin; p < begin + N; ++p)
+          for (ExtMove* q = end - 1; q > p; --q)
+              if (*(q-1) < *q)
+                  std::swap(*(q-1), *q);
+  }
+
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves, e.g., the possible captures.
@@ -147,11 +157,17 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* fm = (ss-2)->counterMoves;
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
+  goodQuietsCnt = 0;
+
   for (auto& m : *this)
+  {
       m.value =      history[pos.moved_piece(m)][to_sq(m)]
                + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
                + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
                + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
+      
+      goodQuietsCnt += (m.value > VALUE_ZERO);
+  }
 }
 
 template<>
@@ -203,11 +219,8 @@ void MovePicker::generate_next_stage() {
       endMoves = generate<QUIETS>(pos, moves);
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
-      {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
-      } else
+          partial_stable_sort(cur, endMoves, goodQuietsCnt);
+      else
           insertion_sort(cur, endMoves);
       break;
 
