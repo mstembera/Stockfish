@@ -202,13 +202,18 @@ void MovePicker::generate_next_stage() {
   case QUIET:
       endMoves = generate<QUIETS>(pos, moves);
       score<QUIETS>();
-      if (depth < 3 * ONE_PLY)
       {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-      } else
-          insertion_sort(cur, endMoves);
+      
+          if (depth >= 3 * ONE_PLY)
+          {
+              ExtMove* zeroQuiet = std::partition(goodQuiet, endMoves, [](const ExtMove& m)
+                                                { return m.value == VALUE_ZERO; });
+              insertion_sort(zeroQuiet, endMoves);
+          }
+      }
       break;
 
   case BAD_CAPTURES:
