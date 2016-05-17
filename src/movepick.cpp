@@ -148,10 +148,10 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
   for (auto& m : *this)
-      m.value =      history[pos.moved_piece(m)][to_sq(m)]
-               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
+      m.value =          history[pos.moved_piece(m)][to_sq(m)]
+               + (cm ? 3 * (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
+               + (fm ? 2 * (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
+               + (f2 ?     (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
 }
 
 template<>

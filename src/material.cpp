@@ -32,7 +32,7 @@ namespace {
   // Polynomial material imbalance parameters
 
   //                      pair  pawn knight bishop rook queen
-  const int Linear[6] = { 1667, -168, -1027, -166,  238, -138 };
+  const int Linear[6] = { 1812, -168, -1027, -166,  238, -138 };
 
   const int QuadraticOurs[][PIECE_TYPE_NB] = {
     //            OUR PIECES
