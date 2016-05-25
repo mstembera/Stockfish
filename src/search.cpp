@@ -420,10 +420,11 @@ void Thread::search() {
       // 2nd ply (using a half-density matrix).
       if (!mainThread)
       {
-          rootDepth = std::max(rootDepth, MaxCompletedDepth + ONE_PLY);
           const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
           if (row[(rootDepth + rootPos.game_ply()) % row.size()])
              continue;
+
+          rootDepth = std::max(rootDepth, MaxCompletedDepth + ONE_PLY);
       }
 
       // Age out PV variability metric
