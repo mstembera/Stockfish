@@ -158,7 +158,7 @@ namespace {
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
-  Depth MaxCompletedDepth;
+  std::atomic<Depth> MaxCompletedDepth(DEPTH_ZERO);
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -362,6 +362,7 @@ void MainThread::search() {
   }
 
   previousScore = bestThread->rootMoves[0].score;
+  MaxCompletedDepth = DEPTH_ZERO;
 
   // Send new PV when needed
   if (bestThread != this)
@@ -392,7 +393,6 @@ void Thread::search() {
   bestValue = delta = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
   completedDepth = DEPTH_ZERO;
-  MaxCompletedDepth = DEPTH_ZERO;
 
   if (mainThread)
   {
@@ -424,7 +424,7 @@ void Thread::search() {
           if (row[(rootDepth + rootPos.game_ply()) % row.size()])
              continue;
 
-          rootDepth = std::max(rootDepth, MaxCompletedDepth + ONE_PLY);
+          rootDepth = std::max(rootDepth, std::min(MaxCompletedDepth + ONE_PLY, DEPTH_MAX - ONE_PLY));
       }
 
       // Age out PV variability metric
@@ -524,7 +524,7 @@ void Thread::search() {
       if (!Signals.stop)
       {
           completedDepth = rootDepth;
-          MaxCompletedDepth = std::max(MaxCompletedDepth, rootDepth);
+          MaxCompletedDepth = std::max(rootDepth, MaxCompletedDepth.load());
       }
 
       if (!mainThread)
