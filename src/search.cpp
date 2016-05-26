@@ -158,7 +158,7 @@ namespace {
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
-  std::atomic<Depth> MaxCompletedDepth(DEPTH_ZERO);
+  std::atomic<Depth> MaxCompletedDepth;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -262,6 +262,8 @@ void MainThread::search() {
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
 
+  MaxCompletedDepth = DEPTH_ZERO;
+
   TB::Hits = 0;
   TB::RootInTB = false;
   TB::UseRule50 = Options["Syzygy50MoveRule"];
@@ -362,7 +364,6 @@ void MainThread::search() {
   }
 
   previousScore = bestThread->rootMoves[0].score;
-  MaxCompletedDepth = DEPTH_ZERO;
 
   // Send new PV when needed
   if (bestThread != this)
