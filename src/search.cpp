@@ -525,7 +525,8 @@ void Thread::search() {
       if (!Signals.stop)
       {
           completedDepth = rootDepth;
-          MaxCompletedDepth = std::max(rootDepth, MaxCompletedDepth.load());
+          if (MaxCompletedDepth < rootDepth)
+              MaxCompletedDepth = rootDepth;
       }
 
       if (!mainThread)
