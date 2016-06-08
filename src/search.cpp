@@ -375,10 +375,10 @@ void MainThread::search() {
 }
 
 // Calculates optimum time based on dynamic search information.
-double adjusted_optimum_time(Value bestValue)
+double adjusted_optimum_time()
 {
     const int F[] = { Threads.main()->failedLow,
-                      bestValue - Threads.main()->previousScore };
+                      Threads.main()->rootMoves[0].score - Threads.main()->previousScore };
 
     int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
     double unstablePvFactor = 1 + Threads.main()->bestMoveChanges;
@@ -432,7 +432,7 @@ void Thread::search() {
           // to finish the current main thread depth.
           if (  !Limits.use_time_management()
               || Limits.ponder
-              || Time.elapsed() <= adjusted_optimum_time(bestValue) * 85 / 100)
+              || Time.elapsed() <= adjusted_optimum_time() * 85 / 100)
           {
               // Set up the new depths for the helper threads skipping on average every
               // 2nd ply (using a half-density matrix).
@@ -567,7 +567,7 @@ void Thread::search() {
                                && Time.elapsed() > Time.optimum() * 5 / 42;
 
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > adjusted_optimum_time(bestValue)
+                  || Time.elapsed() > adjusted_optimum_time()
                   || (mainThread->easyMovePlayed = doEasyMove))
               {
                   // If we are allowed to ponder do not stop the search now but
