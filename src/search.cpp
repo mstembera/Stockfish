@@ -374,6 +374,17 @@ void MainThread::search() {
   std::cout << sync_endl;
 }
 
+// Calculates optimum time based on dynamic search information.
+double adjusted_optimum_time(Value bestValue)
+{
+    const int F[] = { Threads.main()->failedLow,
+                      bestValue - Threads.main()->previousScore };
+
+    int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
+    double unstablePvFactor = 1 + Threads.main()->bestMoveChanges;
+
+    return Time.optimum() * unstablePvFactor * improvingFactor / 628;
+}
 
 // Thread::search() is the main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
@@ -414,13 +425,23 @@ void Thread::search() {
   // Iterative deepening loop until requested to stop or the target depth is reached.
   while (++rootDepth < DEPTH_MAX && !Signals.stop && (!Limits.depth || Threads.main()->rootDepth <= Limits.depth))
   {
-      // Set up the new depths for the helper threads skipping on average every
-      // 2nd ply (using a half-density matrix).
       if (!mainThread)
       {
-          const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
-          if (row[(rootDepth + rootPos.game_ply()) % row.size()])
-             continue;
+          // If we are close to running out of time don't skip any
+          // more depths but instead start using helper threads
+          // to finish the current main thread depth.
+          if (  !Limits.use_time_management()
+              || Limits.ponder
+              || Time.elapsed() <= adjusted_optimum_time(bestValue) * 85 / 100)
+          {
+              // Set up the new depths for the helper threads skipping on average every
+              // 2nd ply (using a half-density matrix).
+              const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
+              if (row[(rootDepth + rootPos.game_ply()) % row.size()])
+                  continue;
+          }
+          else
+              rootDepth = std::max(rootDepth, Threads.main()->rootDepth);
       }
 
       // Age out PV variability metric
@@ -541,18 +562,12 @@ void Thread::search() {
               // Stop the search if only one legal move is available, or if all
               // of the available time has been used, or if we matched an easyMove
               // from the previous search and just did a fast verification.
-              const int F[] = { mainThread->failedLow,
-                                bestValue - mainThread->previousScore };
-
-              int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
-              double unstablePvFactor = 1 + mainThread->bestMoveChanges;
-
               bool doEasyMove =   rootMoves[0].pv[0] == easyMove
                                && mainThread->bestMoveChanges < 0.03
                                && Time.elapsed() > Time.optimum() * 5 / 42;
 
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
+                  || Time.elapsed() > adjusted_optimum_time(bestValue)
                   || (mainThread->easyMovePlayed = doEasyMove))
               {
                   // If we are allowed to ponder do not stop the search now but
