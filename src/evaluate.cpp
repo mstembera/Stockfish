@@ -682,14 +682,25 @@ namespace {
   // evaluate_initiative() computes the initiative correction value for the
   // position, i.e., second order bonus/malus based on the known attacking/defending
   // status of the players.
+
+  int w0 = 120, w1 = 8, w2 = 8, w3 = 8, w4 = 8, w5 = 8;
+  TUNE(SetRange(80, 160), w0);
+  TUNE(SetRange(-20, 40), w1, w2, w3, w4, w5);
+
   Score evaluate_initiative(const Position& pos, int asymmetry, Value eg) {
 
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
+    int imbalance = w1 * (pos.count<KNIGHT>(WHITE) != pos.count<KNIGHT>(BLACK))
+                  + w2 * (pos.count<BISHOP>(WHITE) != pos.count<BISHOP>(BLACK))
+                  + w3 * (pos.count<ROOK>(WHITE)   != pos.count<ROOK>(BLACK))
+                  + w4 * (pos.count<QUEEN>(WHITE)  != pos.count<QUEEN>(BLACK))
+                  + w5 * !pos.opposite_bishops();
+
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (asymmetry + kingDistance - 15) + 12 * pawns;
+    int initiative = 8 * (asymmetry + kingDistance) + 12 * pawns + imbalance - w0;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
