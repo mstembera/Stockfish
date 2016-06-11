@@ -688,8 +688,13 @@ namespace {
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
+    int imbalance =   (pos.count<KNIGHT>(WHITE) != pos.count<KNIGHT>(BLACK))
+                    + (pos.count<BISHOP>(WHITE) != pos.count<BISHOP>(BLACK))
+                    + (pos.count<ROOK>(WHITE)   != pos.count<ROOK>(BLACK))
+                    + (pos.count<QUEEN>(WHITE)  != pos.count<QUEEN>(BLACK)) * 2;
+
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (asymmetry + kingDistance - 15) + 12 * pawns;
+    int initiative = 8 * (asymmetry + kingDistance - 16) + 12 * pawns + 16 * imbalance;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
