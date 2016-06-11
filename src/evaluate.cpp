@@ -683,9 +683,9 @@ namespace {
   // position, i.e., second order bonus/malus based on the known attacking/defending
   // status of the players.
 
-  int w0 = 21, w1 = -4, w2 = -4, w3 = -5, w4 = -2, w5 = -3;
-  TUNE(SetRange(10, 35), w0);
-  TUNE(SetRange(-20, 5), w1, w2, w3, w4, w5);
+  int w0 = 14, w1 = 3, w2 = 1, w3 = 2, w4 = -4, w5 = 4;
+  TUNE(SetRange(5, 30), w0);
+  TUNE(SetRange(-15, 15), w1, w2, w3, w4, w5);
 
   Score evaluate_initiative(const Position& pos, int asymmetry, Value eg) {
 
