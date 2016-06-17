@@ -685,7 +685,7 @@ namespace {
   Score evaluate_initiative(const Position& pos, int asymmetry, Value eg) {
 
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
-                      - (rank_of(pos.square<KING>(BLACK)) - rank_of(pos.square<KING>(WHITE)));
+                      - std::max(int(rank_of(pos.square<KING>(BLACK)) - rank_of(pos.square<KING>(WHITE))), 0);
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
     // Compute the initiative bonus for the attacking side
