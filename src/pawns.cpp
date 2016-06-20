@@ -47,6 +47,9 @@ namespace {
   // Doubled pawn penalty
   const Score Doubled = S(18,38);
 
+  // Blocked pawn penalty
+  const Score Blocked = S(15,30);
+
   // Lever bonus by rank
   const Score Lever[RANK_NB] = {
     S( 0,  0), S( 0,  0), S(0, 0), S(0, 0),
@@ -95,7 +98,7 @@ namespace {
 
     Bitboard b, neighbours, stoppers, doubled, supported, phalanx;
     Square s;
-    bool opposed, lever, connected, backward;
+    bool opposed, lever, connected, backward, blocked;
     Score score = SCORE_ZERO;
     const Square* pl = pos.squares<PAWN>(Us);
     const Bitboard* pawnAttacksBB = StepAttacksBB[make_piece(Us, PAWN)];
@@ -124,6 +127,7 @@ namespace {
         opposed    = theirPawns & forward_bb(Us, s);
         stoppers   = theirPawns & passed_pawn_mask(Us, s);
         lever      = theirPawns & pawnAttacksBB[s];
+        blocked    = !lever && (theirPawns & (s + Up));
         doubled    = ourPawns   & (s + Up);
         neighbours = ourPawns   & adjacent_files_bb(f);
         phalanx    = neighbours & rank_bb(s);
@@ -171,6 +175,9 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
+
+        if (blocked)
+            score -= Blocked;
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;
