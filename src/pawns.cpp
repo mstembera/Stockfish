@@ -109,7 +109,7 @@ namespace {
     e->pawnAttacks[Us] = shift_bb<Right>(ourPawns) | shift_bb<Left>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
-    e->blocked[Us] = 0;
+    e->unblocked[Us] = 0;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -172,8 +172,8 @@ namespace {
         if (lever)
             score += Lever[relative_rank(Us, s)];
 
-        // count blocked pawns
-        e->blocked[Us] += !lever && (theirPawns & (s + Up));
+        // count unblocked pawns
+        e->unblocked[Us] += lever || !(theirPawns & (s + Up));
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;

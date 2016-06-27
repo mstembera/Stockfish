@@ -695,8 +695,12 @@ namespace {
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
+    int blockedPenalty = (   ei.pi->unblocked_count(strongSide) < 2
+                          && ei.pi->unblocked_count(strongSide) < pos.count<PAWN>(strongSide))
+                         ? ei.pi->unblocked_count(strongSide) ? 8 : 20 : 0;
+
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (ei.pi->pawn_asymmetry() + kingDistance - 15) + 12 * (pawns - ei.pi->blocked_count(strongSide));
+    int initiative = 8 * (ei.pi->pawn_asymmetry() + kingDistance - 15) + 12 * pawns - blockedPenalty;
 
     // Now apply the bonus: note that we carefully cap the bonus so
     // that the endgame score will never be divided by more than two.
