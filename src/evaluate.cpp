@@ -112,6 +112,7 @@ namespace {
 
   // MobilityBonus[PieceType][attacked] contains bonuses for middle and end
   // game, indexed by piece type and number of attacked squares in the MobilityArea.
+#if 0
   const Score MobilityBonus[][32] = {
     {}, {},
     { S(-75,-76), S(-56,-54), S(- 9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
@@ -128,6 +129,31 @@ namespace {
       S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
       S(118,174), S(119,177), S(123,191), S(128,199) }
   };
+#endif
+
+  const Score MobilityBonusLHBase[6][2][32] = {
+      {},{},
+      { { S(-8, -8), S(-16,-17), S(2,-3), S( 5, 2), S(10, 10), S(17, 16), S(21, 22) },
+        { S(-2, -2), S(  0, -1), S(7, 6), S(11,10), S(14, 13), S(20, 17), S(29, 25) } },
+      { { S(-12,-14), S( 2, 0), S(16, 8), S(25, 18), S(33, 28), S(41, 38), S(45, 43), S(48, 48) },
+        { S( -3, -3), S(10, 7), S(20,17), S(30, 27), S(38, 35), S(46, 44), S(53, 51), S(61, 58) } },
+      { { S(-6,-8), S(-19,-12), S(-8, 24), S(-2, 48), S( 4, 57), S( 1, 74), S( 9, 95), S(14, 105), S(21, 111), S(25, 120), S(33, 119) },
+        { S( 0, 0), S(  2, 18), S( 6, 35), S( 9, 51), S(14, 63), S(12, 90), S(18,105), S(21, 118), S(29, 128), S(33, 138), S(43, 140) } },
+      { { S(-1,-1), S(0, 5), S( 7, 15), S(11, 25), S(17, 35), S(22, 45), S(27, 53), S(34, 62), S(38, 68), S(42, 75), S(47, 81), S(50, 86), S(54, 89), S(58, 91), S(61, 94), S(66, 99), S(72, 104) },
+        { S( 0, 0), S(5,10), S(10, 21), S(16, 32), S(22, 42), S(28, 51), S(33, 59), S(40, 69), S(45, 75), S(50, 84), S(55, 93), S(60, 99), S(65,106), S(69,110), S(75,114), S(81,121), S(88, 127) } }
+  };
+
+  Score MobilityBonusLH[6][2][32] = { SCORE_ZERO };
+  
+  int DK[7][2] = { 0 };
+  int DB[8][2] = { 0 };
+  int DR[11][2] = { 0 };
+  int DQ[17][2] = { 0 };
+      
+  TUNE(SetRange(-25, 25), DK);
+  TUNE(SetRange(-25, 25), DB);
+  TUNE(SetRange(-25, 25), DR);
+  TUNE(SetRange(-25, 25), DQ);
 
   // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and
   // bishops outposts, bigger if outpost piece is supported by a pawn.
@@ -258,6 +284,8 @@ namespace {
     const Color Them = (Us == WHITE ? BLACK : WHITE);
     const Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
                                                : Rank5BB | Rank4BB | Rank3BB);
+    const Bitboard LowRanks = (Us == WHITE ? Rank1BB | Rank2BB | Rank3BB | Rank4BB
+                                           : Rank5BB | Rank6BB | Rank7BB | Rank8BB);
     const Square* pl = pos.squares<Pt>(Us);
 
     ei.attackedBy[Us][Pt] = 0;
@@ -286,9 +314,13 @@ namespace {
                    | ei.attackedBy[Them][BISHOP]
                    | ei.attackedBy[Them][ROOK]);
 
-        int mob = popcount(b & mobilityArea[Us]);
+        //int mob = popcount(b & mobilityArea[Us]);
+        //mobility[Us] += MobilityBonus[Pt][mob];
 
-        mobility[Us] += MobilityBonus[Pt][mob];
+        int mobL = popcount(b & mobilityArea[Us] & LowRanks);
+        int mobH = popcount(b & mobilityArea[Us] & ~LowRanks);
+        int mob = mobL + mobH;
+        mobility[Us] += MobilityBonusLH[Pt][0][mobL] + MobilityBonusLH[Pt][1][mobH];
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
@@ -901,4 +933,55 @@ void Eval::init() {
       t = std::min(Peak, std::min(i * i - 16, t + MaxSlope));
       KingDanger[i] = make_score(t * 268 / 7700, 0);
   }
+
+
+      const int maxMCnt[PIECE_TYPE_NB] = { 0, 0, 7, 8, 11, 17 };
+
+      PieceType Pt = KNIGHT;
+      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      {
+          MobilityBonusLH[Pt][0][i] = make_score(
+              DK[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
+              DK[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]) );
+
+          MobilityBonusLH[Pt][1][i] = make_score(
+              DK[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
+              DK[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+      }
+
+      Pt = BISHOP;
+      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      {
+          MobilityBonusLH[Pt][0][i] = make_score(
+              DB[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
+              DB[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
+
+          MobilityBonusLH[Pt][1][i] = make_score(
+              DB[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
+              DB[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+      }
+
+      Pt = ROOK;
+      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      {
+          MobilityBonusLH[Pt][0][i] = make_score(
+              DR[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
+              DR[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
+
+          MobilityBonusLH[Pt][1][i] = make_score(
+              DR[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
+              DR[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+      }
+
+      Pt = QUEEN;
+      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      {
+          MobilityBonusLH[Pt][0][i] = make_score(
+              DQ[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
+              DQ[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
+
+          MobilityBonusLH[Pt][1][i] = make_score(
+              DQ[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
+              DQ[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+      }
 }
