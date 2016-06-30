@@ -145,15 +145,25 @@ namespace {
 
   Score MobilityBonusLH[6][2][32] = { SCORE_ZERO };
   
-  int DK[7][2] = { 0 };
-  int DB[8][2] = { 0 };
-  int DR[11][2] = { 0 };
-  int DQ[17][2] = { 0 };
+  
+
+  int DKL[4][2] = { 0 };
+  int DKH[9][2] = { 0 };
+  int DBL[5][2]  = { 0 };
+  int DBH[10][2] = { 0 };
+  int DRL[13][2] = { 0 };
+  int DRH[13][2] = { 0 };
+  int DQL[18][2] = { 0 };
+  int DQH[18][2] = { 0 };
       
-  TUNE(SetRange(-25, 25), DK);
-  TUNE(SetRange(-25, 25), DB);
-  TUNE(SetRange(-25, 25), DR);
-  TUNE(SetRange(-25, 25), DQ);
+  TUNE(SetRange(-40, 40), DKL);
+  TUNE(SetRange(-40, 40), DKH);
+  TUNE(SetRange(-40, 40), DBL);
+  TUNE(SetRange(-40, 40), DBH);
+  TUNE(SetRange(-40, 40), DRL);
+  TUNE(SetRange(-40, 40), DRH);
+  TUNE(SetRange(-40, 40), DQL);
+  TUNE(SetRange(-40, 40), DQH);
 
   // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and
   // bishops outposts, bigger if outpost piece is supported by a pawn.
@@ -270,6 +280,13 @@ namespace {
   }
 
 
+  const Bitboard mobMask[][COLOR_NB] = { {},{},
+  { 0xE78100000081C3FFULL, 0xFFC38100000081E7ULL },
+  { 0xFF818181818181FFULL, 0xFF818181818181FFULL },
+  { 0xE7818181818181E7ULL, 0xE7818181818181E7ULL },
+  { 0xFFC381818181C3FFULL, 0xFFC381818181C3FFULL } };
+
+
   // evaluate_pieces() assigns bonuses and penalties to the pieces of a given
   // color and type.
 
@@ -284,8 +301,6 @@ namespace {
     const Color Them = (Us == WHITE ? BLACK : WHITE);
     const Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
                                                : Rank5BB | Rank4BB | Rank3BB);
-    const Bitboard LowRanks = (Us == WHITE ? Rank1BB | Rank2BB | Rank3BB | Rank4BB
-                                           : Rank5BB | Rank6BB | Rank7BB | Rank8BB);
     const Square* pl = pos.squares<Pt>(Us);
 
     ei.attackedBy[Us][Pt] = 0;
@@ -317,8 +332,8 @@ namespace {
         //int mob = popcount(b & mobilityArea[Us]);
         //mobility[Us] += MobilityBonus[Pt][mob];
 
-        int mobL = popcount(b & mobilityArea[Us] & LowRanks);
-        int mobH = popcount(b & mobilityArea[Us] & ~LowRanks);
+        int mobL = popcount(b & mobilityArea[Us] &  mobMask[Pt][Us]);
+        int mobH = popcount(b & mobilityArea[Us] & ~mobMask[Pt][Us]);
         int mob = mobL + mobH;
         mobility[Us] += MobilityBonusLH[Pt][0][mobL] + MobilityBonusLH[Pt][1][mobH];
 
@@ -935,53 +950,70 @@ void Eval::init() {
   }
 
 
-      const int maxMCnt[PIECE_TYPE_NB] = { 0, 0, 7, 8, 11, 17 };
+      const int maxIdx[PIECE_TYPE_NB][2] = { {},{},{ 3, 8 },{ 4, 9 },{ 12, 12 },{ 17, 17 } };
 
       PieceType Pt = KNIGHT;
-      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      int LH = 0;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
       {
-          MobilityBonusLH[Pt][0][i] = make_score(
-              DK[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
-              DK[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]) );
-
-          MobilityBonusLH[Pt][1][i] = make_score(
-              DK[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
-              DK[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DKL[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DKL[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
       }
-
-      Pt = BISHOP;
-      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      LH = 1;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
       {
-          MobilityBonusLH[Pt][0][i] = make_score(
-              DB[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
-              DB[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
-
-          MobilityBonusLH[Pt][1][i] = make_score(
-              DB[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
-              DB[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DKH[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DKH[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
+      }
+          
+      Pt = BISHOP;
+      LH = 0;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
+      {
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DBL[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DBL[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
+      }
+      LH = 1;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
+      {
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DBH[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DBH[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
       }
 
       Pt = ROOK;
-      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      LH = 0;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
       {
-          MobilityBonusLH[Pt][0][i] = make_score(
-              DR[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
-              DR[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
-
-          MobilityBonusLH[Pt][1][i] = make_score(
-              DR[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
-              DR[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DRL[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DRL[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
+      }
+      LH = 1;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
+      {
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DRH[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DRH[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
       }
 
       Pt = QUEEN;
-      for (int i = 0; i < maxMCnt[Pt]; ++i)
+      LH = 0;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
       {
-          MobilityBonusLH[Pt][0][i] = make_score(
-              DQ[i][0] + mg_value(MobilityBonusLHBase[Pt][0][i]),
-              DQ[i][1] + eg_value(MobilityBonusLHBase[Pt][0][i]));
-
-          MobilityBonusLH[Pt][1][i] = make_score(
-              DQ[i][0] + mg_value(MobilityBonusLHBase[Pt][1][i]),
-              DQ[i][1] + eg_value(MobilityBonusLHBase[Pt][1][i]));
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DQL[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DQL[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
       }
+      LH = 1;
+      for (int i = 0; i <= maxIdx[Pt][LH]; ++i)
+      {
+          MobilityBonusLH[Pt][LH][i] = make_score(
+              DQH[i][0] + mg_value(MobilityBonusLHBase[Pt][LH][i]),
+              DQH[i][1] + eg_value(MobilityBonusLHBase[Pt][LH][i]));
+      }
+
 }
