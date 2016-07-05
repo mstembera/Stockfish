@@ -110,24 +110,35 @@ namespace {
   #define V(v) Value(v)
   #define S(mg, eg) make_score(mg, eg)
 
-  // MobilityBonus[PieceType][attacked] contains bonuses for middle and end
-  // game, indexed by piece type and number of attacked squares in the MobilityArea.
-  const Score MobilityBonus[][32] = {
-    {}, {},
-    { S(-75,-76), S(-56,-54), S(- 9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
-      S( 22, 26), S( 30, 28), S( 36, 29) },
-    { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
-      S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
-      S( 92, 90), S( 97, 94) },
-    { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
-      S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
-      S( 43,165), S( 49,168), S( 59,169) },
-    { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
-      S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
-      S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
-      S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
-      S(118,174), S(119,177), S(123,191), S(128,199) }
+  // MobilityBonusLH[PieceType][Low|High][attacked] contains bonuses for middle and end game, indexed by
+  // piece type, Low or High square importance, and number of attacked squares in the MobilityArea.
+  const Score MobilityBonusLH[][2][32] = {
+      {}, {},
+      { { S(-22,-25), S(  6, -1), S( 10,17), S(14,38) },                                 // Knights
+        { S(-55,-58), S(-24,-32), S(-12, 9), S(24,14), S(24,19), S(45,39), S(59, 47),
+          S( 39, 65), S( 77, 77) } },
+      { { S( -4,-28), S( -6, 18), S( 17,12), S(37, 9), S(31,43) },                       // Bishops
+        { S(-19,-25), S( 11, -3), S( 44,17), S(55,30), S(54,61), S(59,52), S(68, 49), 
+          S( 83, 52), S(112, 71), S( 77,96) } },
+      { { S(-20,-19), S( -2, -2), S( 18,29), S( 7,54),  S(16,77),  S(21, 74), S(36, 94), // Rooks
+          S( 37,118), S( 39,146), S(48,143), S(45,168), S(52,134), S(47,153) },
+        { S(-27,-51), S(-14,  0), S(-12,29), S(-3,46),  S(16,80),  S(13, 87), S(26, 92),
+          S( 24,135), S( 49,151), S(57,160), S(68,155), S(52,187), S(79,185) } },
+      { { S( -6, -7), S(-21,  0), S( -6,21), S( 20, 9), S(14, 27), S(27, 63), S(14, 51), // Queens
+          S( 23, 42), S( 15, 66), S(58, 66), S( 41,60), S(52, 97), S(56, 95), S(50,116),
+          S(53, 110), S( 84, 97), S(60,117), S(107,126) },
+        { S(-25,-27), S( -1,-17), S( -5,25), S(28, 34), S(35, 43), S(43, 81), S(22, 77),
+          S( 36, 73), S( 55, 77), S(79, 93), S(56,113), S(73,109), S(69,112), S(79,101),
+          S( 90,122), S( 88,118), S(61,130), S(112,147) } }
   };
+
+  // Mask for Low or High importance mobility squares indexed by piece type and color.
+  const Bitboard mobLHMask[][COLOR_NB] = { 
+    {}, {},
+    { 0xE78100000081C3FFULL, 0xFFC38100000081E7ULL },
+    { 0xFF818181818181FFULL, 0xFF818181818181FFULL },
+    { 0xE7818181818181E7ULL, 0xE7818181818181E7ULL },
+    { 0xFFC381818181C3FFULL, 0xFFC381818181C3FFULL } };
 
   // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and
   // bishops outposts, bigger if outpost piece is supported by a pawn.
@@ -286,9 +297,11 @@ namespace {
                    | ei.attackedBy[Them][BISHOP]
                    | ei.attackedBy[Them][ROOK]);
 
-        int mob = popcount(b & mobilityArea[Us]);
+        int mobL = popcount(b & mobilityArea[Us] &  mobLHMask[Pt][Us]);
+        int mobH = popcount(b & mobilityArea[Us] & ~mobLHMask[Pt][Us]);
+        int mob = mobL + mobH;
 
-        mobility[Us] += MobilityBonus[Pt][mob];
+        mobility[Us] += MobilityBonusLH[Pt][0][mobL] + MobilityBonusLH[Pt][1][mobH];
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
