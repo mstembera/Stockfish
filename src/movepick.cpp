@@ -147,11 +147,19 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* fm = (ss-2)->counterMoves;
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
-  for (auto& m : *this)
-      m.value =      history[pos.moved_piece(m)][to_sq(m)]
-               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO);
+  ExtMove* best = begin();
+  for (ExtMove* m = begin(); m < end(); ++m)
+  {
+      m->value = history[pos.moved_piece(*m)][to_sq(*m)]
+           + (cm ? (*cm)[pos.moved_piece(*m)][to_sq(*m)] : VALUE_ZERO)
+           + (fm ? (*fm)[pos.moved_piece(*m)][to_sq(*m)] : VALUE_ZERO)
+           + (f2 ? (*f2)[pos.moved_piece(*m)][to_sq(*m)] : VALUE_ZERO);
+
+      if (m->value > best->value)
+          best = m;
+  }
+
+  std::swap(*best, *begin());
 }
 
 template<>
@@ -286,16 +294,7 @@ Move MovePicker::next_move() {
               return move;
           break;
 
-      case FIRST_QUIET:
-          move = pick_best(cur++, endQuiets);
-          if (   move != ttMove
-              && move != killers[0]
-              && move != killers[1]
-              && move != killers[2])
-              return move;
-          break;
-
-      case QUIET:
+      case FIRST_QUIET: case QUIET:
           move = *cur++;
           if (   move != ttMove
               && move != killers[0]
