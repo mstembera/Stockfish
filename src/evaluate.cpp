@@ -264,6 +264,7 @@ namespace {
     const Color Them = (Us == WHITE ? BLACK : WHITE);
     const Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
                                                : Rank5BB | Rank4BB | Rank3BB);
+    const Bitboard centerMask = 0x0000183C3C180000ULL;
     const Square* pl = pos.squares<Pt>(Us);
 
     ei.attackedBy[Us][Pt] = 0;
@@ -294,8 +295,9 @@ namespace {
                    | ei.attackedBy[Them][ROOK]);
 
         int mob = popcount(b & mobilityArea[Us]);
+        int mobCenter = popcount(b & mobilityArea[Us] & centerMask);
 
-        mobility[Us] += MobilityBonus[Pt][mob];
+        mobility[Us] += MobilityBonus[Pt][mob] + make_score(mobCenter, mobCenter);
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
