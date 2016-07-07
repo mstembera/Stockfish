@@ -297,7 +297,7 @@ namespace {
         int mob = popcount(b & mobilityArea[Us]);
         int mobCenter = popcount(b & mobilityArea[Us] & centerMask);
 
-        mobility[Us] += MobilityBonus[Pt][mob] + make_score(mobCenter, mobCenter);
+        mobility[Us] += MobilityBonus[Pt][mob] + make_score(0, mobCenter * 2);
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
