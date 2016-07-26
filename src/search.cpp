@@ -126,34 +126,32 @@ namespace {
     Move pv[3];
   };
 
-  // Set of rows with half bits set to 1 and half to 0. It is used to allocate
+  // Set of rows with 2/3 of bits set to 1 and 1/3 to 0. It is used to allocate
   // the search depths across the threads.
   typedef std::vector<int> Row;
 
-  const Row HalfDensity[] = {
-    {0, 1},
-    {1, 0},
-    {0, 0, 1, 1},
-    {0, 1, 1, 0},
-    {1, 1, 0, 0},
-    {1, 0, 0, 1},
-    {0, 0, 0, 1, 1, 1},
-    {0, 0, 1, 1, 1, 0},
-    {0, 1, 1, 1, 0, 0},
-    {1, 1, 1, 0, 0, 0},
-    {1, 1, 0, 0, 0, 1},
-    {1, 0, 0, 0, 1, 1},
-    {0, 0, 0, 0, 1, 1, 1, 1},
-    {0, 0, 0, 1, 1, 1, 1, 0},
-    {0, 0, 1, 1, 1, 1, 0 ,0},
-    {0, 1, 1, 1, 1, 0, 0 ,0},
-    {1, 1, 1, 1, 0, 0, 0 ,0},
-    {1, 1, 1, 0, 0, 0, 0 ,1},
-    {1, 1, 0, 0, 0, 0, 1 ,1},
-    {1, 0, 0, 0, 0, 1, 1 ,1},
+  const Row SkipMap[] = {
+    {0, 1, 1},
+    {1, 1, 0},
+    {1, 0, 1},
+    {0, 0, 1, 1, 1, 1},
+    {0, 1, 1, 1, 1, 0},
+    {1, 1, 1, 1, 0, 0},
+    {1, 1, 1, 0, 0, 1},
+    {1, 1, 0, 0, 1, 1},
+    {1, 0, 0, 1, 1, 1},
+    {0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {0, 0, 1, 1, 1, 1, 1, 1, 0},
+    {0, 1, 1, 1, 1, 1, 1, 0, 0},
+    {1, 1, 1, 1, 1, 1, 0, 0, 0},
+    {1, 1, 1, 1, 1, 0, 0, 0, 1},
+    {1, 1, 1, 1, 0, 0, 0, 1, 1},
+    {1, 1, 1, 0, 0, 0, 1, 1, 1},
+    {1, 1, 0, 0, 0, 1, 1, 1, 1},
+    {1, 0, 0, 0, 1, 1, 1, 1, 1}
   };
 
-  const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
+  const size_t SkipMapSize = std::extent<decltype(SkipMap)>::value;
 
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
@@ -369,11 +367,10 @@ void Thread::search() {
   // Iterative deepening loop until requested to stop or the target depth is reached.
   while (++rootDepth < DEPTH_MAX && !Signals.stop && (!Limits.depth || Threads.main()->rootDepth <= Limits.depth))
   {
-      // Set up the new depths for the helper threads skipping on average every
-      // 2nd ply (using a half-density matrix).
+      // Set up the new depths for the helper threads
       if (!mainThread)
       {
-          const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
+          const Row& row = SkipMap[(idx - 1) % SkipMapSize];
           if (row[(rootDepth + rootPos.game_ply()) % row.size()])
              continue;
       }
