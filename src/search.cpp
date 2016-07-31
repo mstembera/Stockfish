@@ -156,6 +156,7 @@ namespace {
   const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
 
   EasyMoveManager EasyMove;
+  std::vector<Move> easyMovesSMP(128, MOVE_NONE);
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
 
@@ -354,6 +355,7 @@ void Thread::search() {
       mainThread->easyMovePlayed = mainThread->failedLow = false;
       mainThread->bestMoveChanges = 0;
       TT.new_search();
+      easyMovesSMP.assign(Threads.size(), MOVE_NONE);
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -497,9 +499,13 @@ void Thread::search() {
               int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
               double unstablePvFactor = 1 + mainThread->bestMoveChanges;
 
-              bool doEasyMove =   rootMoves[0].pv[0] == easyMove
-                               && mainThread->bestMoveChanges < 0.03
-                               && Time.elapsed() > Time.optimum() * 5 / 42;
+              // Reduce time if we have at least 4 threads and all agree on the same move.
+              bool easySMP = Threads.size() >= 4
+                  && Threads.size() == (size_t)std::count(easyMovesSMP.begin(), easyMovesSMP.begin() + Threads.size(), easyMovesSMP[0]);
+
+              bool doEasyMove = mainThread->bestMoveChanges < 0.03
+                               && (   (rootMoves[0].pv[0] == easyMove && Time.elapsed() > Time.optimum() * 5 / 42)
+                                   || (easySMP && Time.elapsed() > Time.optimum() * 6 / 10));
 
               if (   rootMoves.size() == 1
                   || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
@@ -1043,6 +1049,8 @@ moves_loop: // When in check search starts from here
 
               for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                   rm.pv.push_back(*m);
+
+              easyMovesSMP[thisThread->idx] = move;
 
               // We record how often the best move has been changed in each
               // iteration. This information is used for time management: When
