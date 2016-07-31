@@ -505,7 +505,7 @@ void Thread::search() {
 
               bool doEasyMove = mainThread->bestMoveChanges < 0.03
                                && (   (rootMoves[0].pv[0] == easyMove && Time.elapsed() > Time.optimum() * 5 / 42)
-                                   || (easySMP && Time.elapsed() > Time.optimum() * 6 / 10));
+                                   || (easySMP && Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor * 6 / 6280));
 
               if (   rootMoves.size() == 1
                   || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
