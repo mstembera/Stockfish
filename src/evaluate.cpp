@@ -851,6 +851,21 @@ Value Eval::evaluate(const Position& pos) {
       score +=  evaluate_space<WHITE>(pos, ei)
               - evaluate_space<BLACK>(pos, ei);
 
+
+  // Pawns span bonus for more bishops than knights.
+  if (   pos.count<BISHOP>(WHITE) != pos.count<BISHOP>(BLACK)
+      &&     pos.count<BISHOP>(WHITE) + pos.count<KNIGHT>(WHITE)
+          == pos.count<BISHOP>(BLACK) + pos.count<KNIGHT>(BLACK))
+  {
+      int ps = ei.pi->pawn_span(WHITE) + ei.pi->pawn_span(BLACK);
+
+      if (pos.count<BISHOP>(WHITE) > pos.count<BISHOP>(BLACK))
+          score += pos.count<BISHOP>(BLACK) ? make_score(0, ps) : make_score(ps, ps * 3);
+      else
+          score -= pos.count<BISHOP>(WHITE) ? make_score(0, ps) : make_score(ps, ps * 3);
+  }
+
+
   // Evaluate position potential for the winning side
   score += evaluate_initiative(pos, ei.pi->pawn_asymmetry(), eg_value(score));
 
