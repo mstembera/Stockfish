@@ -156,6 +156,7 @@ namespace {
   const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
 
   EasyMoveManager EasyMove;
+  Key predictedKey = 0;
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
 
@@ -317,6 +318,17 @@ void MainThread::search() {
   }
 
   previousScore = bestThread->rootMoves[0].score;
+
+  if (bestThread->rootMoves[0].pv.size() >= 2)
+  {
+      StateInfo st[2];
+      const std::vector<Move>& pv = bestThread->rootMoves[0].pv;
+      rootPos.do_move(pv[0], st[0], rootPos.gives_check(pv[0], CheckInfo(rootPos)));
+      rootPos.do_move(pv[1], st[1], rootPos.gives_check(pv[1], CheckInfo(rootPos)));
+      predictedKey = rootPos.key();
+      rootPos.undo_move(pv[1]);
+      rootPos.undo_move(pv[0]);
+  }
 
   // Send new PV when needed
   if (bestThread != this)
@@ -497,13 +509,14 @@ void Thread::search() {
 
               int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
               double unstablePvFactor = 1 + mainThread->bestMoveChanges;
+              double predictedFactor = (rootPos.key() == predictedKey) ? 0.9 : 1.1;
 
               bool doEasyMove =   rootMoves[0].pv[0] == easyMove
                                && mainThread->bestMoveChanges < 0.03
                                && Time.elapsed() > Time.optimum() * 5 / 42;
 
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
+                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor * predictedFactor / 628
                   || (mainThread->easyMovePlayed = doEasyMove))
               {
                   // If we are allowed to ponder do not stop the search now but
