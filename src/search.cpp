@@ -156,6 +156,7 @@ namespace {
   const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
 
   EasyMoveManager EasyMove;
+  std::vector<Move> easyMovesSMP(128, MOVE_NONE);
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
 
@@ -355,6 +356,7 @@ void Thread::search() {
       mainThread->easyMovePlayed = mainThread->failedLow = false;
       mainThread->bestMoveChanges = 0;
       TT.new_search();
+      easyMovesSMP.assign(Threads.size(), MOVE_NONE);
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -498,12 +500,24 @@ void Thread::search() {
               int improvingFactor = std::max(229, std::min(715, 357 + 119 * F[0] - 6 * F[1]));
               double unstablePvFactor = 1 + mainThread->bestMoveChanges;
 
+              double SMPFactor = 1.0;             
+              if (Threads.size() >= 4)
+              {
+                  std::vector<Move> tmpMoves = easyMovesSMP;
+                  std::sort(tmpMoves.begin(), tmpMoves.end());
+                  int changeCnt = 0;
+                  for (size_t i = 0; i < tmpMoves.size() - 1; ++i)
+                      changeCnt += (tmpMoves[i] != tmpMoves[i+1]);
+
+                  SMPFactor = 0.9 + std::min(changeCnt, 3) * 0.1;
+              }             
+              
               bool doEasyMove =   rootMoves[0].pv[0] == easyMove
                                && mainThread->bestMoveChanges < 0.03
                                && Time.elapsed() > Time.optimum() * 5 / 42;
 
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
+                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor * SMPFactor / 628
                   || (mainThread->easyMovePlayed = doEasyMove))
               {
                   // If we are allowed to ponder do not stop the search now but
@@ -1046,6 +1060,8 @@ moves_loop: // When in check search starts from here
               for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                   rm.pv.push_back(*m);
 
+              easyMovesSMP[thisThread->idx] = move;
+
               // We record how often the best move has been changed in each
               // iteration. This information is used for time management: When
               // the best move changes frequently, we allocate some more time.
@@ -1397,7 +1413,7 @@ moves_loop: // When in check search starts from here
         ss->killers[1] = ss->killers[0];
         ss->killers[0] = move;
     }
-	
+    
     Color c = pos.side_to_move();
     Value bonus = Value((depth / ONE_PLY) * (depth / ONE_PLY) + 2 * depth / ONE_PLY - 2);
 
