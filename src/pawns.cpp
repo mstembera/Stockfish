@@ -218,6 +218,11 @@ Entry* probe(const Position& pos) {
   e->key = key;
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
+
+  Bitboard bW = e->semiopenFiles[WHITE] ^ 0xFF;
+  Bitboard bB = e->semiopenFiles[BLACK] ^ 0xFF;
+  e->wingDelta = (bW && bB) ? std::max(abs(msb(bW) - msb(bB)), abs(lsb(bW) - lsb(bB))) : (bW || bB);
+  
   return e;
 }
 
