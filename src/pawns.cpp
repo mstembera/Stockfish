@@ -44,6 +44,9 @@ namespace {
   // Connected pawn bonus by opposed, phalanx, twice supported and rank
   Score Connected[2][2][2][RANK_NB];
 
+  // Pawn file asymmetry 
+  uint8_t Asymmetry[256][256];
+
   // Doubled pawn penalty
   const Score Doubled = S(18,38);
 
@@ -179,6 +182,33 @@ namespace {
 
 namespace Pawns {
 
+/// Calculate asymmetry metric based on distance of each p1 pawn to closest p2 pawn.
+int pawn_asymetry(const Bitboard p1, const Bitboard p2)
+{
+    assert(p1 && p2);
+    const int asymDistMap[FILE_NB] = { 0, 3, 5, 6, 7, 8, 9, 10 };
+    int sum = 0;
+    Bitboard b1 = p1;
+
+    do
+    {
+        int minD = INT_MAX;
+        File f1 = file_of(pop_lsb(&b1));
+        Bitboard b2 = p2;
+        do
+        {
+            File f2 = file_of(pop_lsb(&b2));
+            minD = std::min(distance(f1, f2), minD);
+
+        } while (b2 && minD);
+
+        sum += asymDistMap[minD];
+
+    } while (b1);
+
+    return sum;
+}
+
 /// Pawns::init() initializes some tables needed by evaluation. Instead of using
 /// hard-coded tables, when makes sense, we prefer to calculate them with a formula
 /// to reduce independent parameters and to allow easier tuning and better insight.
@@ -196,6 +226,17 @@ void init()
       v += (apex ? v / 2 : 0);
       Connected[opposed][phalanx][apex][r] = make_score(v, v * 5 / 8);
   }
+  
+  for (unsigned i = 0; i < 256; ++i)
+      for (unsigned j = i; j < 256; ++j)
+      {
+          if (i && j)
+              Asymmetry[i][j] = pawn_asymetry(i, j) + pawn_asymetry(j, i);
+          else
+              Asymmetry[i][j] = 2 * (popcount(i) + popcount(j));
+
+          Asymmetry[j][i] = Asymmetry[i][j];
+      }
 }
 
 
@@ -214,7 +255,7 @@ Entry* probe(const Position& pos) {
 
   e->key = key;
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
-  e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
+  e->asymmetry = Asymmetry[e->semiopenFiles[WHITE] ^ 0xFF][e->semiopenFiles[BLACK] ^ 0xFF];
   return e;
 }
 
