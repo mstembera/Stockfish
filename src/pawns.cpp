@@ -182,7 +182,7 @@ namespace {
 
 namespace Pawns {
 
-/// Calculate asymmetry metric based on distance of each p1 pawn to closest p2 pawn.
+/// Calculate asymmetry metric based on file distance of each p1 pawn to closest p2 pawn.
 int pawn_asymetry(const Bitboard p1, const Bitboard p2)
 {
     assert(p1 && p2);
