@@ -158,6 +158,7 @@ namespace {
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
+  bool CompletedDepths[DEPTH_MAX];
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -261,6 +262,8 @@ void MainThread::search() {
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
+
+  std::memset(CompletedDepths, 0, sizeof(CompletedDepths));
 
   if (rootMoves.empty())
   {
@@ -396,7 +399,7 @@ void Thread::search() {
           // Reset aspiration window starting size
           if (rootDepth >= 5 * ONE_PLY)
           {
-              delta = Value(18);
+              delta = CompletedDepths[rootDepth] ? Value(6) : Value(18);
               alpha = std::max(rootMoves[PVIdx].previousScore - delta,-VALUE_INFINITE);
               beta  = std::min(rootMoves[PVIdx].previousScore + delta, VALUE_INFINITE);
           }
@@ -471,7 +474,10 @@ void Thread::search() {
       }
 
       if (!Signals.stop)
+      {
           completedDepth = rootDepth;
+          CompletedDepths[rootDepth] = true;
+      }
 
       if (!mainThread)
           continue;
