@@ -126,38 +126,11 @@ namespace {
     Move pv[3];
   };
 
-  // Set of rows with half bits set to 1 and half to 0. It is used to allocate
-  // the search depths across the threads.
-  typedef std::vector<int> Row;
-
-  const Row HalfDensity[] = {
-    {0, 1},
-    {1, 0},
-    {0, 0, 1, 1},
-    {0, 1, 1, 0},
-    {1, 1, 0, 0},
-    {1, 0, 0, 1},
-    {0, 0, 0, 1, 1, 1},
-    {0, 0, 1, 1, 1, 0},
-    {0, 1, 1, 1, 0, 0},
-    {1, 1, 1, 0, 0, 0},
-    {1, 1, 0, 0, 0, 1},
-    {1, 0, 0, 0, 1, 1},
-    {0, 0, 0, 0, 1, 1, 1, 1},
-    {0, 0, 0, 1, 1, 1, 1, 0},
-    {0, 0, 1, 1, 1, 1, 0 ,0},
-    {0, 1, 1, 1, 1, 0, 0 ,0},
-    {1, 1, 1, 1, 0, 0, 0 ,0},
-    {1, 1, 1, 0, 0, 0, 0 ,1},
-    {1, 1, 0, 0, 0, 0, 1 ,1},
-    {1, 0, 0, 0, 0, 1, 1 ,1},
-  };
-
-  const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
-
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
   CounterMoveHistoryStats CounterMoveHistory;
+  std::atomic<Depth> MaxCompletedDepth;
+  std::atomic<int> StartedDepths[DEPTH_MAX];
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -262,6 +235,10 @@ void MainThread::search() {
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
 
+  MaxCompletedDepth = DEPTH_ZERO;
+  for (unsigned i = 0; i < DEPTH_MAX; ++i)
+      StartedDepths[i] = 0;
+
   if (rootMoves.empty())
   {
       rootMoves.push_back(RootMove(MOVE_NONE));
@@ -330,6 +307,20 @@ void MainThread::search() {
   std::cout << sync_endl;
 }
 
+/// Dynamically select best search depth for current helper thread.
+Depth helper_depth()
+{
+    Depth maxSkip = int(sqrt(Threads.size()) + 0.6) * ONE_PLY;
+    Depth startD = std::min(MaxCompletedDepth + ONE_PLY, DEPTH_MAX - ONE_PLY);
+    Depth endD = std::min(startD + maxSkip, DEPTH_MAX);
+    Depth selectedD = startD;
+
+    for (Depth d = startD + ONE_PLY; d < endD; d += ONE_PLY)
+        if (StartedDepths[d] < StartedDepths[selectedD])
+            selectedD = d;
+
+    return selectedD;
+}
 
 // Thread::search() is the main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has been
@@ -372,14 +363,10 @@ void Thread::search() {
          && !Signals.stop
          && (!Limits.depth || Threads.main()->rootDepth / ONE_PLY <= Limits.depth))
   {
-      // Set up the new depths for the helper threads skipping on average every
-      // 2nd ply (using a half-density matrix).
       if (!mainThread)
-      {
-          const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
-          if (row[(rootDepth / ONE_PLY + rootPos.game_ply()) % row.size()])
-             continue;
-      }
+          rootDepth = helper_depth();
+
+      ++StartedDepths[rootDepth];
 
       // Age out PV variability metric
       if (mainThread)
@@ -471,7 +458,11 @@ void Thread::search() {
       }
 
       if (!Signals.stop)
+      {
           completedDepth = rootDepth;
+          if (MaxCompletedDepth < rootDepth)
+              MaxCompletedDepth = rootDepth;
+      }
 
       if (!mainThread)
           continue;
