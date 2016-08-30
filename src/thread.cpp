@@ -153,6 +153,10 @@ void ThreadPool::read_uci_options() {
 
   while (size() > requested)
       delete back(), pop_back();
+
+  extern CounterMoveHistoryStats CounterMoveHistory[2];
+  for (size_t i = 0; i < size(); ++i)
+      at(i)->counterMoveHistory = (2 * i < size()) ? &CounterMoveHistory[0] : &CounterMoveHistory[1];
 }
 
 
