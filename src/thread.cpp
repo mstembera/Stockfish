@@ -38,6 +38,7 @@ Thread::Thread() {
   maxPly = callsCnt = 0;
   history.clear();
   counterMoves.clear();
+  counterMoveHistory = nullptr;
   idx = Threads.size(); // Start from 0
 
   std::unique_lock<Mutex> lk(mutex);
@@ -154,10 +155,13 @@ void ThreadPool::read_uci_options() {
   while (size() > requested)
       delete back(), pop_back();
 
-  extern CounterMoveHistoryStats CounterMoveHistory[2];
+  extern CounterMoveHistoryStats CounterMoveHistory[8];
+  int threadsPerCMH = size();
+  while (threadsPerCMH >= 20)
+      threadsPerCMH /= 2;
+
   for (size_t i = 0; i < size(); ++i)
-      at(i)->counterMoveHistory = (2 * i < size() || size() <= 8)
-      ? &CounterMoveHistory[0] : &CounterMoveHistory[1];
+      at(i)->counterMoveHistory = &CounterMoveHistory[i / threadsPerCMH];
 }
 
 

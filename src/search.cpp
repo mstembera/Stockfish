@@ -173,7 +173,7 @@ namespace {
 
 } // namespace
 
-CounterMoveHistoryStats CounterMoveHistory[2];
+CounterMoveHistoryStats CounterMoveHistory[8];
 
 /// Search::init() is called during startup to initialize various lookup tables
 
@@ -208,8 +208,9 @@ void Search::init() {
 void Search::clear() {
 
   TT.clear();
-  CounterMoveHistory[0].clear();
-  CounterMoveHistory[1].clear();
+
+  for(unsigned i = 0; i < 8; ++i)
+    CounterMoveHistory[i].clear();
 
   for (Thread* th : Threads)
   {
