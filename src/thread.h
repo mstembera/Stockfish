@@ -68,6 +68,7 @@ public:
   Depth rootDepth;
   HistoryStats history;
   MoveStats counterMoves;
+  CounterMoveHistoryStats* counterMoveHistory;
   FromToStats fromTo;
   Depth completedDepth;
   std::atomic_bool resetCalls;

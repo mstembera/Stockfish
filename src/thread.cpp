@@ -38,6 +38,7 @@ Thread::Thread() {
   maxPly = callsCnt = 0;
   history.clear();
   counterMoves.clear();
+  counterMoveHistory = nullptr;
   idx = Threads.size(); // Start from 0
 
   std::unique_lock<Mutex> lk(mutex);
@@ -56,6 +57,7 @@ Thread::~Thread() {
   sleepCondition.notify_one();
   mutex.unlock();
   nativeThread.join();
+  delete counterMoveHistory;
 }
 
 
@@ -94,6 +96,9 @@ void Thread::start_searching(bool resume) {
 /// Thread::idle_loop() is where the thread is parked when it has no work to do
 
 void Thread::idle_loop() {
+
+  if (!counterMoveHistory)
+      counterMoveHistory = new CounterMoveHistoryStats;
 
   while (!exit)
   {
