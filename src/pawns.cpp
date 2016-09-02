@@ -215,6 +215,14 @@ Entry* probe(const Position& pos) {
   e->key = key;
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
+
+  const Bitboard QueenSide = FileABB | FileBBB | FileCBB | FileDBB;
+  int wQP = popcount(pos.pieces(WHITE, PAWN) & QueenSide);
+  int bQP = popcount(pos.pieces(BLACK, PAWN) & QueenSide);
+  int wKP = pos.count<PAWN>(WHITE) - wQP;
+  int bKP = pos.count<PAWN>(BLACK) - bQP;
+  e->kqImbalance = std::max(abs(wQP - bQP), abs(wKP - bKP));
+
   return e;
 }
 
