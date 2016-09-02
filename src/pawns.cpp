@@ -221,7 +221,8 @@ Entry* probe(const Position& pos) {
   int bQP = popcount(pos.pieces(BLACK, PAWN) & QueenSide);
   int wKP = pos.count<PAWN>(WHITE) - wQP;
   int bKP = pos.count<PAWN>(BLACK) - bQP;
-  e->kqImbalance = std::max(abs(wQP - bQP), abs(wKP - bKP));
+  e->kqImbalance[WHITE] = std::min(std::max(std::max(4 * wQP - 5 * bQP, 4 * wKP - 5 * bKP), 0), 10);
+  e->kqImbalance[BLACK] = std::min(std::max(std::max(4 * bQP - 5 * wQP, 4 * bKP - 5 * wKP), 0), 10);
 
   return e;
 }

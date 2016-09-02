@@ -38,7 +38,7 @@ struct Entry {
   Bitboard passed_pawns(Color c) const { return passedPawns[c]; }
   Bitboard pawn_attacks_span(Color c) const { return pawnAttacksSpan[c]; }
   int pawn_asymmetry() const { return asymmetry; }
-  int pawn_imbalance() const { return kqImbalance; }
+  int pawn_imbalance(Color c) const { return kqImbalance[c]; }
 
   int semiopen_file(Color c, File f) const {
     return semiopenFiles[c] & (1 << f);
@@ -74,8 +74,8 @@ struct Entry {
   int castlingRights[COLOR_NB];
   int semiopenFiles[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
+  int kqImbalance[COLOR_NB];
   int asymmetry;
-  int kqImbalance;
 };
 
 typedef HashTable<Entry, 16384> Table;

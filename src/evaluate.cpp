@@ -717,20 +717,26 @@ namespace {
   // status of the players.
   Score evaluate_initiative(const Position& pos, const EvalInfo& ei, Value eg) {
 
+    if (!eg)
+        return SCORE_ZERO;
+      
+    // Find the attacking side from the sign of the endgame value.
+    Color strongSide = (eg > 0) ? WHITE : BLACK;
+
+
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
     // Compute the initiative bonus for the attacking side
     int initiative =  8 * (ei.pi->pawn_asymmetry() + kingDistance)
-                   + 12 * pawns + 6 * ei.pi->pawn_imbalance() - 125;
+                   + 12 * pawns + 2 * ei.pi->pawn_imbalance(strongSide) - 124;
 
-    // Now apply the bonus: note that we find the attacking side by extracting
-    // the sign of the endgame value, and that we carefully cap the bonus so
+    // Now apply the bonus: note that we carefully cap the bonus so
     // that the endgame score will never be divided by more than two.
-    int value = ((eg > 0) - (eg < 0)) * std::max(initiative, -abs(eg / 2));
+    int value = std::max(initiative, -abs(eg / 2));
 
-    return make_score(0, value);
+    return make_score(0, strongSide == WHITE ? value : -value);
   }
 
 
