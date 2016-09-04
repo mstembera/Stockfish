@@ -52,6 +52,15 @@ namespace {
     S( 0,  0), S( 0,  0), S(0, 0), S(0, 0),
     S(17, 16), S(33, 32), S(0, 0), S(0, 0) };
 
+  // Majority bonus
+  const Score Majority[5][4] = {
+      {},
+      { S(15, 15) },
+      { S(20, 20), S(10, 10) },
+      { S(25, 25), S(23, 23), S(7,  7) },
+      { S(30, 30), S(28, 28), S(18, 18), S(5, 5) }
+  };
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
     { V( 97), V(21), V(26), V(51), V(87), V( 89), V( 99) },
@@ -102,6 +111,34 @@ namespace {
 
     Bitboard ourPawns   = pos.pieces(Us  , PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
+
+    const Bitboard QueenSide = FileABB | FileBBB | FileCBB | FileDBB;
+    int uQP = popcount(ourPawns   & QueenSide);
+    int tQP = popcount(theirPawns & QueenSide);
+    int uKP = pos.count<PAWN>(Us)   - uQP;
+    int tKP = pos.count<PAWN>(Them) - tQP;
+
+    if (uQP > tQP)
+    {
+        if (uQP > 4)
+        {
+            tQP = std::max(tQP - (uQP - 4), 0);
+            uQP = 4;
+            score -= make_score(5, 5);
+        }
+        score += Majority[uQP][tQP];
+    }
+
+    if (uKP > tKP)
+    {
+        if (uKP > 4)
+        {
+            tKP = std::max(tKP - (uKP - 4), 0);
+            uKP = 4;
+            score -= make_score(5, 5);
+        }
+        score += Majority[uKP][tKP];
+    }
 
     e->passedPawns[Us] = e->pawnAttacksSpan[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
