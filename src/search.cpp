@@ -504,9 +504,17 @@ void Thread::search() {
                                && mainThread->bestMoveChanges < 0.03
                                && Time.elapsed() > Time.optimum() * 5 / 42;
 
+              bool doEasyRecapture =
+                     rootPos.captured_piece() != NO_PIECE
+                  && abs(PieceValue[MG][rootPos.captured_piece()] - PieceValue[MG][rootPos.piece_on(to_sq(rootMoves[0].pv[0]))])
+                     <= BishopValueMg - KnightValueMg
+                  && mainThread->bestMoveChanges < pow(0.505, std::max(8, int(rootDepth - 3 * ONE_PLY)))
+                  && Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 2090;
+
               if (   rootMoves.size() == 1
                   || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
-                  || (mainThread->easyMovePlayed = doEasyMove, doEasyMove))
+                  || (mainThread->easyMovePlayed = doEasyMove, doEasyMove)
+                  || (mainThread->easyMovePlayed = doEasyRecapture, doEasyRecapture))
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
