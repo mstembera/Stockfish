@@ -509,7 +509,7 @@ void Thread::search() {
                   && abs(PieceValue[MG][rootPos.captured_piece()] - PieceValue[MG][rootPos.piece_on(to_sq(rootMoves[0].pv[0]))])
                      <= BishopValueMg - KnightValueMg
                   && mainThread->bestMoveChanges < pow(0.505, std::max(8, int(rootDepth - 3 * ONE_PLY)))
-                  && Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 2090;
+                  && Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 1256;
 
               if (   rootMoves.size() == 1
                   || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
