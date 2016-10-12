@@ -201,7 +201,7 @@ Move MovePicker::next_move() {
           move = pick_best(cur++, endMoves);
           if (move != ttMove)
           {
-              if (pos.see_ge(move, VALUE_ZERO))
+              if (pos.see_ge(move, KnightValueMg - BishopValueMg))
                   return move;
 
               // Losing capture, move it to the beginning of the array
