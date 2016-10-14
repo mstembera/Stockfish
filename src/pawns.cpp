@@ -46,6 +46,9 @@ namespace {
   // Doubled pawn penalty
   const Score Doubled = S(18,38);
 
+  // Span bonus
+  const int Span[8] = { -10, -8, -4, 4, 18, 30, 31, 32 };
+
   // Lever bonus by rank
   const Score Lever[RANK_NB] = {
     S( 0,  0), S( 0,  0), S(0, 0), S(0, 0),
@@ -218,6 +221,10 @@ Entry* probe(const Position& pos) {
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
+
+  Bitboard b = (e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]) ^ 0xFF;
+  e->spanBonus = Span[b ? int(msb(b) - lsb(b)) : 0];
+
   return e;
 }
 
