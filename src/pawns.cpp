@@ -218,6 +218,23 @@ Entry* probe(const Position& pos) {
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
+
+  Bitboard pawns = pos.pieces(PAWN);
+  if (more_than_one(pawns))
+  {
+      int minR = RANK_2;
+      while (!(pawns & rank_bb((Rank)minR)))
+          minR++;
+
+      int maxR = RANK_7;
+      while (!(pawns & rank_bb((Rank)maxR)))
+          maxR--;
+
+      e->rankSpan = maxR - minR;
+  }
+  else
+      e->rankSpan = 0;
+
   return e;
 }
 
