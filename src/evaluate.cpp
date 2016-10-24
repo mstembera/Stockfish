@@ -742,7 +742,7 @@ namespace {
 
     // Compute the initiative bonus for the attacking side
     int initiative = 8 * (asymmetry + kingDistance) + 12 * pawns
-                     + std::max(std::min(int(eg - mg) / 2, 25), -25) - 115;
+                     + std::min(abs(eg - mg) / 8, 35) - 138;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
