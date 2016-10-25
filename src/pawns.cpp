@@ -46,6 +46,9 @@ namespace {
   // Doubled pawn penalty
   const Score Doubled = S(18,38);
 
+  // Blocked pawn penalty
+  const Score Blocked = S(8, 20);
+
   // Lever bonus by rank
   const Score Lever[RANK_NB] = {
     S( 0,  0), S( 0,  0), S(0, 0), S(0, 0),
@@ -172,6 +175,8 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
+        else if(theirPawns & (s + Up))
+            score -= Blocked;
     }
 
     return score;
