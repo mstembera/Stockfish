@@ -44,6 +44,10 @@ struct Entry {
     return semiopenFiles[c] & (1 << f);
   }
 
+  int pawn_separation() const {
+    return separation;
+  }
+
   int semiopen_side(Color c, File f, bool leftSide) const {
     return semiopenFiles[c] & (leftSide ? (1 << f) - 1 : ~((1 << (f + 1)) - 1));
   }
@@ -76,6 +80,7 @@ struct Entry {
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
   int asymmetry;
   int openFiles;
+  int separation;
 };
 
 typedef HashTable<Entry, 16384> Table;

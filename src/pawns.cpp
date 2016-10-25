@@ -46,6 +46,9 @@ namespace {
   // Doubled pawn penalty
   const Score Doubled = S(18,38);
 
+  // Separation from opposing bonus
+  const int Separation[6] = { 0, -4, 3, 5, 5, 5 };
+
   // Lever bonus by rank
   const Score Lever[RANK_NB] = {
     S( 0,  0), S( 0,  0), S(0, 0), S(0, 0),
@@ -218,6 +221,24 @@ Entry* probe(const Position& pos) {
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
+
+  e->separation = 0;
+  Bitboard pW = pos.pieces(WHITE, PAWN);
+  Bitboard pB = pos.pieces(BLACK, PAWN);
+
+  if (pW && pB)
+      for (File f = FILE_A; f <= FILE_H; ++f)
+      {
+          Bitboard pFW = pW & file_bb(f);
+          Bitboard pFB = pB & file_bb(f);
+
+          if (pFW && pFB)
+          {
+              int dist = rank_of(frontmost_sq(BLACK, pFB)) - rank_of(frontmost_sq(WHITE, pFW));
+              e->separation += Separation[std::max(dist, 0)];
+          }
+      }
+
   return e;
 }
 
