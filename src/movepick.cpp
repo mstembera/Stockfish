@@ -134,7 +134,7 @@ void MovePicker::score<CAPTURES>() {
   // has been picked up, saving some SEE calls in case we get a cutoff.
   for (auto& m : *this)
       m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-               - Value(200 * relative_rank(pos.side_to_move(), to_sq(m)));
+               - Value(220 * relative_rank(pos.side_to_move(), to_sq(m)));
 }
 
 template<>
@@ -168,7 +168,7 @@ void MovePicker::score<EVASIONS>() {
       if (pos.capture(m))
           m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
                    - Value(type_of(pos.moved_piece(m)))
-                   - Value(200 * relative_rank(pos.side_to_move(), to_sq(m)))
+                   - Value(220 * relative_rank(pos.side_to_move(), to_sq(m)))
                    + HistoryStats::Max * 2;
       else
           m.value = history[pos.moved_piece(m)][to_sq(m)] + fromTo.get(c, m);
