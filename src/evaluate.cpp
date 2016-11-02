@@ -212,6 +212,13 @@ namespace {
   // KingAttackWeights[PieceType] contains king attack weights by piece type
   const int KingAttackWeights[PIECE_TYPE_NB] = { 0, 0, 78, 56, 45, 11 };
 
+  // Pawn span multiplier indexed by strong and weak side bishop counts.
+  const int bishopSpanMod[3][3] = {
+      {  5, 0, 0 },
+      {  8, 3, 0 },
+      { 10, 5, 2 }
+  };
+
   // Penalties for enemy's safe checks
   const int QueenContactCheck = 997;
   const int QueenCheck        = 695;
@@ -727,9 +734,14 @@ namespace {
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     int pawns = pos.count<PAWN>(WHITE) + pos.count<PAWN>(BLACK);
 
+    Color strongSide = (eg > 0) ? WHITE : BLACK;
+    int strongBCnt = std::min(pos.count<BISHOP>( strongSide), 2);
+    int weakBCnt   = std::min(pos.count<BISHOP>(~strongSide), 2);
+    int pawnSpanBonus = bishopSpanMod[strongBCnt][weakBCnt] * ei.pi->span_bonus() / 4;
+
     // Compute the initiative bonus for the attacking side
-    int initiative =   8 * (ei.pi->pawn_asymmetry() + kingDistance)
-                     + 9 * pawns + ei.pi->span_bonus() - 115;    
+    int initiative =    8 * (ei.pi->pawn_asymmetry() + kingDistance)
+                     + 10 * pawns + pawnSpanBonus - 123;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
