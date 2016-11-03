@@ -241,13 +241,14 @@ Move MovePicker::next_move() {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      if (depth < 3 * ONE_PLY)
       {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-      } else
-          insertion_sort(cur, endMoves);
+
+          if (depth >= 3 * ONE_PLY)
+              insertion_sort(goodQuiet, endMoves);
+      }
       ++stage;
 
   case QUIET:
