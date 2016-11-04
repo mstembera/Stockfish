@@ -245,9 +245,6 @@ Move MovePicker::next_move() {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-
-          if (depth >= 3 * ONE_PLY)
-              insertion_sort(goodQuiet, endMoves);
       }
       ++stage;
 
