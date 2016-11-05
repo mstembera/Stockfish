@@ -245,6 +245,10 @@ Move MovePicker::next_move() {
       {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
+
+          std::partition(goodQuiet, endMoves, [](const ExtMove& m)
+                        { return m.value == VALUE_ZERO; });
+
           insertion_sort(cur, goodQuiet);
       } else
           insertion_sort(cur, endMoves);
