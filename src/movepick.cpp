@@ -26,8 +26,9 @@
 namespace {
 
   enum Stages {
-    MAIN_SEARCH, CAPTURES_INIT, GOOD_CAPTURES, KILLERS, COUNTERMOVE, QUIET_INIT, QUIET, BAD_CAPTURES,
-    EVASION, EVASIONS_INIT, ALL_EVASIONS,
+    MAIN_SEARCH, CAPTURES_INIT, GOOD_CAPTURES, KILLERS, COUNTERMOVE,
+    QUIET_INIT1, QUIET1, QUIET_INIT2, QUIET2, QUIET_INIT3, QUIET3,
+    BAD_CAPTURES, EVASION, EVASIONS_INIT, ALL_EVASIONS,
     PROBCUT, PROBCUT_INIT, PROBCUT_CAPTURES,
     QSEARCH_WITH_CHECKS, QCAPTURES_1_INIT, QCAPTURES_1, QCHECKS,
     QSEARCH_NO_CHECKS, QCAPTURES_2_INIT, QCAPTURES_2,
@@ -237,20 +238,60 @@ Move MovePicker::next_move() {
           && !pos.capture(move))
           return move;
 
-  case QUIET_INIT:
+  case QUIET_INIT1:
       cur = endBadCaptures;
-      endMoves = generate<QUIETS>(pos, cur);
+      endQuiets = endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      if (depth < 3 * ONE_PLY)
+      endMoves = std::partition(cur, endQuiets, [](const ExtMove& m)
+                               { return m.value > VALUE_ZERO; });
+      insertion_sort(cur, endMoves);
+      if (depth < 3 * ONE_PLY || endMoves == endQuiets)
       {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
-      } else
-          insertion_sort(cur, endMoves);
+          endMoves = endQuiets;
+          stage = QUIET3;
+          goto quiet_3;
+      }
+      else
+          ++stage;
+
+  case QUIET1:
+      while (cur < endMoves)
+      {
+          move = *cur++;
+          if (move != ttMove
+              && move != ss->killers[0]
+              && move != ss->killers[1]
+              && move != countermove)
+              return move;
+      }
+      ++stage;
+      
+  case QUIET_INIT2:
+      cur = endMoves;
+      endMoves = std::partition(cur, endQuiets, [](const ExtMove& m)
+                               { return m.value == VALUE_ZERO; });
+      ++stage;
+   
+  case QUIET2:
+      while (cur < endMoves)
+      {
+          move = *cur++;
+          if (move != ttMove
+              && move != ss->killers[0]
+              && move != ss->killers[1]
+              && move != countermove)
+              return move;
+      }
       ++stage;
 
-  case QUIET:
+  case QUIET_INIT3:
+      cur = endMoves;
+      endMoves = endQuiets;
+      insertion_sort(cur, endQuiets);
+      ++stage;
+
+  case QUIET3:
+quiet_3:
       while (cur < endMoves)
       {
           move = *cur++;
