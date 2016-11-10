@@ -148,13 +148,24 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
   Color c = pos.side_to_move();
-
-  for (auto& m : *this)
-      m.value =      history[pos.moved_piece(m)][to_sq(m)]
-               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + fromTo.get(c, m);
+  
+  for (ExtMove* p = cur; p < endMoves;)
+  {
+      if (   *p == ttMove
+          || *p == ss->killers[0]
+          || *p == ss->killers[1]
+          || *p == countermove)
+          *p = *--endMoves;
+      else
+      {
+          p->value = history[pos.moved_piece(*p)][to_sq(*p)]
+               + (cm ? (*cm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + (fm ? (*fm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + (f2 ? (*f2)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + fromTo.get(c, *p);
+          ++p;
+      }
+  }
 }
 
 template<>
@@ -251,15 +262,8 @@ Move MovePicker::next_move() {
       ++stage;
 
   case QUIET:
-      while (cur < endMoves)
-      {
-          move = *cur++;
-          if (   move != ttMove
-              && move != ss->killers[0]
-              && move != ss->killers[1]
-              && move != countermove)
-              return move;
-      }
+      if (cur < endMoves)
+          return *cur++;
       ++stage;
       cur = moves; // Point to beginning of bad captures
 
