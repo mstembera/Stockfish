@@ -149,8 +149,7 @@ void MovePicker::score<QUIETS>() {
 
   Color c = pos.side_to_move();
   
-  for (ExtMove* p = cur; p < endMoves;)
-  {
+  for (ExtMove* p = cur; p < endMoves; )
       if (   *p == ttMove
           || *p == ss->killers[0]
           || *p == ss->killers[1]
@@ -165,7 +164,6 @@ void MovePicker::score<QUIETS>() {
                + fromTo.get(c, *p);
           ++p;
       }
-  }
 }
 
 template<>
