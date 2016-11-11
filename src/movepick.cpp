@@ -132,9 +132,15 @@ void MovePicker::score<CAPTURES>() {
   // In the main search we want to push captures with negative SEE values to the
   // badCaptures[] array, but instead of doing it now we delay until the move
   // has been picked up, saving some SEE calls in case we get a cutoff.
-  for (auto& m : *this)
-      m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-               - Value(200 * relative_rank(pos.side_to_move(), to_sq(m)));
+    for (ExtMove* p = cur; p < endMoves; )
+        if (*p == ttMove)
+            *p = *--endMoves;
+        else
+        {
+            p->value =  PieceValue[MG][pos.piece_on(to_sq(*p))]
+                      - Value(200 * relative_rank(pos.side_to_move(), to_sq(*p)));
+            ++p;
+        }
 }
 
 template<>
@@ -148,13 +154,22 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* f2 = (ss-4)->counterMoves;
 
   Color c = pos.side_to_move();
-
-  for (auto& m : *this)
-      m.value =      history[pos.moved_piece(m)][to_sq(m)]
-               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
-               + fromTo.get(c, m);
+  
+  for (ExtMove* p = cur; p < endMoves; )
+      if (   *p == ttMove
+          || *p == ss->killers[0]
+          || *p == ss->killers[1]
+          || *p == countermove)
+          *p = *--endMoves;
+      else
+      {
+          p->value = history[pos.moved_piece(*p)][to_sq(*p)]
+               + (cm ? (*cm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + (fm ? (*fm)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + (f2 ? (*f2)[pos.moved_piece(*p)][to_sq(*p)] : VALUE_ZERO)
+               + fromTo.get(c, *p);
+          ++p;
+      }
 }
 
 template<>
@@ -164,12 +179,18 @@ void MovePicker::score<EVASIONS>() {
   const FromToStats& fromTo = pos.this_thread()->fromTo;
   Color c = pos.side_to_move();
 
-  for (auto& m : *this)
-      if (pos.capture(m))
-          m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                   - Value(type_of(pos.moved_piece(m))) + HistoryStats::Max;
+  for (ExtMove* p = cur; p < endMoves; )
+      if (*p == ttMove)
+          *p = *--endMoves;
       else
-          m.value = history[pos.moved_piece(m)][to_sq(m)] + fromTo.get(c, m);
+      {
+          if (pos.capture(*p))
+              p->value =  PieceValue[MG][pos.piece_on(to_sq(*p))]
+                        - Value(type_of(pos.moved_piece(*p))) + HistoryStats::Max;
+          else
+              p->value = history[pos.moved_piece(*p)][to_sq(*p)] + fromTo.get(c, *p);
+          ++p;
+      }
 }
 
 
@@ -199,14 +220,12 @@ Move MovePicker::next_move() {
       while (cur < endMoves)
       {
           move = pick_best(cur++, endMoves);
-          if (move != ttMove)
-          {
-              if (pos.see_ge(move, VALUE_ZERO))
-                  return move;
+          
+          if (pos.see_ge(move, VALUE_ZERO))
+              return move;
 
-              // Losing capture, move it to the beginning of the array
-              *endBadCaptures++ = move;
-          }
+          // Losing capture, move it to the beginning of the array
+          *endBadCaptures++ = move;
       }
 
       ++stage;
@@ -251,15 +270,8 @@ Move MovePicker::next_move() {
       ++stage;
 
   case QUIET:
-      while (cur < endMoves)
-      {
-          move = *cur++;
-          if (   move != ttMove
-              && move != ss->killers[0]
-              && move != ss->killers[1]
-              && move != countermove)
-              return move;
-      }
+      if (cur < endMoves)
+          return *cur++;
       ++stage;
       cur = moves; // Point to beginning of bad captures
 
@@ -275,12 +287,8 @@ Move MovePicker::next_move() {
       ++stage;
 
   case ALL_EVASIONS:
-      while (cur < endMoves)
-      {
-          move = pick_best(cur++, endMoves);
-          if (move != ttMove)
-              return move;
-      }
+      if (cur < endMoves)
+          return pick_best(cur++, endMoves);
       break;
 
   case PROBCUT_INIT:
@@ -293,8 +301,7 @@ Move MovePicker::next_move() {
       while (cur < endMoves)
       {
           move = pick_best(cur++, endMoves);
-          if (   move != ttMove
-              && pos.see_ge(move, threshold + 1))
+          if (pos.see_ge(move, threshold + 1))
               return move;
       }
       break;
@@ -306,12 +313,9 @@ Move MovePicker::next_move() {
       ++stage;
 
   case QCAPTURES_1: case QCAPTURES_2:
-      while (cur < endMoves)
-      {
-          move = pick_best(cur++, endMoves);
-          if (move != ttMove)
-              return move;
-      }
+      if (cur < endMoves)
+          return pick_best(cur++, endMoves);
+
       if (stage == QCAPTURES_2)
           break;
       cur = moves;
