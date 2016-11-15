@@ -374,9 +374,14 @@ void Thread::search() {
       // 2nd ply (using a half-density matrix).
       if (!mainThread)
       {
-          const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
-          if (row[(rootDepth / ONE_PLY + rootPos.game_ply()) % row.size()])
-             continue;
+          if (idx == 1)
+              rootDepth = std::max(Threads.main()->rootDepth + ONE_PLY, rootDepth);
+          else
+          {
+              const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
+              if (row[(rootDepth / ONE_PLY + rootPos.game_ply()) % row.size()])
+                  continue;
+          }
       }
 
       // Age out PV variability metric
