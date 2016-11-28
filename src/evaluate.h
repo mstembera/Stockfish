@@ -29,7 +29,8 @@ class Position;
 
 namespace Eval {
 
-const Value Tempo = Value(20); // Must be visible to search
+// Must be visible to search
+inline Value tempo(int ply) { return ply < 24 ? Value(23) : Value(17); }
 
 std::string trace(const Position& pos);
 
