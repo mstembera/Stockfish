@@ -733,7 +733,7 @@ namespace {
   // status of the players.
   Score evaluate_initiative(const Position& pos, int asymmetry, Value eg) {
 
-    if (abs(eg) <= PawnValueEg / 20)
+    if (abs(eg) < PawnValueEg / 10)
         return SCORE_ZERO;
 
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
