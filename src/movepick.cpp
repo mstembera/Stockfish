@@ -132,9 +132,12 @@ void MovePicker::score<CAPTURES>() {
   // In the main search we want to push captures with negative SEE values to the
   // badCaptures[] array, but instead of doing it now we delay until the move
   // has been picked up, saving some SEE calls in case we get a cutoff.
+
+  int factor = pos.non_pawn_material(pos.side_to_move()) / 32;
+
   for (auto& m : *this)
       m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-               - Value(180 * relative_rank(pos.side_to_move(), to_sq(m)));
+               - Value(factor * relative_rank(pos.side_to_move(), to_sq(m)));
 }
 
 template<>
@@ -163,12 +166,13 @@ void MovePicker::score<EVASIONS>() {
   const HistoryStats& history = pos.this_thread()->history;
   const FromToStats& fromTo = pos.this_thread()->fromTo;
   Color c = pos.side_to_move();
+  int factor = pos.non_pawn_material(pos.side_to_move()) / 32;
 
   for (auto& m : *this)
       if (pos.capture(m))
           m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
                    - Value(type_of(pos.moved_piece(m)))
-                   - Value(180 * relative_rank(pos.side_to_move(), to_sq(m)))
+                   - Value(factor * relative_rank(pos.side_to_move(), to_sq(m)))
                    + HistoryStats::Max * 2;
       else
           m.value = history[pos.moved_piece(m)][to_sq(m)] + fromTo.get(c, m);
