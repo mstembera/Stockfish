@@ -526,7 +526,7 @@ void Thread::search() {
 
   // Clear any candidate easy move that wasn't stable for the last search
   // iterations; the second condition prevents consecutive fast moves.
-  if (EasyMove.stableCnt < 7 || mainThread->easyMovePlayed)
+  if (EasyMove.stableCnt < 8 || mainThread->easyMovePlayed)
       EasyMove.clear();
 
   // If skill level is enabled, swap best PV line with the sub-optimal one
