@@ -93,7 +93,7 @@ namespace {
 
     void clear() {
       stableCnt = 0;
-      expectedPosKey = 0;
+      expectedPosKey = afterKey = 0;
       pv[0] = pv[1] = pv[2] = MOVE_NONE;
     }
 
@@ -105,24 +105,32 @@ namespace {
 
       assert(newPv.size() >= 3);
 
-      // Keep track of how many times in a row the 3rd ply remains stable
-      stableCnt = (newPv[2] == pv[2]) ? stableCnt + 1 : 0;
-
       if (!std::equal(newPv.begin(), newPv.begin() + 3, pv))
       {
-          std::copy(newPv.begin(), newPv.begin() + 3, pv);
-
-          StateInfo st[2];
+          StateInfo st[3];
           pos.do_move(newPv[0], st[0]);
           pos.do_move(newPv[1], st[1]);
           expectedPosKey = pos.key();
+          pos.do_move(newPv[2], st[2]);
+
+          // Consider possible 1st and 3rd ply transposition as stable.
+          if (afterKey == pos.key())
+              pv[2] = newPv[2];
+
+          afterKey = pos.key();
+          pos.undo_move(newPv[2]);
           pos.undo_move(newPv[1]);
           pos.undo_move(newPv[0]);
       }
+
+      // Keep track of how many times in a row the 3rd ply remains stable
+      stableCnt = (newPv[2] == pv[2]) ? stableCnt + 1 : 0;
+        
+      std::copy(newPv.begin(), newPv.begin() + 3, pv);
     }
 
     int stableCnt;
-    Key expectedPosKey;
+    Key expectedPosKey, afterKey;
     Move pv[3];
   };
 
