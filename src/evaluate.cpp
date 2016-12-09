@@ -193,7 +193,7 @@ namespace {
   const Score SafeCheck           = S(20, 20);
   const Score OtherCheck          = S(10, 10);
   const Score ThreatByHangingPawn = S(71, 61);
-  const Score LooseEnemies        = S( 0, 25);
+  const Score LooseEnemies        = S( 9, 31);
   const Score WeakQueen           = S(50, 10);
   const Score Hanging             = S(48, 27);
   const Score ThreatByPawnPush    = S(38, 22);
