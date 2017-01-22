@@ -378,7 +378,7 @@ void Thread::search() {
   {
       // Set up the new depths for the helper threads skipping on average every
       // 2nd ply (using a half-density matrix).
-      if (!mainThread)
+      if (!mainThread && rootDepth >= 5 * ONE_PLY)
       {
           const Row& row = HalfDensity[(idx - 1) % HalfDensitySize];
           if (row[(rootDepth / ONE_PLY + rootPos.game_ply()) % row.size()])
