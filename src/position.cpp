@@ -457,6 +457,11 @@ Phase Position::game_phase() const {
 
   npm = std::max(EndgameLimit, std::min(npm, MidgameLimit));
 
+  int npm2 = int(npm - EndgameLimit) * int(npm - EndgameLimit)
+      / int(MidgameLimit - EndgameLimit) + EndgameLimit;
+
+  npm = (7 * npm + npm2) / 8;
+
   return Phase(((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit));
 }
 
