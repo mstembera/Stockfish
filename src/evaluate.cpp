@@ -215,7 +215,7 @@ namespace {
   const int KnightCheck       = 924;
 
   // Threshold for lazy evaluation
-  const Value LazyThreshold = Value(1300);
+  const Value LazyThreshold = Value(1500);
 
   // eval_init() initializes king and attack bitboards for a given color
   // adding pawn attacks. To be done at the beginning of the evaluation.
