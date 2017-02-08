@@ -83,8 +83,8 @@ namespace {
       { V(21),  V(  23), V( 116), V(41), V(15) } }
   };
 
-  // Asymetry bonus.
-  const int Asymmetry[9] = { 0, 16, 24, 28, 30, 32, 33, 34, 35 };
+  // Asymmetry bonus.
+  const int Asymmetry[9] = { 0, 14, 22, 28, 32, 34, 36, 37, 38 };
 
   // Max bonus for king safety. Corresponds to start position with all the pawns
   // in front of the king and no enemy pawn on the horizon.
