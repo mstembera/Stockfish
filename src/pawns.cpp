@@ -84,7 +84,7 @@ namespace {
   };
 
   // Asymetry bonus.
-  const int Asymetry[9] = { 0, 16, 24, 28, 30, 32, 33, 34, 35 };
+  const int Asymmetry[9] = { 0, 16, 24, 28, 30, 32, 33, 34, 35 };
 
   // Max bonus for king safety. Corresponds to start position with all the pawns
   // in front of the king and no enemy pawn on the horizon.
@@ -229,7 +229,7 @@ Entry* probe(const Position& pos) {
 
   e->key = key;
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
-  e->asymmetry = Asymetry[popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK])];
+  e->asymmetry = Asymmetry[popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK])];
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
   return e;
 }
