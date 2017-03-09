@@ -230,7 +230,7 @@ Entry* probe(const Position& pos) {
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
 
   Bitboard pawns = (e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]) ^ 0xFF;
-  e->pawnSpan = pawns ? int(msb(pawns) - lsb(pawns)) : 0;
+  e->pawnSpan = pawns ? 1 + int(msb(pawns) - lsb(pawns)) : 0;
   return e;
 }
 
