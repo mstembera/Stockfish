@@ -52,6 +52,9 @@ namespace {
     S(17, 16), S(33, 32), S(0, 0), S(0, 0)
   };
 
+  // Span bonus
+  const int Span[9] = { 0, 0, 0, 0, 0, 5, 18, 22, 23 };
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawns or our pawn is behind our king.
   const Value ShelterWeakness[][RANK_NB] = {
@@ -230,7 +233,7 @@ Entry* probe(const Position& pos) {
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
 
   Bitboard pawns = (e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]) ^ 0xFF;
-  e->pawnSpan = pawns ? 1 + int(msb(pawns) - lsb(pawns)) : 0;
+  e->pawnSpan = Span[pawns ? 1 + msb(pawns) - lsb(pawns) : 0];
   return e;
 }
 

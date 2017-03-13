@@ -742,11 +742,10 @@ namespace {
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
 
     int pawns = pos.count<PAWN>();
-    bool span = ei.pe->pawn_span() >= 6;
 
     // Compute the initiative bonus for the attacking side
     int initiative =   8 * (ei.pe->pawn_asymmetry() + kingDistance)
-                    + 12 * pawns + 22 * span - 136;
+                    + 12 * pawns + ei.pe->pawn_span() - 136;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
