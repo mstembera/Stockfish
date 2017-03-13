@@ -147,12 +147,17 @@ void MovePicker::score<QUIETS>() {
   const CounterMoveStats* fmh2 = (ss-4)->counterMoves;
 
   Color c = pos.side_to_move();
+  goodQuietCnt = 0;
 
   for (auto& m : *this)
+  {
       m.value =   (*cmh)[pos.moved_piece(m)][to_sq(m)]
                +  (*fmh)[pos.moved_piece(m)][to_sq(m)]
                + (*fmh2)[pos.moved_piece(m)][to_sq(m)]
                + history.get(c, m);
+
+      goodQuietCnt += m.value > VALUE_ZERO;
+  }
 }
 
 template<>
@@ -240,9 +245,9 @@ Move MovePicker::next_move() {
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
       {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
+          if(goodQuietCnt)
+              std::partial_sort(cur, cur + goodQuietCnt, endMoves, [](const ExtMove& m1, const ExtMove& m2)
+                               { return m2.value < m1.value; });
       } else
           insertion_sort(cur, endMoves);
       ++stage;
