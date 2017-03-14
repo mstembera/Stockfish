@@ -781,7 +781,7 @@ namespace {
 
         MovePicker mp(pos, ttMove, rbeta - ss->staticEval);
 
-        while ((move = mp.next_move()) != MOVE_NONE)
+        while ((move = mp.next_move(false)) != MOVE_NONE)
             if (pos.legal(move))
             {
                 ss->currentMove = move;
@@ -904,6 +904,7 @@ moves_loop: // When in check search starts from here
               && !givesCheck
               && (!pos.advanced_pawn_push(move) || pos.non_pawn_material() >= 5000))
           {
+              skipQuiets = moveCountPruning;
               // Move count based pruning
               if (moveCountPruning) {
                   skipQuiets = true;
@@ -1244,7 +1245,7 @@ moves_loop: // When in check search starts from here
     MovePicker mp(pos, ttMove, depth, to_sq((ss-1)->currentMove));
 
     // Loop through the moves until no moves remain or a beta cutoff occurs
-    while ((move = mp.next_move()) != MOVE_NONE)
+    while ((move = mp.next_move(false)) != MOVE_NONE)
     {
       assert(is_ok(move));
 

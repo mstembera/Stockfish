@@ -251,6 +251,13 @@ Move MovePicker::next_move(bool skipQuiets) {
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
+          
+          if (skipQuiets && cur->value < VALUE_ZERO)
+          {
+              cur = endMoves;
+              break;
+          }
+
           move = *cur++;
 
           if (   move != ttMove
