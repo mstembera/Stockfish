@@ -240,15 +240,19 @@ Move MovePicker::next_move(bool skipQuiets) {
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
       {
-          ExtMove* goodQuiet = skipQuiets
+          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
+                                             { return m.value > VALUE_ZERO; });
+          insertion_sort(cur, goodQuiet);
+      }
+      else
+      {
+          ExtMove* endSort = skipQuiets
               ? std::partition(cur, endMoves, [](const ExtMove& m)
                               { return m.value >= VALUE_ZERO; })
-              : std::partition(cur, endMoves, [](const ExtMove& m)
-                              { return m.value >  VALUE_ZERO; });
+              : endMoves;
 
-          insertion_sort(cur, goodQuiet);
-      } else
-          insertion_sort(cur, endMoves);
+          insertion_sort(cur, endSort);
+      }
       ++stage;
 
   case QUIET:
