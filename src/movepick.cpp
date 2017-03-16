@@ -256,7 +256,7 @@ Move MovePicker::next_move(bool skipQuiets) {
           {
               ExtMove* front = cur;
 
-              while (startSort->value > VALUE_ZERO)
+              while (startSort->value > VALUE_ZERO && startSort < endMoves)
                   std::swap(*front++, *startSort++);
           }
       }
