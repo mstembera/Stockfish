@@ -240,16 +240,49 @@ Move MovePicker::next_move() {
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
       {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
-      } else
+          endSort = std::partition(cur, endMoves, [](const ExtMove& m)
+                                  { return m.value > VALUE_ZERO; });
+
+          endBatch = (cur + 1 == endSort) ? endSort : cur;
+      } 
+      else
+      {
           insertion_sort(cur, endMoves);
+          endBatch = endSort = endMoves;
+      }
       ++stage;
 
   case QUIET:
       while (cur < endMoves)
       {
+          if (cur == endBatch)
+          {
+              if (cur == endSort)
+              {
+                  endBatch = endSort = endMoves;
+              }
+              else
+              {
+                  if (cur + 5 >= endSort)
+                  {
+                      endBatch = endSort;
+
+                      std::sort(cur, endSort,
+                          [](const ExtMove& m1, const ExtMove& m2)
+                          { return m2.value < m1.value; });
+                  }
+                  else
+                  {
+                      assert(cur < endSort);
+                      endBatch = cur + 3;
+
+                      std::nth_element(cur, endBatch, endSort,
+                          [](const ExtMove& m1, const ExtMove& m2)
+                          { return m2.value < m1.value; });                
+                  }
+              }
+          }
+
           move = *cur++;
           if (   move != ttMove
               && move != ss->killers[0]
