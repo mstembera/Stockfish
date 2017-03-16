@@ -243,8 +243,23 @@ Move MovePicker::next_move(bool skipQuiets) {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-      } else
-          insertion_sort(cur, endMoves);
+      }
+      else
+      {
+          ExtMove* startSort = std::partition(cur, endMoves, [](const ExtMove& m)
+                                             { return m.value == VALUE_ZERO; });
+
+          std::sort(startSort, endMoves, [](const ExtMove& m1, const ExtMove& m2)
+                                           { return m2.value < m1.value; });
+
+          if (startSort != cur)
+          {
+              ExtMove* front = cur;
+
+              while (startSort->value > VALUE_ZERO)
+                  std::swap(*front++, *startSort++);
+          }
+      }
       ++stage;
 
   case QUIET:
