@@ -258,18 +258,13 @@ Move MovePicker::next_move() {
           if (cur == endBatch)
           {
               if (cur == endSort)
-              {
                   endBatch = endSort = endMoves;
-              }
               else
               {
                   if (cur + 5 >= endSort)
                   {
                       endBatch = endSort;
-
-                      std::sort(cur, endSort,
-                          [](const ExtMove& m1, const ExtMove& m2)
-                          { return m2.value < m1.value; });
+                      insertion_sort(cur, endSort);
                   }
                   else
                   {
