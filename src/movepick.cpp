@@ -261,7 +261,7 @@ Move MovePicker::next_move() {
                   endBatch = endSort = endMoves;
               else
               {
-                  if (cur + 5 >= endSort)
+                  if (cur + 4 >= endSort)
                   {
                       endBatch = endSort;
                       insertion_sort(cur, endSort);
@@ -269,7 +269,7 @@ Move MovePicker::next_move() {
                   else
                   {
                       assert(cur < endSort);
-                      endBatch = cur + 3;
+                      endBatch = cur + 2;
 
                       std::nth_element(cur, endBatch, endSort,
                           [](const ExtMove& m1, const ExtMove& m2)
