@@ -240,25 +240,14 @@ Move MovePicker::next_move(bool skipQuiets) {
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
       {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
-      }
+          endPartition = std::partition(cur, endMoves, [](const ExtMove& m)
+                                       { return m.value > VALUE_ZERO; });
+          insertion_sort(cur, endPartition);
+      } 
       else
       {
-          ExtMove* startSort = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value == VALUE_ZERO; });
-
-          std::sort(startSort, endMoves, [](const ExtMove& m1, const ExtMove& m2)
-                                           { return m2.value < m1.value; });
-
-          if (startSort != cur)
-          {
-              ExtMove* front = cur;
-
-              while (startSort->value > VALUE_ZERO && startSort < endMoves)
-                  std::swap(*front++, *startSort++);
-          }
+          endPartition = endMoves;
+          insertion_sort(cur, endMoves);
       }
       ++stage;
 
@@ -266,6 +255,13 @@ Move MovePicker::next_move(bool skipQuiets) {
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
+          if(cur == endPartition)
+          { 
+              std::partition(endPartition, endMoves, [](const ExtMove& m)
+                            { return m.value == VALUE_ZERO; });
+              endPartition = endMoves;
+          }
+
           move = *cur++;
 
           if (   move != ttMove
