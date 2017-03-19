@@ -238,50 +238,23 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
+      endSort = std::partition(cur, endMoves, [](const ExtMove& m)
+                              { return m.value > VALUE_ZERO; });
+      insertion_sort(cur, endSort);
+    
       if (depth < 3 * ONE_PLY)
-      {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
           endSort = endMoves;
-          sortState = 4;
-      } 
-      else
-      {
-          endSort = std::partition(cur, endMoves, [](const ExtMove& m)
-                                  { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, endSort);
-          sortState = 1;
-      }
       ++stage;
 
   case QUIET:
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
-          while (cur == endSort)
+          if (cur == endSort)
           {
-              switch (sortState)
-              {
-                case 1:
-                {
-                    endSort = std::partition(cur, endMoves, [](const ExtMove& m)
-                                            { return m.value == VALUE_ZERO; });
-                    sortState = 2;
-                    break;
-                }
-                case 2:
-                {
-                    insertion_sort(cur, endMoves);
-                    endSort = endMoves;
-                    sortState = 3;
-                    break;
-                }
-                default:
-                    assert(!"Bad sort state");
-              }
+              insertion_sort(cur, endMoves);
+              endSort = endMoves;
           }
-
           move = *cur++;
 
           if (   move != ttMove

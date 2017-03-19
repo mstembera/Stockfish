@@ -109,7 +109,7 @@ private:
   Move ttMove;
   Square recaptureSquare;
   Value threshold;
-  int stage, sortState;
+  int stage;
   ExtMove *cur, *endMoves, *endBadCaptures, *endSort;
   ExtMove moves[MAX_MOVES];
 };
