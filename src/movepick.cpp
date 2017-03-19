@@ -240,14 +240,18 @@ Move MovePicker::next_move(bool skipQuiets) {
       score<QUIETS>();
       if (depth < 3 * ONE_PLY)
       {
-          endPartition = std::partition(cur, endMoves, [](const ExtMove& m)
-                                       { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, endPartition);
+          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
+                                             { return m.value > VALUE_ZERO; });
+          insertion_sort(cur, goodQuiet);
+          endSort = endMoves;
+          sortState = 4;
       } 
       else
       {
-          endPartition = endMoves;
-          insertion_sort(cur, endMoves);
+          endSort = std::partition(cur, endMoves, [](const ExtMove& m)
+                                  { return m.value > VALUE_ZERO; });
+          insertion_sort(cur, endSort);
+          sortState = 1;
       }
       ++stage;
 
@@ -255,11 +259,27 @@ Move MovePicker::next_move(bool skipQuiets) {
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
-          if(cur == endPartition)
-          { 
-              std::partition(endPartition, endMoves, [](const ExtMove& m)
-                            { return m.value == VALUE_ZERO; });
-              endPartition = endMoves;
+          while (cur == endSort)
+          {
+              switch (sortState)
+              {
+                case 1:
+                {
+                    endSort = std::partition(cur, endMoves, [](const ExtMove& m)
+                                            { return m.value == VALUE_ZERO; });
+                    sortState = 2;
+                    break;
+                }
+                case 2:
+                {
+                    insertion_sort(cur, endMoves);
+                    endSort = endMoves;
+                    sortState = 3;
+                    break;
+                }
+                default:
+                    assert(!"Bad sort state");
+              }
           }
 
           move = *cur++;

@@ -109,8 +109,8 @@ private:
   Move ttMove;
   Square recaptureSquare;
   Value threshold;
-  int stage;
-  ExtMove *cur, *endMoves, *endBadCaptures, *endPartition;
+  int stage, sortState;
+  ExtMove *cur, *endMoves, *endBadCaptures, *endSort;
   ExtMove moves[MAX_MOVES];
 };
 
