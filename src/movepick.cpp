@@ -241,9 +241,6 @@ Move MovePicker::next_move(bool skipQuiets) {
       endSort = std::partition(cur, endMoves, [](const ExtMove& m)
                               { return m.value > VALUE_ZERO; });
       insertion_sort(cur, endSort);
-    
-      if (depth < 3 * ONE_PLY)
-          endSort = endMoves;
       ++stage;
 
   case QUIET:
@@ -252,7 +249,11 @@ Move MovePicker::next_move(bool skipQuiets) {
       {
           if (cur == endSort)
           {
-              insertion_sort(cur, endMoves);
+              if (depth < 3 * ONE_PLY)
+                  std::partition(cur, endMoves, [](const ExtMove& m)
+                                { return m.value == VALUE_ZERO; });
+              else
+                  insertion_sort(cur, endMoves);
               endSort = endMoves;
           }
           move = *cur++;
