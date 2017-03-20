@@ -302,12 +302,17 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = moves;
       endMoves = generate<CAPTURES>(pos, cur);
       score<CAPTURES>();
+      endGood = std::partition(cur, endMoves, [](const ExtMove& m)
+                              { return m.value > VALUE_ZERO; });
       ++stage;
 
   case QCAPTURES_1: case QCAPTURES_2:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          if (cur == endGood)
+              endGood = endMoves;
+
+          move = pick_best(cur++, endGood);
           if (move != ttMove)
               return move;
       }
