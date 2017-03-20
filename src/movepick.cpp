@@ -271,12 +271,17 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = moves;
       endMoves = generate<EVASIONS>(pos, cur);
       score<EVASIONS>();
+      endGood = std::partition(cur, endMoves, [](const ExtMove& m)
+                              { return m.value > VALUE_ZERO; });
       ++stage;
 
   case ALL_EVASIONS:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          if (cur == endGood)
+              endGood = endMoves;
+
+          move = pick_best(cur++, endGood);
           if (move != ttMove)
               return move;
       }
