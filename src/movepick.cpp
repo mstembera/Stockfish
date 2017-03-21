@@ -243,15 +243,22 @@ Move MovePicker::next_move(bool skipQuiets) {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-      } else
+          sorted = true;
+      } 
+      else if (endMoves - cur > 7)
+      {
           insertion_sort(cur, endMoves);
+          sorted = true;
+      }
+      else
+          sorted = false;
       ++stage;
 
   case QUIET:
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
-          move = *cur++;
+          move = sorted ? *cur++ : pick_best(cur++, endMoves);
 
           if (   move != ttMove
               && move != ss->killers[0]
