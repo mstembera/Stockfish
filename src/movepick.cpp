@@ -198,11 +198,14 @@ Move MovePicker::next_move(bool skipQuiets) {
           move = pick_best(cur++, endMoves);
           if (move != ttMove)
           {
-              if (pos.see_ge(move, VALUE_ZERO))
+              Value seeV = pos.see(move);
+              if (seeV >= VALUE_ZERO)
                   return move;
 
               // Losing capture, move it to the beginning of the array
-              *endBadCaptures++ = move;
+              endBadCaptures->move = move;
+              endBadCaptures->value = seeV;
+              endBadCaptures++;
           }
       }
 
@@ -264,7 +267,7 @@ Move MovePicker::next_move(bool skipQuiets) {
 
   case BAD_CAPTURES:
       if (cur < endBadCaptures)
-          return *cur++;
+          return pick_best(cur++, endBadCaptures);
       break;
 
   case EVASIONS_INIT:
