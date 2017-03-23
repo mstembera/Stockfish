@@ -204,7 +204,7 @@ Move MovePicker::next_move(bool skipQuiets) {
 
               // Losing capture, move it to the beginning of the array
               endBadCaptures->move = move;
-              endBadCaptures->value = seeV;
+              endBadCaptures->value += seeV * 8;
               endBadCaptures++;
           }
       }
