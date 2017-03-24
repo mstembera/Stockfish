@@ -51,10 +51,10 @@ namespace {
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves, e.g., the possible captures.
-  Move pick_best(ExtMove* begin, ExtMove* end)
+  ExtMove* pick_best(ExtMove* begin, ExtMove* end)
   {
       std::swap(*begin, *std::max_element(begin, end));
-      return *begin;
+      return begin;
   }
 
 } // namespace
@@ -195,7 +195,8 @@ Move MovePicker::next_move(bool skipQuiets) {
   case GOOD_CAPTURES:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          ExtMove* eMove = pick_best(cur++, endMoves);
+          move = *eMove;
           if (move != ttMove)
           {
               Value seeV = pos.see(move);
@@ -204,7 +205,7 @@ Move MovePicker::next_move(bool skipQuiets) {
 
               // Losing capture, move it to the beginning of the array
               endBadCaptures->move = move;
-              endBadCaptures->value += seeV * 8;
+              endBadCaptures->value = eMove->value + seeV * 8;
               endBadCaptures++;
           }
       }
@@ -267,7 +268,7 @@ Move MovePicker::next_move(bool skipQuiets) {
 
   case BAD_CAPTURES:
       if (cur < endBadCaptures)
-          return pick_best(cur++, endBadCaptures);
+          return *pick_best(cur++, endBadCaptures);
       break;
 
   case EVASIONS_INIT:
@@ -279,7 +280,7 @@ Move MovePicker::next_move(bool skipQuiets) {
   case ALL_EVASIONS:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          move = *pick_best(cur++, endMoves);
           if (move != ttMove)
               return move;
       }
@@ -294,7 +295,7 @@ Move MovePicker::next_move(bool skipQuiets) {
   case PROBCUT_CAPTURES:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          move = *pick_best(cur++, endMoves);
           if (   move != ttMove
               && pos.see_ge(move, threshold))
               return move;
@@ -310,7 +311,7 @@ Move MovePicker::next_move(bool skipQuiets) {
   case QCAPTURES_1: case QCAPTURES_2:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          move = *pick_best(cur++, endMoves);
           if (move != ttMove)
               return move;
       }
@@ -338,7 +339,7 @@ Move MovePicker::next_move(bool skipQuiets) {
   case QRECAPTURES:
       while (cur < endMoves)
       {
-          move = pick_best(cur++, endMoves);
+          move = *pick_best(cur++, endMoves);
           if (to_sq(move) == recaptureSquare)
               return move;
       }
