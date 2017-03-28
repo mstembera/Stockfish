@@ -48,6 +48,38 @@ namespace {
     }
   }
 
+  void dual_insertion_sort(ExtMove* begin, ExtMove* end)
+  {
+      ExtMove *plusEnd = begin, *minusBegin = end;
+
+      for (ExtMove* p = begin; p < minusBegin; ++p)
+      {
+          if (p->value > VALUE_ZERO)
+          {
+              ExtMove tmp = *p, *q;
+              *p = *plusEnd;
+
+              for (q = plusEnd; q > begin && *(q-1) < tmp; --q)
+                  *q = *(q-1);
+
+              *q = tmp;
+              ++plusEnd;
+          }
+          else if (p->value < VALUE_ZERO)
+          {
+              ExtMove tmp = *p, *q;
+              *p = *(minusBegin-1);
+
+              for (q = minusBegin; q < end && tmp < *q; ++q)
+                  *(q-1) = *q;
+
+              *(q-1) = tmp;
+              --minusBegin;
+              --p;
+          }
+      }
+  }
+
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves, e.g., the possible captures.
@@ -244,7 +276,7 @@ Move MovePicker::next_move(bool skipQuiets) {
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
       } else
-          insertion_sort(cur, endMoves);
+          dual_insertion_sort(cur, endMoves);
       ++stage;
 
   case QUIET:
