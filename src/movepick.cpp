@@ -48,6 +48,19 @@ namespace {
     }
   }
 
+  void approximate_sort(ExtMove* begin, ExtMove* end)
+  {
+      ExtMove tmp, *p, *q;
+
+      for (p = begin + 1; p < end; ++p)
+      {
+          tmp = *p;
+          Value v = p->value - 15;
+          for (q = p; q != begin && (q-1)->value < v; --q)
+              *q = *(q-1);
+          *q = tmp;
+      }
+  }
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves, e.g., the possible captures.
@@ -242,7 +255,7 @@ Move MovePicker::next_move(bool skipQuiets) {
       {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
+          approximate_sort(cur, goodQuiet);
       } else
           insertion_sort(cur, endMoves);
       ++stage;
