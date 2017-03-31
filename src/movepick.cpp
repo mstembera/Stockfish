@@ -48,6 +48,73 @@ namespace {
     }
   }
 
+  void approximate_sort(ExtMove* begin, ExtMove* end)
+  {
+      ExtMove tmp, *p, *q;
+
+      for (p = begin + 1; p < end; ++p)
+      {
+          tmp = *p;
+          Value v = p->value * 975 / 1024;
+          for (q = p; q != begin && (q-1)->value < v; --q)
+              *q = *(q-1);
+          *q = tmp;
+      }
+  }
+
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end)
+  {
+      ExtMove* sortedEnd = begin + 1;
+
+      //TODO time order of ifs
+      for (ExtMove* p = begin + 1; p < end; ++p)
+      {
+          int margin = sortedEnd - begin;
+          if (   p->value > VALUE_ZERO 
+              && (   margin < 5
+                  || p->value >= sortedEnd->value))
+          {
+              ExtMove tmp = *p, *q;
+              Value tmpV = p->value - margin * 2;
+              *p = *sortedEnd;
+
+              // count # of swaps
+              // after call count how many positions same vs different %
+              // get numbers for several parameters to find best tradeoff
+              for (q = sortedEnd; q != begin && (q-1)->value < tmpV; --q)
+                  *q = *(q-1);
+
+              *q = tmp;
+              ++sortedEnd;
+          }
+      }
+  }
+
+  // 4 5
+  void quasi_sort(ExtMove* begin, ExtMove* end)
+  {
+      ExtMove* sortedEnd = begin + 1;
+
+      //TODO time order of ifs
+      for (ExtMove* p = begin + 1; p < end; ++p)
+      {
+          int margin = sortedEnd - begin;
+          if (   p->value > VALUE_ZERO
+              || margin < 5
+              || p->value >= sortedEnd->value)
+          {
+              ExtMove tmp = *p, *q;
+              Value tmpV = p->value - (p->value <= VALUE_ZERO) * margin * 2;
+              *p = *sortedEnd;
+
+              for (q = sortedEnd; q != begin && (q-1)->value < tmpV; --q)
+                  *q = *(q-1);
+
+              *q = tmp;
+              ++sortedEnd;
+          }
+      }
+  }
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves, e.g., the possible captures.
@@ -243,7 +310,10 @@ Move MovePicker::next_move(bool skipQuiets) {
           ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
                                              { return m.value > VALUE_ZERO; });
           insertion_sort(cur, goodQuiet);
-      } else
+      }
+      else if (depth < 5 * ONE_PLY)
+          quasi_sort(cur, endMoves);
+      else
           insertion_sort(cur, endMoves);
       ++stage;
 
