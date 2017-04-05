@@ -48,25 +48,24 @@ namespace {
     }
   }
 
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end)
+  void partial_sort(ExtMove* begin, ExtMove* end, int n)
   {
-      ExtMove* sortedEnd = begin + 1;
-
-      for (ExtMove* p = begin + 1; p < end; ++p)
-      {
-          if (p->value > VALUE_ZERO)
-          {
-              ExtMove tmp = *p, *q;
-              *p = *sortedEnd;
-
-              for (q = sortedEnd; q != begin && *(q-1) < tmp; --q)
-                  *q = *(q-1);
-
-              *q = tmp;
-              ++sortedEnd;
-          }
-      }
+    for (ExtMove *sortedEnd = begin+1, *p = begin+1; p < end; ++p)
+    {
+        if (   p - begin < n
+            || p->value > VALUE_ZERO
+            || p->value > begin[n-1].value)
+        {
+            ExtMove tmp = *p, *q;
+            *p = *sortedEnd;
+            for (q = sortedEnd; q != begin && *(q-1) < tmp; --q)
+                *q = *(q-1);
+            *q = tmp;
+            ++sortedEnd;
+        }
+    }
   }
+
 
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
@@ -258,8 +257,8 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      if (depth < 4 * ONE_PLY)
-          partial_insertion_sort(cur, endMoves);
+      if (depth < 4 * ONE_PLY && endMoves - cur > (int)depth * 2 + 2)   
+          partial_sort(cur, endMoves, depth);
       else
           insertion_sort(cur, endMoves);
       ++stage;
