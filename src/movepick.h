@@ -120,6 +120,7 @@ private:
   int stage;
   ExtMove *cur, *endMoves, *endBadCaptures;
   ExtMove moves[MAX_MOVES];
+  bool scored;
 };
 
 #endif // #ifndef MOVEPICK_H_INCLUDED

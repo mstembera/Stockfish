@@ -237,22 +237,30 @@ Move MovePicker::next_move(bool skipQuiets) {
   case QUIET_INIT:
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
-      score<QUIETS>();
-      if (depth < 3 * ONE_PLY)
-      {
-          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-                                             { return m.value > VALUE_ZERO; });
-          insertion_sort(cur, goodQuiet);
-      }
-      else
-      {
-          ExtMove* endSort = std::partition(cur, endMoves, [](const ExtMove& m)
-                                           { return m.value >= VALUE_ZERO; });
-          insertion_sort(cur, endSort);
-      }
+      scored = false;
       ++stage;
 
   case QUIET:
+      if (!scored && !skipQuiets)
+      {
+          score<QUIETS>();
+          if (depth < 3 * ONE_PLY)
+          {
+              ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
+                                                 { return m.value > VALUE_ZERO; });
+              insertion_sort(cur, goodQuiet);
+          }
+          else
+          {
+              ExtMove* endSort = skipQuiets
+                  ? std::partition(cur, endMoves, [](const ExtMove& m)
+                                  { return m.value >= VALUE_ZERO; })
+                  : endMoves;
+              insertion_sort(cur, endSort);
+          }
+          scored = true;
+      }
+
       while (    cur < endMoves
              && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
