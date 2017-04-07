@@ -251,13 +251,7 @@ Move MovePicker::next_move(bool skipQuiets) {
               insertion_sort(cur, goodQuiet);
           }
           else
-          {
-              ExtMove* endSort = skipQuiets
-                  ? std::partition(cur, endMoves, [](const ExtMove& m)
-                                  { return m.value >= VALUE_ZERO; })
-                  : endMoves;
-              insertion_sort(cur, endSort);
-          }
+              insertion_sort(cur, endMoves);
           scored = true;
       }
 
