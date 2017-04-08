@@ -67,9 +67,10 @@ void TranspositionTable::clear() {
 /// TranspositionTable::probe() looks up the current position in the transposition
 /// table. It returns true and a pointer to the TTEntry if the position is found.
 /// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
-/// to be replaced later. The replace value of an entry is calculated as its depth
-/// minus 8 times its relative age. TTEntry t1 is considered more valuable than
-/// TTEntry t2 if its replace value is greater than that of t2.
+/// to be replaced later. The replace value of an entry is calculated as 2 times its
+/// depth minus 16 times its relative age plus its bound match to its value. TTEntry
+/// t1 is considered more valuable than TTEntry t2 if its replace value is greater
+/// than that of t2.
 
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
@@ -85,16 +86,21 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
           return found = (bool)tte[i].key16, &tte[i];
       }
 
-  // Find an entry to be replaced according to the replacement strategy
-  TTEntry* replace = tte;
-  for (int i = 1; i < ClusterSize; ++i)
+  // Find an entry to be replaced according to the replacement policy
+  TTEntry* replace = nullptr;
+  int policyMin = INT_MAX;
+  for (int i = 0; i < ClusterSize; ++i)
+  {
       // Due to our packed storage format for generation and its cyclic
       // nature we add 259 (256 is the modulus plus 3 to keep the lowest
       // two bound bits from affecting the result) to calculate the entry
       // age correctly even after generation8 overflows into the next cycle.
-      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
-          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2)
-          replace = &tte[i];
+      int policy =  tte[i].depth8 * 2
+                  - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 4
+                  + !!(tte[i].genBound8 & (tte[i].value16 > VALUE_ZERO ? BOUND_LOWER : BOUND_UPPER));
+      if (policy < policyMin)
+          replace = &tte[i], policyMin = policy;
+  }
 
   return found = false, replace;
 }
