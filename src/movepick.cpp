@@ -245,11 +245,14 @@ Move MovePicker::next_move(bool skipQuiets) {
           insertion_sort(cur, goodQuiet);
       } else
           insertion_sort(cur, endMoves);
+      positiveCnt = 0;
       ++stage;
 
   case QUIET:
       while (    cur < endMoves
-             && (!skipQuiets || cur->value >= VALUE_ZERO))
+             && (   !skipQuiets
+                 ||  cur->value >  VALUE_ZERO 
+                 || (cur->value == VALUE_ZERO && positiveCnt < 3)))
       {
           move = *cur++;
 
@@ -257,7 +260,10 @@ Move MovePicker::next_move(bool skipQuiets) {
               && move != ss->killers[0]
               && move != ss->killers[1]
               && move != countermove)
+          {
+              positiveCnt += cur->value > VALUE_ZERO;
               return move;
+          }
       }
       ++stage;
       cur = moves; // Point to beginning of bad captures
