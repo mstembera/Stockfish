@@ -34,10 +34,16 @@ namespace {
     QSEARCH_RECAPTURES, QRECAPTURES
   };
 
-  // Our insertion sort, which is guaranteed to be stable, as it should be
   void insertion_sort(ExtMove* begin, ExtMove* end)
   {
     ExtMove tmp, *p, *q;
+
+    int64_t cnt = (end - begin) / 4;
+    p = end - cnt;
+
+    for (int i = 0; i < cnt; ++i)
+        if (begin[i] < p[i])
+            std::swap(begin[i], p[i]);
 
     for (p = begin + 1; p < end; ++p)
     {
