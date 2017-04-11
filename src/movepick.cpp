@@ -38,12 +38,15 @@ namespace {
   {
     ExtMove tmp, *p, *q;
 
-    int64_t cnt = (end - begin) / 4;
-    p = end - cnt;
+    if (end - begin > 6)
+    {
+        int twoThirds = int(end - begin) * 683 / 1024;
+        p = end - twoThirds;
 
-    for (int i = 0; i < cnt; ++i)
-        if (begin[i] < p[i])
-            std::swap(begin[i], p[i]);
+        for (int i = 0; i < twoThirds; ++i)
+            if (begin[i] < p[i])
+                std::swap(begin[i], p[i]);
+    }
 
     for (p = begin + 1; p < end; ++p)
     {
