@@ -40,10 +40,10 @@ namespace {
 
     if (end - begin > 6)
     {
-        int twoThirds = int(end - begin) * 683 / 1024;
-        p = end - twoThirds;
+        int third = int(end - begin) * 342 / 1024;
+        p = end - third;
 
-        for (int i = 0; i < twoThirds; ++i)
+        for (int i = 0; i < third; ++i)
             if (begin[i] < p[i])
                 std::swap(begin[i], p[i]);
     }
