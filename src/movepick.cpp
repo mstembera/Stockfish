@@ -243,7 +243,7 @@ Move MovePicker::next_move(bool skipQuiets) {
       score<QUIETS>();
 
       partial_insertion_sort(cur, endMoves,
-                             depth < 3 * ONE_PLY ? VALUE_ZERO : Value(INT_MIN));
+                             (depth < 3 * ONE_PLY || skipQuiets) ? VALUE_ZERO : Value(INT_MIN));
       ++stage;
 
   case QUIET:
