@@ -241,7 +241,7 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      partial_insertion_sort(cur, endMoves, 4001 - 4000 * depth / ONE_PLY);
       ++stage;
 
   case QUIET:
