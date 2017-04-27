@@ -49,6 +49,8 @@ namespace {
             *q = tmp;
             ++sortedEnd;
         }
+        else if (p->value < (end-1)->value)
+            std::swap(*p--, *--end);
   }
 
   // pick_best() finds the best move in the range (begin, end) and moves it to
