@@ -37,18 +37,23 @@ namespace {
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
   // To keep the implementation simple, *begin is always included in the sorted moves.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void adaptive_sort(ExtMove* begin, ExtMove* end, int margin) {
 
-    for (ExtMove *sortedEnd = begin + 1, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
-        {
-            ExtMove tmp = *p, *q;
-            *p = *sortedEnd;
-            for (q = sortedEnd; q != begin && *(q-1) < tmp; --q)
-                *q = *(q-1);
-            *q = tmp;
-            ++sortedEnd;
-        }
+    if (end - begin > 1)
+    {
+        int limit = begin->value - margin;
+        for (ExtMove *sortedEnd = begin+1, *p = begin+1; p < end; ++p)
+            if (p->value >= limit)
+            {
+                ExtMove tmp = *p, *q;
+                *p = *sortedEnd;
+                for (q = sortedEnd; q != begin && *(q-1) < tmp; --q)
+                    *q = *(q-1);
+                *q = tmp;
+                ++sortedEnd;
+                limit = begin->value - margin;
+            }
+    }
   }
 
   // pick_best() finds the best move in the range (begin, end) and moves it to
@@ -241,7 +246,7 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      adaptive_sort(cur, endMoves, 16000 * depth / ONE_PLY);
       ++stage;
 
   case QUIET:
