@@ -49,7 +49,7 @@ namespace {
             *q = tmp;
             ++sortedEnd;
         }
-        else if (p->value < (end-1)->value)
+        else if (p->value < limit - abs(limit))
             std::swap(*p--, *--end);
   }
 
