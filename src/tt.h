@@ -52,7 +52,8 @@ struct TTEntry {
 
     // Don't overwrite more valuable entries
     if (  (k >> 48) != key16
-        || d / ONE_PLY + (b == BOUND_EXACT) * 4 > depth8 - 4)
+        ||   d / ONE_PLY + (b == BOUND_EXACT) * 4
+           > depth8 + ((genBound8 & 0x3) == BOUND_EXACT) * 4 - 4)
      /* || g != (genBound8 & 0xFC) // Matching non-zero keys are already refreshed by probe() */
     {
         key16     = (uint16_t)(k >> 48);
