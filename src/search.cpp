@@ -142,6 +142,7 @@ namespace {
 
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
+  std::atomic<int> StartedDepthCnt[DEPTH_MAX];
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -246,6 +247,9 @@ void MainThread::search() {
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
+
+  for (unsigned i = 0; i < DEPTH_MAX; ++i)
+      StartedDepthCnt[i] = 0;
 
   if (rootMoves.empty())
   {
@@ -368,8 +372,19 @@ void Thread::search() {
       {
           int i = (idx - 1) % 20;
           if (((rootDepth / ONE_PLY + rootPos.game_ply() + skipPhase[i]) / skipSize[i]) % 2)
+          {
+              ++StartedDepthCnt[rootDepth];
               continue;
+          }
+
+          while (StartedDepthCnt[rootDepth] * 2 > (int)Threads.size() && rootDepth < DEPTH_MAX)
+          {
+              ++StartedDepthCnt[rootDepth];
+              rootDepth += ONE_PLY;
+          }
       }
+
+      ++StartedDepthCnt[rootDepth];
 
       // Age out PV variability metric
       if (mainThread)
