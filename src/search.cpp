@@ -378,7 +378,7 @@ void Thread::search() {
           }
 
           while (   rootDepth < DEPTH_MAX - ONE_PLY
-                 && StartedDepthCnt[rootDepth + ONE_PLY] * 2 >= (int)Threads.size())
+                 && StartedDepthCnt[rootDepth + ONE_PLY] >= (int)Threads.size() / 2)
           {
               ++StartedDepthCnt[rootDepth];
               rootDepth += ONE_PLY;
