@@ -212,38 +212,42 @@ template<> inline int distance<Rank>(Square x, Square y) { return distance(rank_
 /// attacks_bb() returns a bitboard representing all the squares attacked by a
 /// piece of type Pt (bishop or rook) placed on 's'. The helper magic_index()
 /// looks up the index using the 'magic bitboards' approach.
-template<PieceType Pt>
+template<MagicType Pt>
 inline unsigned magic_index(Square s, Bitboard occupied) {
 
-  extern Bitboard RookMasks[SQUARE_NB];
-  extern Bitboard RookMagics[SQUARE_NB];
-  extern unsigned RookShifts[SQUARE_NB];
+  extern Bitboard RookMasksF[SQUARE_NB];
+  extern Bitboard RookMagicsF[SQUARE_NB];
+  extern Bitboard RookMasksR[SQUARE_NB];
+  extern Bitboard RookMagicsR[SQUARE_NB];
+
   extern Bitboard BishopMasks[SQUARE_NB];
   extern Bitboard BishopMagics[SQUARE_NB];
   extern unsigned BishopShifts[SQUARE_NB];
 
-  Bitboard* const Masks  = Pt == ROOK ? RookMasks  : BishopMasks;
-  Bitboard* const Magics = Pt == ROOK ? RookMagics : BishopMagics;
-  unsigned* const Shifts = Pt == ROOK ? RookShifts : BishopShifts;
+  Bitboard* const Masks  = Pt == M_ROOK_F ? RookMasksF  : Pt == M_ROOK_R ? RookMasksR  : BishopMasks;
+  Bitboard* const Magics = Pt == M_ROOK_F ? RookMagicsF : Pt == M_ROOK_R ? RookMagicsR : BishopMagics;
 
   if (HasPext)
       return unsigned(pext(occupied, Masks[s]));
 
   if (Is64Bit)
-      return unsigned(((occupied & Masks[s]) * Magics[s]) >> Shifts[s]);
+      return unsigned(((occupied & Masks[s]) * Magics[s]) >> (Pt == M_BISHOP ? BishopShifts[s] : 58));
 
   unsigned lo = unsigned(occupied) & unsigned(Masks[s]);
   unsigned hi = unsigned(occupied >> 32) & unsigned(Masks[s] >> 32);
-  return (lo * unsigned(Magics[s]) ^ hi * unsigned(Magics[s] >> 32)) >> Shifts[s];
+  return (lo * unsigned(Magics[s]) ^ hi * unsigned(Magics[s] >> 32)) >> (Pt == M_BISHOP ? BishopShifts[s] : 26);
 }
 
 template<PieceType Pt>
 inline Bitboard attacks_bb(Square s, Bitboard occupied) {
 
-  extern Bitboard* RookAttacks[SQUARE_NB];
+  extern Bitboard  RookAttacksF[SQUARE_NB][64];
+  extern Bitboard  RookAttacksR[SQUARE_NB][64];
   extern Bitboard* BishopAttacks[SQUARE_NB];
 
-  return (Pt == ROOK ? RookAttacks : BishopAttacks)[s][magic_index<Pt>(s, occupied)];
+  return (Pt == ROOK)
+      ? RookAttacksF[s][magic_index<M_ROOK_F>(s, occupied)] | RookAttacksR[s][magic_index<M_ROOK_R>(s, occupied)]
+      : BishopAttacks[s][magic_index<M_BISHOP>(s, occupied)];
 }
 
 inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
