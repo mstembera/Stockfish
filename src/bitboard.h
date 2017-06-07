@@ -212,35 +212,33 @@ template<> inline int distance<Rank>(Square x, Square y) { return distance(rank_
 /// Magic holds all magic relevant data for a single square
 struct Magic {
 
-    Bitboard  mask;
-    Bitboard  magic;
-    Bitboard* attacks;
-    unsigned  shift;
+    Bitboard mask[2];
+    Bitboard magic[2];
+    Bitboard attacks[2][64];
 };
 
 /// attacks_bb() returns a bitboard representing all the squares attacked by a
 /// piece of type Pt (bishop or rook) placed on 's'. The helper magic_index()
 /// looks up the index using the 'magic bitboards' approach.
-template<PieceType Pt>
+template<PieceType Pt, int Direction>
 inline unsigned magic_index(Square s, Bitboard occupied) {
 
   extern Magic RookMagics[SQUARE_NB];
   extern Magic BishopMagics[SQUARE_NB];
 
   const Magic* Magics = Pt == ROOK ? RookMagics : BishopMagics;
-  Bitboard mask  = Magics[s].mask;
-  Bitboard magic = Magics[s].magic;
-  unsigned shift = Magics[s].shift;
+  Bitboard mask  = Magics[s].mask[Direction];
+  Bitboard magic = Magics[s].magic[Direction];
 
   if (HasPext)
       return unsigned(pext(occupied, mask));
 
   if (Is64Bit)
-      return unsigned(((occupied & mask) * magic) >> shift);
+      return unsigned(((occupied & mask) * magic) >> 58);
 
   unsigned lo = unsigned(occupied) & unsigned(mask);
   unsigned hi = unsigned(occupied >> 32) & unsigned(mask >> 32);
-  return  (lo * unsigned(magic) ^ hi * unsigned(magic >> 32)) >> shift;
+  return  (lo * unsigned(magic) ^ hi * unsigned(magic >> 32)) >> 26;
 }
 
 template<PieceType Pt>
@@ -249,7 +247,9 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
     extern Magic RookMagics[SQUARE_NB];
     extern Magic BishopMagics[SQUARE_NB];
 
-    return (Pt == ROOK ? RookMagics : BishopMagics)[s].attacks[magic_index<Pt>(s, occupied)];
+    return (Pt == ROOK)
+        ? RookMagics[s].attacks[0][magic_index<Pt, 0>(s, occupied)]   | RookMagics[s].attacks[1][magic_index<Pt, 1>(s, occupied)]
+        : BishopMagics[s].attacks[0][magic_index<Pt, 0>(s, occupied)] | BishopMagics[s].attacks[1][magic_index<Pt, 1>(s, occupied)];
 }
 
 inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {

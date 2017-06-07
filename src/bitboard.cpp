@@ -51,12 +51,10 @@ namespace {
 
   int MSBTable[256];            // To implement software msb()
   Square BSFTable[SQUARE_NB];   // To implement software bitscan
-  Bitboard RookTable[0x19000];  // To store rook attacks
-  Bitboard BishopTable[0x1480]; // To store bishop attacks
 
   typedef unsigned (Fn)(Square, Bitboard);
 
-  void init_magics(Bitboard table[], Magic magics[], Square deltas[], Fn index);
+  void init_magics(Magic magics[], Square deltas[], Fn index, int direction);
 
   // bsf_index() returns the index into BSFTable[] to look up the bitscan. Uses
   // Matt Taylor's folding for 32 bit case, extended to 64 bit by Kim Walisch.
@@ -201,11 +199,13 @@ void Bitboards::init() {
                   }
               }
 
-  Square RookDeltas[] = { NORTH,  EAST,  SOUTH,  WEST };
-  Square BishopDeltas[] = { NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST };
+  Square RookDeltas[][2] = { {NORTH, SOUTH}, {EAST, WEST} };
+  Square BishopDeltas[][2] = { {NORTH_EAST, SOUTH_WEST}, {NORTH_WEST, SOUTH_EAST} };
 
-  init_magics(RookTable, RookMagics, RookDeltas, magic_index<ROOK>);
-  init_magics(BishopTable, BishopMagics, BishopDeltas, magic_index<BISHOP>);
+  init_magics(RookMagics, RookDeltas[0], magic_index<ROOK, 0>, 0);
+  init_magics(RookMagics, RookDeltas[1], magic_index<ROOK, 1>, 1);
+  init_magics(BishopMagics, BishopDeltas[0], magic_index<BISHOP, 0>, 0);
+  init_magics(BishopMagics, BishopDeltas[1], magic_index<BISHOP, 1>, 1);
 
   for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
   {
@@ -231,7 +231,7 @@ namespace {
 
     Bitboard attack = 0;
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 2; ++i)
         for (Square s = sq + deltas[i];
              is_ok(s) && distance(s, s - deltas[i]) == 1;
              s += deltas[i])
@@ -251,16 +251,13 @@ namespace {
   // chessprogramming.wikispaces.com/Magic+Bitboards. In particular, here we
   // use the so called "fancy" approach.
 
-  void init_magics(Bitboard table[], Magic magics[], Square deltas[], Fn index) {
+  void init_magics(Magic magics[], Square deltas[], Fn index, int direction) {
 
     int seeds[][RANK_NB] = { { 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 },
                              {  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 } };
 
     Bitboard occupancy[4096], reference[4096], edges, b;
     int age[4096] = {0}, current = 0, i, size;
-
-    // attacks[s] is a pointer to the beginning of the attacks table for square 's'
-    magics[SQ_A1].attacks = table;
 
     for (Square s = SQ_A1; s <= SQ_H8; ++s)
     {
@@ -272,8 +269,7 @@ namespace {
         // all the attacks for each possible subset of the mask and so is 2 power
         // the number of 1s of the mask. Hence we deduce the size of the shift to
         // apply to the 64 or 32 bits word to get the index.
-        magics[s].mask  = sliding_attack(deltas, s, 0) & ~edges;
-        magics[s].shift = (Is64Bit ? 64 : 32) - popcount(magics[s].mask);
+        magics[s].mask[direction]  = sliding_attack(deltas, s, 0) & ~edges;
 
         // Use Carry-Rippler trick to enumerate all subsets of masks[s] and
         // store the corresponding sliding attack bitboard in reference[].
@@ -283,16 +279,12 @@ namespace {
             reference[size] = sliding_attack(deltas, s, b);
 
             if (HasPext)
-                magics[s].attacks[pext(b, magics[s].mask)] = reference[size];
+                magics[s].attacks[direction][pext(b, magics[s].mask[direction])] = reference[size];
 
             size++;
-            b = (b - magics[s].mask) & magics[s].mask;
+            b = (b - magics[s].mask[direction]) & magics[s].mask[direction];
         } while (b);
 
-        // Set the offset for the table of the next square. We have individual
-        // table sizes for each square with "Fancy Magic Bitboards".
-        if (s < SQ_H8)
-            magics[s + 1].attacks = magics[s].attacks + size;
 
         if (HasPext)
             continue;
@@ -303,8 +295,9 @@ namespace {
         // until we find the one that passes the verification test.
         do {
             do
-                magics[s].magic = rng.sparse_rand<Bitboard>();
-            while (popcount((magics[s].magic * magics[s].mask) >> 56) < 6);
+                magics[s].magic[direction] = rng.sparse_rand<Bitboard>();
+            while (  popcount((magics[s].magic[direction] * magics[s].mask[direction]) >> 56)
+                   < std::min(6, popcount(magics[s].mask[direction])));
 
             // A good magic must map every possible occupancy to an index that
             // looks up the correct sliding attack in the attacks[s] database.
@@ -317,9 +310,9 @@ namespace {
                 if (age[idx] < current)
                 {
                     age[idx] = current;
-                    magics[s].attacks[idx] = reference[i];
+                    magics[s].attacks[direction][idx] = reference[i];
                 }
-                else if (magics[s].attacks[idx] != reference[i])
+                else if (magics[s].attacks[direction][idx] != reference[i])
                     break;
             }
         } while (i < size);
