@@ -56,7 +56,7 @@ struct ButterflyHistory : public ButterflyBoards {
 
     assert(abs(v) <= D); // Consistency check for below formula
 
-    entry += v * 32 - entry * abs(v) / D;
+	entry = (D * 32 * v + (D - abs(v)) * entry) / D;
 
     assert(abs(entry) <= 32 * D);
   }
@@ -72,7 +72,7 @@ struct PieceToHistory : public PieceToBoards {
 
     assert(abs(v) <= D); // Consistency check for below formula
 
-    entry += v * 32 - entry * abs(v) / D;
+	entry =  (D * 32 * v + (D - abs(v)) * entry) / D;
 
     assert(abs(entry) <= 32 * D);
   }
