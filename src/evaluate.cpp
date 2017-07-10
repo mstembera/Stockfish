@@ -92,7 +92,7 @@ namespace {
     template<Color Us> Score evaluate_space();
     template<Color Us, PieceType Pt> Score evaluate_pieces();
     ScaleFactor evaluate_scale_factor(Value eg);
-    Score evaluate_initiative(Value eg);
+    Score evaluate_initiative(Value eg, Value kingEg);
 
     // Data members
     const Position& pos;
@@ -750,14 +750,15 @@ namespace {
   // status of the players.
 
   template<Tracing T>
-  Score Evaluation<T>::evaluate_initiative(Value eg) {
+  Score Evaluation<T>::evaluate_initiative(Value eg, Value kingEg) {
 
     int kingDistance =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                       - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
     bool bothFlanks = (pos.pieces(PAWN) & QueenSide) && (pos.pieces(PAWN) & KingSide);
 
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (pe->pawn_asymmetry() + kingDistance - 17) + 12 * pos.count<PAWN>() + 16 * bothFlanks;
+    int initiative =   8 * (pe->pawn_asymmetry() + kingDistance - 17) + 12 * pos.count<PAWN>()
+                    + 16 * bothFlanks - kingEg / 6;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
@@ -847,8 +848,9 @@ namespace {
 
     score += mobility[WHITE] - mobility[BLACK];
 
-    score +=  evaluate_king<WHITE>()
-            - evaluate_king<BLACK>();
+    Score kingScore = evaluate_king<WHITE>()
+                    - evaluate_king<BLACK>();
+    score += kingScore;
 
     score +=  evaluate_threats<WHITE>()
             - evaluate_threats<BLACK>();
@@ -860,7 +862,7 @@ namespace {
         score +=  evaluate_space<WHITE>()
                 - evaluate_space<BLACK>();
 
-    score += evaluate_initiative(eg_value(score));
+    score += evaluate_initiative(eg_value(score), eg_value(kingScore));
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = evaluate_scale_factor(eg_value(score));
