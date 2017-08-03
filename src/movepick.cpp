@@ -36,10 +36,10 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit, int endLimit) {
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
+        if (p->value >= sortLimit)
         {
             ExtMove tmp = *p, *q;
             *p = *++sortedEnd;
@@ -47,6 +47,8 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
+        else if (p->value < endLimit)
+            std::swap(*p--, *--end);
   }
 
   // pick_best() finds the best move in the range (begin, end) and moves it to
@@ -245,7 +247,8 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY,
+                             -20000 - 4000 * depth / ONE_PLY);
       ++stage;
       /* fallthrough */
 
