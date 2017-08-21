@@ -128,7 +128,7 @@ void MovePicker::score() {
 
   if (T == QUIETS)
   {
-      int sum = -100, c = 2;
+      int sum = -100, c = 1;
       for (ExtMove *m = begin(), *e = end(); m < e; ++m)
       {
           m->value =  (*mainHistory)[pos.side_to_move()][from_to(*m)]
@@ -136,7 +136,7 @@ void MovePicker::score() {
                     + (*contHistory[1])[pos.moved_piece(*m)][to_sq(*m)]
                     + (*contHistory[3])[pos.moved_piece(*m)][to_sq(*m)];
 
-          sum += m->value;
+          sum += m->value - 50;
           ++c;
 
           if (m->value * c < sum)
@@ -227,7 +227,7 @@ Move MovePicker::next_move(bool skipQuiets) {
       cur = endBadCaptures;
       endMoves = generate<QUIETS>(pos, cur);
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4400 * depth / ONE_PLY);
+      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
       ++stage;
       /* fallthrough */
 
