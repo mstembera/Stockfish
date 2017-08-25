@@ -1002,19 +1002,8 @@ bool Position::see_ge(Move m, Value threshold) const {
   Square from = from_sq(m), to = to_sq(m);
   PieceType nextVictim = type_of(piece_on(from));
   Color stm = ~color_of(piece_on(from)); // First consider opponent's move
-  Value balance; // Values of the pieces taken by us minus opponent's ones
-  Bitboard occupied, stmAttackers;
-
-  if (type_of(m) == ENPASSANT)
-  {
-      occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn
-      balance = PieceValue[MG][PAWN];
-  }
-  else
-  {
-      balance = PieceValue[MG][piece_on(to)];
-      occupied = 0;
-  }
+  Value balance = PieceValue[MG][piece_on(to)]; // Values of the pieces taken by us minus opponent's ones
+  Bitboard occupied = 0, stmAttackers;
 
   if (balance < threshold)
       return false;
