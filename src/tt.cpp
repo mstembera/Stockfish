@@ -71,6 +71,8 @@ void TranspositionTable::clear() {
 /// minus 8 times its relative age. TTEntry t1 is considered more valuable than
 /// TTEntry t2 if its replace value is greater than that of t2.
 
+const int selectTbl[2][2][2] = {{{0, 0}, {-1, 2}}, {{1, -1}, {1, 2}}};
+
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
   TTEntry* const tte = first_entry(key);
@@ -86,17 +88,15 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
       }
 
   // Find an entry to be replaced according to the replacement strategy
-  TTEntry* replace = tte;
-  for (int i = 1; i < ClusterSize; ++i)
+  int p[ClusterSize];
+  for (int i = 0; i < ClusterSize; ++i)
       // Due to our packed storage format for generation and its cyclic
       // nature we add 259 (256 is the modulus plus 3 to keep the lowest
       // two bound bits from affecting the result) to calculate the entry
       // age correctly even after generation8 overflows into the next cycle.
-      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
-          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2)
-          replace = &tte[i];
+      p[i] = tte[i].depth8 - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 2;
 
-  return found = false, replace;
+    return found = false, &tte[selectTbl[p[0] > p[1]][p[0] > p[2]][p[1] > p[2]]];
 }
 
 
