@@ -26,6 +26,89 @@
 #include "position.h"
 #include "thread.h"
 
+
+const int reindex[50] = { 0, 1, 1458, 3, 4374, 54, 27, 486, 243, 9, 13122, 162, 81, 4, 5832, 1620,
+                         82, 495, 13365, 4383, 13125, 2, 729, 6, 2187, 1461, 4375, 4455, 165, 6561,
+                         18, 1467, 13123, 1459, 1476, 6562, 4428, 30, 18954, 13, 4377, 1944, 244,
+                         55, 1485, 13131, 1701, 487, 1464, 2188 };
+int wm[50] = { 0 };
+int we[50] = { 0 };
+
+int sm[12] = { 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 };
+int se[12] = { 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 };
+
+
+int16_t base3Tbl[1 << 9];
+int bonus3x3[19683][2] = { 0 };
+
+const Square corners3x3[12] = {
+    SQ_A2, SQ_B2, SQ_C2,
+    SQ_A3, SQ_B3, SQ_C3,
+    SQ_A4, SQ_B4, SQ_C4,
+    SQ_A5, SQ_B5, SQ_C5 };
+
+uint8_t reverseBits[256];
+
+inline uint8_t reverse_bits(uint8_t b)
+{
+    return uint8_t(((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32);
+}
+
+Bitboard flip_files(Bitboard b)
+{
+    union { Bitboard bb; uint8_t u[8]; } v = { b };
+
+    for (unsigned i = 0; i < 8; ++i)
+        v.u[i] = reverseBits[v.u[i]];
+
+    return v.bb;
+}
+
+Bitboard flip_ranks(Bitboard b)
+{
+    union { Bitboard bb; uint8_t u[8]; } v = { b }, w;
+
+    for (unsigned i = 0; i < 8; ++i)
+        w.u[i] = v.u[7 - i];
+
+    return w.bb;
+}
+
+int base3(uint32_t bits9)
+{
+    int value = 0;
+    int digit = 1;
+
+    for (unsigned i = 0; i < 9 && bits9; ++i)
+    {
+        value += (bits9 & 0x1) * digit;
+        bits9 >>= 1;
+        digit *= 3;
+    }
+
+    return value;
+}
+
+uint32_t get3x3_bits(Bitboard b, Square s)
+{
+    uint32_t bits = 0;
+    if (b)
+    {
+        Rank r = rank_of(s);
+        File f = file_of(s);
+        assert(r < RANK_6 && f < FILE_D);
+
+        int shift = (r - RANK_1) * 8 + (f - FILE_A);
+        bits = uint32_t(b >> shift) & 0x70707;
+
+        if (bits)
+            bits = (bits & 0x7) | ((bits & 0x700) >> 5) | ((bits & 0x70000) >> 10);
+    }
+    assert(bits < (1 << 9));
+    return bits;
+}
+
+
 namespace {
 
   #define V Value
@@ -185,6 +268,22 @@ namespace {
             score += Lever[relative_rank(Us, s)];
     }
 
+    Bitboard opLeft = (Us == WHITE) ? ourPawns : flip_ranks(ourPawns);
+    Bitboard tpLeft = (Us == WHITE) ? theirPawns : flip_ranks(theirPawns);
+    Bitboard opRight = flip_files(opLeft);
+    Bitboard tpRight = flip_files(tpLeft);
+
+    for (int i = 0; i < 12; ++i)
+    {
+        Square cs = corners3x3[i];
+        int idxL = base3Tbl[get3x3_bits(opLeft, cs)] + base3Tbl[get3x3_bits(tpLeft, cs)] * 2;
+        int idxR = base3Tbl[get3x3_bits(opRight, cs)] + base3Tbl[get3x3_bits(tpRight, cs)] * 2;
+        assert(idxL < 19683 && idxR < 19683);
+
+        score += make_score((bonus3x3[idxL][0] + bonus3x3[idxR][0]) * sm[i] / 16,
+                            (bonus3x3[idxL][1] + bonus3x3[idxR][1]) * se[i] / 16);
+    }
+
     return score;
   }
 
@@ -197,6 +296,13 @@ namespace Pawns {
 /// to reduce independent parameters and to allow easier tuning and better insight.
 
 void init() {
+
+  for (unsigned i = 0; i < 256; ++i)
+      reverseBits[i] = reverse_bits((uint8_t)i);
+
+  for (unsigned i = 0; i < (1 << 9); ++i)
+      base3Tbl[i] = base3(i);
+
 
   static const int Seed[RANK_NB] = { 0, 13, 24, 18, 76, 100, 175, 330 };
 
@@ -302,3 +408,21 @@ template Score Entry::do_king_safety<WHITE>(const Position& pos, Square ksq);
 template Score Entry::do_king_safety<BLACK>(const Position& pos, Square ksq);
 
 } // namespace Pawns
+
+
+UPDATE_ON_LAST();
+
+void my_post_update()
+{
+    for (int i = 0; i < 50; ++i)
+    {
+        bonus3x3[reindex[i]][0] = wm[i];
+        bonus3x3[reindex[i]][1] = we[i];
+    }
+}
+
+
+TUNE(SetRange(-100, 100), wm, we, my_post_update);
+
+TUNE(SetRange(-100, 100), sm, se);
+
