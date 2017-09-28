@@ -26,20 +26,18 @@
 #include "position.h"
 #include "thread.h"
 
+int wm[60] = { 0 };
+int we[60] = { 0 };
 
-const int reindex[50] = { 0, 1, 1458, 3, 4374, 54, 27, 486, 243, 9, 13122, 162, 81, 4, 5832, 1620,
-                         82, 495, 13365, 4383, 13125, 2, 729, 6, 2187, 1461, 4375, 4455, 165, 6561,
-                         18, 1467, 13123, 1459, 1476, 6562, 4428, 30, 18954, 13, 4377, 1944, 244,
-                         55, 1485, 13131, 1701, 487, 1464, 2188 };
-int wm[50] = { 0 };
-int we[50] = { 0 };
-
-int sm[12] = { 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 };
-int se[12] = { 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 };
+const int reindex[60] = {
+  0, 1, 1458, 3, 4374, 54, 27, 486, 243, 9, 13122, 162, 81, 4, 5832, 1620, 82,
+  495, 13365, 4383, 13125, 2, 729, 6, 2187, 1461, 4375, 4455, 165, 6561, 18, 1467,
+  13123, 1459, 1476, 6562, 4428, 30, 18954, 13, 4377, 1944, 244, 55, 1485, 13131,
+  1701, 487, 1464, 2188, 247, 6318, 14742, 91, 39, 17550, 4456, 1623, 13368, 4869 };
 
 
-int16_t base3Tbl[1 << 9];
-int bonus3x3[19683][2] = { 0 };
+uint16_t base3Tbl[0x70708];
+Score bonus3x3[19683] = { SCORE_ZERO };
 
 const Square corners3x3[12] = {
     SQ_A2, SQ_B2, SQ_C2,
@@ -100,11 +98,7 @@ uint32_t get3x3_bits(Bitboard b, Square s)
 
         int shift = (r - RANK_1) * 8 + (f - FILE_A);
         bits = uint32_t(b >> shift) & 0x70707;
-
-        if (bits)
-            bits = (bits & 0x7) | ((bits & 0x700) >> 5) | ((bits & 0x70000) >> 10);
     }
-    assert(bits < (1 << 9));
     return bits;
 }
 
@@ -277,11 +271,10 @@ namespace {
     {
         Square cs = corners3x3[i];
         int idxL = base3Tbl[get3x3_bits(opLeft, cs)] + base3Tbl[get3x3_bits(tpLeft, cs)] * 2;
-        int idxR = base3Tbl[get3x3_bits(opRight, cs)] + base3Tbl[get3x3_bits(tpRight, cs)] * 2;
+        int idxR = base3Tbl[get3x3_bits(opRight,cs)] + base3Tbl[get3x3_bits(tpRight,cs)] * 2;
         assert(idxL < 19683 && idxR < 19683);
 
-        score += make_score((bonus3x3[idxL][0] + bonus3x3[idxR][0]) * sm[i] / 16,
-                            (bonus3x3[idxL][1] + bonus3x3[idxR][1]) * se[i] / 16);
+        score += bonus3x3[idxL] + bonus3x3[idxR];
     }
 
     return score;
@@ -297,11 +290,15 @@ namespace Pawns {
 
 void init() {
 
-  for (unsigned i = 0; i < 256; ++i)
-      reverseBits[i] = reverse_bits((uint8_t)i);
 
-  for (unsigned i = 0; i < (1 << 9); ++i)
-      base3Tbl[i] = base3(i);
+    for (unsigned i = 0; i < 256; ++i)
+        reverseBits[i] = reverse_bits((uint8_t)i);
+
+    for (unsigned i = 0; i <= 0x70707; ++i)
+    {
+        uint32_t bits3x3 = (i & 0x7) | ((i & 0x700) >> 5) | ((i & 0x70000) >> 10);
+        base3Tbl[i] = base3(bits3x3);
+    }
 
 
   static const int Seed[RANK_NB] = { 0, 13, 24, 18, 76, 100, 175, 330 };
@@ -414,15 +411,12 @@ UPDATE_ON_LAST();
 
 void my_post_update()
 {
-    for (int i = 0; i < 50; ++i)
+    for (int i = 0; i < 60; ++i)
     {
-        bonus3x3[reindex[i]][0] = wm[i];
-        bonus3x3[reindex[i]][1] = we[i];
+        bonus3x3[reindex[i]] = make_score(wm[i], we[i]);
     }
 }
 
+TUNE(SetRange(-40, 40), wm, we, my_post_update);
 
-TUNE(SetRange(-100, 100), wm, we, my_post_update);
-
-TUNE(SetRange(-100, 100), sm, se);
 
