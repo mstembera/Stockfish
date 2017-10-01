@@ -410,5 +410,5 @@ void my_post_update()
     }
 }
 
-TUNE(SetRange(-40, 40), wm, we, my_post_update);
+TUNE(SetRange(-60, 60), wm, we, my_post_update);
 
