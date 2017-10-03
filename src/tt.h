@@ -41,6 +41,8 @@ struct TTEntry {
   Value eval()  const { return (Value)eval16; }
   Depth depth() const { return (Depth)(depth8 * int(ONE_PLY)); }
   Bound bound() const { return (Bound)(genBound8 & 0x3); }
+  bool  busy()  const { return bool(genBound8 & 0x4); }
+  void  set_busy(bool flag) { genBound8 = (genBound8 & ~0x4) | (flag << 2); }
 
   void save(Key k, Value v, Bound b, Depth d, Move m, Value ev, uint8_t g) {
 
@@ -53,7 +55,7 @@ struct TTEntry {
     // Don't overwrite more valuable entries
     if (  (k >> 48) != key16
         || d / ONE_PLY > depth8 - 4
-     /* || g != (genBound8 & 0xFC) // Matching non-zero keys are already refreshed by probe() */
+     /* || g != (genBound8 & 0xF8) // Matching non-zero keys are already refreshed by probe() */
         || b == BOUND_EXACT)
     {
         key16     = (uint16_t)(k >> 48);
@@ -97,7 +99,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { free(mem); }
-  void new_search() { generation8 += 4; } // Lower 2 bits are used by Bound
+  void new_search() { generation8 += 8; } // Lower 2 bits are used by Bound, 3rd bit by busy flag
   uint8_t generation() const { return generation8; }
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
