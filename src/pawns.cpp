@@ -96,24 +96,26 @@ namespace {
       SQ_A3, SQ_B3, SQ_C3,
       SQ_A4, SQ_B4, SQ_C4,
       SQ_A5, SQ_B5, SQ_C5 };
-  
-  const int reindex[60] = {
-      0, 1, 1458, 3, 4374, 54, 27, 486, 243, 9, 13122, 162, 81, 4, 5832, 1620, 82,
-      495, 13365, 4383, 13125, 2, 729, 6, 2187, 1461, 4375, 4455, 165, 6561, 18, 1467,
-      13123, 1459, 1476, 6562, 4428, 30, 18954, 13, 4377, 1944, 244, 55, 1485, 13131,
-      1701, 487, 1464, 2188, 247, 6318, 14742, 91, 39, 17550, 4456, 1623, 13368, 4869 };
 
-  const int wm_3x3[60] = {
-      2, 0, -3, 1, -1, 1, -2, -1, 3, -3, -1, 2, 6, -2, -3, -1, 0, -1,
-      2, -4, -2, 2, 0, 0, 2, 1, -2, -1, 1, -2, -1, 0, 1, -4, 2, -2, 3,
-      -4, 1, -4, 1, 2, 0, 0, -2, -1, -2, 3, -3, 2, -1, -2, 0, 1, -2,
-      1, 1, 1, -2, 3 };
+  const int indexPairs[50][2] = {
+      { 1, 1458 },{ 3, 4374 },{ 27, 54 },{ 243, 486 },{ 9, 13122 },{ 81, 162 },{ 4, 5832 },
+      { 82, 1620 },{ 495, 13365 },{ 4383, 13125 },{ 2, 729 },{ 6, 2187 },{ 1461, 4375 },
+      { 165, 4455 },{ 18, 6561 },{ 1467, 13123 },{ 1476, 6562 },{ 30, 4428 },{ 13, 18954 },
+      { 244, 1944 },{ 55, 1485 },{ 487, 1701 },{ 1464, 2188 },{ 247, 6318 },{ 91, 14742 },
+      { 39, 17550 },{ 1623, 4456 },{ 4869, 13368 },{ 1638, 6643 },{ 60, 2214 },{ 5850, 6565 },
+      { 1953, 13366 },{ 63, 13149 },{ 246, 4860 },{ 108, 216 },{ 5841, 13126 },{ 72, 6588 },
+      { 10, 14580 },{ 4464, 13287 },{ 405, 567 },{ 90, 13284 },{ 163, 1539 },{ 492, 2430 },
+      { 164, 810 },{ 270, 540 },{ 36, 13176 },{ 324, 648 },{ 12, 17496 },{ 489, 4617 },{ 488, 972 } };
 
-  const int we_3x3[60] = {
-      0, 4, 3, -2, 6, -1, -3, -1, -1, -1, -3, 0, -2, 1, 1, -1, 0, -1,
-      -1, 0, -1, 0, -2, 1, 1, -2, 3, -2, 1, 1, 1, -3, 2, 4, 4, -1, -1,
-      1, 4, -2, -1, 2, 0, 1, 1, 2, 0, 0, 1, -1, 2, 1, -2, -1, 2, 1,
-      -1, 1, -3, 1 };
+  const int wm_3x3[50] = {
+     -1, -1, 1, 0, -1, -1, 2, 0, 0, 1, -1, -1, 1, 0, 1, 2, 1,
+      1, 0, -1, 2, 1, -1, -1, 0, 0, 2, -1, -2, -1, 0, -1, 1,
+      0, 0, -1, 0, 0, 1, -1, 0, 0, -1, 1, 1, -1, -1, 0, 2, 1 };
+
+  const int we_3x3[50] = {
+      0, -1, 2, 0, -1, -1, -1, -2, 1, 0, -2, 1, 0, 1, 1, 1,
+     -1, 1, -1, 1, 0, 0, 3, 1, 0, 2, 1, -1, -1, 1, 1, 1, -1,
+      0, 1, 1, -1, 1, 0, 0, 1, 1, 2, 0, -2, 0, 2, -2, 1, 2 };
 
   uint16_t base3Tbl[0x70708];
   Score bonus3x3[19683] = { SCORE_ZERO }; //19683 = 3^9
@@ -134,17 +136,7 @@ namespace {
       return v.bb;
   }
 
-  Bitboard flip_ranks(Bitboard b)
-  {
-      union { Bitboard bb; uint8_t u[8]; } v = { b }, w;
-
-      for (unsigned i = 0; i < 8; ++i)
-          w.u[i] = v.u[7 - i];
-
-      return w.bb;
-  }
-
-  int tobase3(uint32_t bits9)
+  int to_base3(uint32_t bits9)
   {
       int value = 0;
       int digit = 1;
@@ -262,22 +254,6 @@ namespace {
             score += Lever[relative_rank(Us, s)];
     }
 
-    Bitboard opLeft = (Us == WHITE) ? ourPawns : flip_ranks(ourPawns);
-    Bitboard tpLeft = (Us == WHITE) ? theirPawns : flip_ranks(theirPawns);
-    Bitboard opRight = flip_files(opLeft);
-    Bitboard tpRight = flip_files(tpLeft);
-
-    for (int i = 0; i < 12; ++i)
-    {
-        Square corner = corners3x3[i];
-
-        int idxL = base3Tbl[get3x3_bits(opLeft, corner)] + base3Tbl[get3x3_bits(tpLeft, corner)] * 2;
-        int idxR = base3Tbl[get3x3_bits(opRight,corner)] + base3Tbl[get3x3_bits(tpRight,corner)] * 2;
-        assert(idxL < 19683 && idxR < 19683);
-
-        score += bonus3x3[idxL] + bonus3x3[idxR];
-    }
-
     return score;
   }
 
@@ -297,11 +273,14 @@ void init() {
   for (unsigned i = 0; i <= 0x70707; ++i)
   {
       uint32_t bits3x3 = (i & 0x7) | ((i & 0x700) >> 5) | ((i & 0x70000) >> 10);
-      base3Tbl[i] = tobase3(bits3x3);
+      base3Tbl[i] = to_base3(bits3x3);
   }
 
-  for (unsigned i = 0; i < 60; ++i)
-      bonus3x3[reindex[i]] = make_score(wm_3x3[i], we_3x3[i]);
+  for (unsigned i = 0; i < 50; ++i)
+  {
+      bonus3x3[indexPairs[i][0]] = make_score( wm_3x3[i],  we_3x3[i]);
+      bonus3x3[indexPairs[i][1]] = make_score(-wm_3x3[i], -we_3x3[i]);
+  }
 
   static const int Seed[RANK_NB] = { 0, 13, 24, 18, 76, 100, 175, 330 };
 
@@ -333,6 +312,22 @@ Entry* probe(const Position& pos) {
 
   e->key = key;
   e->score = evaluate<WHITE>(pos, e) - evaluate<BLACK>(pos, e);
+
+  Bitboard wPawnsL = pos.pieces(WHITE, PAWN);
+  Bitboard bPawnsL = pos.pieces(BLACK, PAWN);
+  Bitboard wPawnsR = flip_files(wPawnsL);
+  Bitboard bPawnsR = flip_files(bPawnsL);
+  for (int i = 0; i < 12; ++i)
+  {
+      Square corner = corners3x3[i];
+
+      int idxL = base3Tbl[get3x3_bits(wPawnsL, corner)] + base3Tbl[get3x3_bits(bPawnsL, corner)] * 2;
+      int idxR = base3Tbl[get3x3_bits(wPawnsR, corner)] + base3Tbl[get3x3_bits(bPawnsR, corner)] * 2;
+      assert(idxL < 19683 && idxR < 19683);
+
+      e->score += bonus3x3[idxR] + bonus3x3[idxL];
+  }
+
   e->asymmetry = popcount(e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
   return e;
