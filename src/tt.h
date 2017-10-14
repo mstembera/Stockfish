@@ -47,7 +47,11 @@ struct TTEntry {
     assert(d / ONE_PLY * ONE_PLY == d);
 
     // Preserve any existing move for the same position
-    if (m || (k >> 48) != key16)
+    if(    (k >> 48) != key16
+        || !move16 
+        || (m 
+        && (d / ONE_PLY > depth8 - 4 
+        ||  b == BOUND_EXACT)))
         move16 = (uint16_t)m;
 
     // Don't overwrite more valuable entries
