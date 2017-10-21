@@ -760,6 +760,8 @@ namespace {
   // position, i.e., second order bonus/malus based on the known attacking/defending
   // status of the players.
 
+  const int pawnCntBonus[17] = { 0, 19, 35, 53, 67, 83, 95, 109, 119, 133, 143, 155, 163, 161, 155, 153, 147 };
+
   template<Tracing T>
   Score Evaluation<T>::evaluate_initiative(Value eg) {
 
@@ -768,8 +770,8 @@ namespace {
     bool bothFlanks = (pos.pieces(PAWN) & QueenSide) && (pos.pieces(PAWN) & KingSide);
 
     // Compute the initiative bonus for the attacking side
-    int initiative =   8 * (pe->pawn_asymmetry() + kingDistance - 17)
-                    + 14 * std::min(pos.count<PAWN>(), 12) + 16 * bothFlanks;
+    int initiative =  8 * (pe->pawn_asymmetry() + kingDistance - 17)
+                    + pawnCntBonus[pos.count<PAWN>()] + 16 * bothFlanks;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
