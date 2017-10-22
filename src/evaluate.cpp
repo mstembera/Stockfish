@@ -768,7 +768,9 @@ namespace {
     bool bothFlanks = (pos.pieces(PAWN) & QueenSide) && (pos.pieces(PAWN) & KingSide);
 
     // Compute the initiative bonus for the attacking side
-    int initiative = 8 * (pe->pawn_asymmetry() + kingDistance - 17) + 12 * pos.count<PAWN>() + 16 * bothFlanks;
+    int initiative  =  6 * pe->pawn_asymmetry() + 8 * kingDistance - 138
+                    + 12 * pos.count<PAWN>() + 16 * bothFlanks
+                    + 10 * std::min(abs(pos.count<PAWN>(WHITE) - pos.count<PAWN>(BLACK)), 2);
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
