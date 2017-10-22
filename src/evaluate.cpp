@@ -760,7 +760,7 @@ namespace {
   // position, i.e., second order bonus/malus based on the known attacking/defending
   // status of the players.
 
-  const int pawnCntBonus[17] = { 0, 19, 35, 53, 67, 83, 95, 109, 119, 133, 143, 155, 163, 161, 155, 153, 147 };
+  const int pawnCntBonus[17] = { 0, 20, 39, 57, 74, 90, 105, 119, 132, 144, 155, 165, 163, 158, 150, 140, 128 };
 
   template<Tracing T>
   Score Evaluation<T>::evaluate_initiative(Value eg) {
