@@ -757,9 +757,9 @@ namespace {
     int mobW = eg_value(mobility[WHITE]), mobB = eg_value(mobility[BLACK]);
 
     // Compute the initiative bonus for the attacking side
-    int initiative =   8 * (pe->pawn_asymmetry() + kingDistance) - 150
+    int initiative =   8 * (pe->pawn_asymmetry() + kingDistance) - 145
                     + 12 * pos.count<PAWN>() + 16 * bothFlanks
-                    + (mobW + mobB + abs(mobW - mobB) * 4) / 32;
+                    + (mobW + mobB + abs(mobW - mobB) * 6) / 64;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
