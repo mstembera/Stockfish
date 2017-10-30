@@ -220,6 +220,7 @@ void Search::clear() {
 
   Threads.main()->callsCnt = 0;
   Threads.main()->previousScore = VALUE_INFINITE;
+  Threads.main()->previousTimeReduction = 1;
 }
 
 
@@ -327,7 +328,10 @@ void Thread::search() {
   Stack stack[MAX_PLY+7], *ss = stack+4; // To reference from (ss-4) to (ss+2)
   Value bestValue, alpha, beta, delta;
   Move easyMove = MOVE_NONE;
+  Move  lastBestMove = MOVE_NONE;
+  Depth lastBestMoveDepth = DEPTH_ZERO;
   MainThread* mainThread = (this == Threads.main() ? Threads.main() : nullptr);
+  double timeReduction = 1.0;
 
   std::memset(ss-4, 0, 7 * sizeof(Stack));
   for (int i = 4; i > 0; i--)
@@ -453,6 +457,11 @@ void Thread::search() {
       if (!Threads.stop)
           completedDepth = rootDepth;
 
+      if (rootMoves[0].pv[0] != lastBestMove) {
+         lastBestMove = rootMoves[0].pv[0];
+         lastBestMoveDepth = rootDepth;
+      }
+
       // Have we found a "mate in x"?
       if (   Limits.mate
           && bestValue >= VALUE_MATE_IN_MAX_PLY
@@ -483,15 +492,24 @@ void Thread::search() {
                                && Limits.time[us] - Time.elapsed() > Limits.time[~us]
                                && ::pv_is_draw(rootPos);
 
-              double unstablePvFactor = 1 + mainThread->bestMoveChanges + thinkHard;
-
               bool doEasyMove =   rootMoves[0].pv[0] == easyMove
                                && !thinkHard
                                && mainThread->bestMoveChanges < 0.03
                                && Time.elapsed() > Time.optimum() * 5 / 44;
 
+              double unstablePvFactor = 1 + mainThread->bestMoveChanges + thinkHard;
+
+              // if the bestMove is stable over several iterations, reduce time for this move,
+              // the longer the move has been stable, the more.
+              // Use part of the gained time from a previous stable move for the current move.
+              timeReduction = 1;
+              for (int i : {3, 4, 5})
+                  if (lastBestMoveDepth * i < completedDepth && !thinkHard)
+                     timeReduction *= 1.3;
+              unstablePvFactor *=  std::pow(mainThread->previousTimeReduction, 0.51) / timeReduction;
+
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628
+                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 610
                   || (mainThread->easyMovePlayed = doEasyMove, doEasyMove))
               {
                   // If we are allowed to ponder do not stop the search now but
@@ -512,6 +530,8 @@ void Thread::search() {
 
   if (!mainThread)
       return;
+
+  mainThread->previousTimeReduction = mainThread->easyMovePlayed ? 3.0 : timeReduction;
 
   // Clear any candidate easy move that wasn't stable for the last search
   // iterations; the second condition prevents consecutive fast moves.

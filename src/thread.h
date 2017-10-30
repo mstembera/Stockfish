@@ -83,7 +83,7 @@ struct MainThread : public Thread {
   void check_time();
 
   bool easyMovePlayed, failedLow;
-  double bestMoveChanges;
+  double bestMoveChanges, previousTimeReduction;
   Value previousScore;
   int callsCnt;
 };
