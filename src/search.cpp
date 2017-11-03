@@ -137,6 +137,7 @@ namespace {
 
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
+  std::atomic<Depth> MaxCompletedDepth;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -242,6 +243,8 @@ void MainThread::search() {
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
+
+  MaxCompletedDepth = DEPTH_ZERO;
 
   if (rootMoves.empty())
   {
@@ -366,6 +369,8 @@ void Thread::search() {
           if (((rootDepth / ONE_PLY + rootPos.game_ply() + skipPhase[i]) / skipSize[i]) % 2)
               continue;
       }
+      else
+          rootDepth = std::max<Depth>(rootDepth, MaxCompletedDepth);
 
       // Age out PV variability metric
       if (mainThread)
@@ -451,7 +456,12 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
+      {
           completedDepth = rootDepth;
+
+          if (MaxCompletedDepth < rootDepth)
+              MaxCompletedDepth = rootDepth;
+      }
 
       // Have we found a "mate in x"?
       if (   Limits.mate
