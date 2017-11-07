@@ -97,6 +97,7 @@ namespace {
   };
 
   Value DrawValue[COLOR_NB];
+  std::atomic<Depth> MaxCompletedDepth;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -204,6 +205,8 @@ void MainThread::search() {
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
   DrawValue[~us] = VALUE_DRAW + Value(contempt);
+
+  MaxCompletedDepth = DEPTH_ZERO;
 
   if (rootMoves.empty())
   {
@@ -326,6 +329,11 @@ void Thread::search() {
           int i = (idx - 1) % 20;
           if (((rootDepth / ONE_PLY + rootPos.game_ply() + skipPhase[i]) / skipSize[i]) % 2)
               continue;
+
+          for (Depth d = std::min(MaxCompletedDepth + ONE_PLY, DEPTH_MAX - ONE_PLY); 
+               unsigned(d) > unsigned(rootDepth); d -= ONE_PLY)
+              if ( !(((d / ONE_PLY + rootPos.game_ply() + skipPhase[i]) / skipSize[i]) % 2) )
+                  rootDepth = d;
       }
 
       // Age out PV variability metric
@@ -412,7 +420,12 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
+      {
           completedDepth = rootDepth;
+
+          if (MaxCompletedDepth < rootDepth)
+              MaxCompletedDepth = rootDepth;
+      }
 
       if (rootMoves[0].pv[0] != lastBestMove) {
          lastBestMove = rootMoves[0].pv[0];
