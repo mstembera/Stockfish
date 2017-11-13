@@ -459,8 +459,10 @@ void Thread::search() {
                      timeReduction *= 1.3;
               unstablePvFactor *=  std::pow(mainThread->previousTimeReduction, 0.51) / timeReduction;
 
+              double pawnFactor = interpolate(rootPos.count<PAWN>(), 0, 16, 1.1, 0.95);
+
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 628)
+                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor * pawnFactor / 628)
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
