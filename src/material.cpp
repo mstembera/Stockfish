@@ -121,6 +121,9 @@ namespace {
     if  (pieceCount[Us][QUEEN] == 1 && pieceCount[Them][QUEEN] == 0)
          bonus += QueenMinorsImbalance[pieceCount[Them][KNIGHT] + pieceCount[Them][BISHOP]];
 
+    if (pieceCount[Us][ROOK] + pieceCount[Them][ROOK] == 1)
+        bonus += (pieceCount[Us][ROOK] == 1) ? 18 : -18;
+
     return bonus;
   }
 
