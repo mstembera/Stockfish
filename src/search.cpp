@@ -95,6 +95,8 @@ namespace {
     Move best = MOVE_NONE;
   };
 
+  std::vector<Move> easyMovesSMP(128, MOVE_NONE);
+
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
 
@@ -290,6 +292,7 @@ void Thread::search() {
   {
       mainThread->failedLow = false;
       mainThread->bestMoveChanges = 0;
+      easyMovesSMP.assign(Threads.size(), MOVE_NONE);
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -454,8 +457,22 @@ void Thread::search() {
                      timeReduction *= 1.3;
               unstablePvFactor *=  std::pow(mainThread->previousTimeReduction, 0.51) / timeReduction;
 
+              double SMPFactor = 1.0;
+              if (Threads.size() >= 4)
+              {
+                  std::vector<Move> tmpMoves = easyMovesSMP;
+                  std::sort(tmpMoves.begin(), tmpMoves.end());
+                  int changeCnt = 0;
+                  for (size_t i = 0; i < tmpMoves.size() - 1; ++i)
+                      changeCnt += (tmpMoves[i] != tmpMoves[i + 1]);
+                  if (changeCnt == 0)
+                      SMPFactor = 0.8;
+                  else if (changeCnt > 3)
+                      SMPFactor = 1.2;
+              }
+
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor / 605)
+                  || Time.elapsed() > Time.optimum() * unstablePvFactor * improvingFactor * SMPFactor / 605)
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -1033,6 +1050,8 @@ moves_loop: // When in check search starts from here
 
               for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                   rm.pv.push_back(*m);
+
+              easyMovesSMP[thisThread->index()] = move;
 
               // We record how often the best move has been changed in each
               // iteration. This information is used for time management: When
