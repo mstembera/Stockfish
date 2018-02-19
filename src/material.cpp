@@ -136,6 +136,10 @@ Entry* probe(const Position& pos) {
 
   // Map total non-pawn material into [PHASE_ENDGAME, PHASE_MIDGAME]
   e->gamePhase = Phase(((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit));
+  
+  Value minMat = KnightValueMg * 3, maxMat = MidgameLimit + PawnValueMg * 14;
+  Value fullMat = std::max(minMat, std::min(npm_w + npm_b + pos.count<PAWN>() * PawnValueMg, maxMat));
+  e->fullPhase = Phase(((fullMat - minMat) * PHASE_MIDGAME) / (maxMat - minMat));
 
   // Let's look if we have a specialized evaluation function for this particular
   // material configuration. Firstly we look for a fixed configuration one, then

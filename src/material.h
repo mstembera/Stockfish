@@ -41,6 +41,7 @@ struct Entry {
 
   Score imbalance() const { return make_score(value, value); }
   Phase game_phase() const { return gamePhase; }
+  Phase full_phase() const { return fullPhase; }
   bool specialized_eval_exists() const { return evaluationFunction != nullptr; }
   Value evaluate(const Position& pos) const { return (*evaluationFunction)(pos); }
 
@@ -61,7 +62,7 @@ struct Entry {
                                                        // side (e.g. KPKP, KBPsKs)
   int16_t value;
   uint8_t factor[COLOR_NB];
-  Phase gamePhase;
+  Phase gamePhase, fullPhase;
 };
 
 typedef HashTable<Entry, 8192> Table;
