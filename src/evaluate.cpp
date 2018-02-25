@@ -841,7 +841,7 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + Eval::Contempt;
+    Score score = pos.psq_score() + me->imbalance();
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
@@ -881,8 +881,9 @@ namespace {
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = evaluate_scale_factor(eg_value(score));
-    v =  mg_value(score) * int(me->game_phase())
-       + eg_value(score) * int(PHASE_MIDGAME - me->game_phase()) * sf / SCALE_FACTOR_NORMAL;
+    v =  mg_value(score) * int(me->game_phase()) + Eval::Contempt * int(me->full_phase())
+       + (  eg_value(score) * int(PHASE_MIDGAME - me->game_phase()) 
+          + Eval::Contempt  * int(PHASE_MIDGAME - me->full_phase()) / 2) * sf / SCALE_FACTOR_NORMAL;
 
     v /= int(PHASE_MIDGAME);
 
@@ -904,7 +905,7 @@ namespace {
 
 } // namespace
 
-std::atomic<Score> Eval::Contempt;
+std::atomic<Value> Eval::Contempt;
 
 /// evaluate() is the evaluator for the outer world. It returns a static evaluation
 /// of the position from the point of view of the side to move.
@@ -922,7 +923,7 @@ std::string Eval::trace(const Position& pos) {
 
   std::memset(scores, 0, sizeof(scores));
 
-  Eval::Contempt = SCORE_ZERO;
+  Eval::Contempt = VALUE_ZERO;
 
   Value v = Eval::Tempo + Evaluation<TRACE>(pos).value();
 
