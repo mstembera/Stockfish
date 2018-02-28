@@ -61,7 +61,13 @@ void TranspositionTable::resize(size_t mbSize) {
 
 void TranspositionTable::clear() {
 
-  std::memset(table, 0, clusterCount * sizeof(Cluster));
+  for (size_t i = 0; i < clusterCount; ++i)
+  {
+      for (int j = 0; j < ClusterSize; ++j)
+          table[i].entry[j].init();
+
+      table[i].lastProbed = ClusterSize;
+  }
 }
 
 
@@ -75,27 +81,39 @@ void TranspositionTable::clear() {
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
   TTEntry* const tte = first_entry(key);
+  Cluster* const cl = (Cluster*)tte;
   const uint16_t key16 = key >> 48;  // Use the high 16 bits as key inside the cluster
 
   for (int i = 0; i < ClusterSize; ++i)
       if (!tte[i].key16 || tte[i].key16 == key16)
       {
-          if ((tte[i].genBound8 & 0xFC) != generation8 && tte[i].key16)
+          if ((((tte[i].genBound8 & 0xFC) != generation8) || (cl->lastProbed != i)) && tte[i].key16)
+          {
               tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+              cl->lastProbed = i;
+          }
 
           return found = (bool)tte[i].key16, &tte[i];
       }
 
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
+
+  // Due to our packed storage format for generation and its cyclic
+  // nature we add 259 (256 is the modulus plus 3 to keep the lowest
+  // two bound bits from affecting the result) to calculate the entry
+  // age correctly even after generation8 overflows into the next cycle.
+  int minScore = tte->depth8 * 2 + (0 == cl->lastProbed)
+               - ((259 + generation8 - tte->genBound8) & 0xFC) * 4;
+
   for (int i = 1; i < ClusterSize; ++i)
-      // Due to our packed storage format for generation and its cyclic
-      // nature we add 259 (256 is the modulus plus 3 to keep the lowest
-      // two bound bits from affecting the result) to calculate the entry
-      // age correctly even after generation8 overflows into the next cycle.
-      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
-          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2)
-          replace = &tte[i];
+  {
+      int score = tte[i].depth8 * 2 + (i == cl->lastProbed)
+                - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 4;
+                
+      if (score < minScore)
+          replace = &tte[i], minScore = score;
+  }
 
   return found = false, replace;
 }

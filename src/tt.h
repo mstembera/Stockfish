@@ -64,6 +64,16 @@ struct TTEntry {
     }
   }
 
+  void init() {
+
+    key16     = 0;
+    move16    = MOVE_NONE;
+    value16   = VALUE_NONE;
+    eval16    = VALUE_NONE;
+    genBound8 = BOUND_NONE;
+    depth8    = DEPTH_NONE;
+  }
+
 private:
   friend class TranspositionTable;
 
@@ -90,7 +100,7 @@ class TranspositionTable {
 
   struct Cluster {
     TTEntry entry[ClusterSize];
-    char padding[2]; // Align to a divisor of the cache line size
+    uint16_t lastProbed;
   };
 
   static_assert(CacheLineSize % sizeof(Cluster) == 0, "Cluster size incorrect");
