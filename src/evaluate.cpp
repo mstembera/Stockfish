@@ -353,7 +353,7 @@ namespace {
 
                 // Additional penalty for any remaining pawns thus lowering the value of the bishop
                 // on a pawn crowded board
-                score -= BishopPawns2 * (pos.count<PAWN>() - pe->pawns_on_same_color_squares(Us, s) - 4);
+                score -= BishopPawns2 * (pos.count<PAWN>() - pe->pawns_on_same_color_squares(Us, s) - 1);
 
                 // Bonus for bishop on a long diagonal which can "see" both center squares
                 if (more_than_one(Center & (attacks_bb<BISHOP>(s, pos.pieces(PAWN)) | s)))
