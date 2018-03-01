@@ -164,7 +164,7 @@ namespace {
 
   // Assorted bonuses and penalties
   const Score BishopPawns       = S(  8, 12);
-  const Score KnightPawns       = S(  6,  9);
+  const Score KnightPawns       = S(  2,  3);
   const Score CloseEnemies      = S(  7,  0);
   const Score Hanging           = S( 52, 30);
   const Score HinderPassedPawn  = S(  8,  1);
@@ -358,7 +358,7 @@ namespace {
             else //Pt == KNIGHT
             {
                 // Bonus according to number of pawns
-                score += KnightPawns * (pos.count<PAWN>(Us) - 4);
+                score += KnightPawns * (pos.count<PAWN>() - 8);
             }
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
