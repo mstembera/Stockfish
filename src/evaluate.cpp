@@ -164,6 +164,7 @@ namespace {
 
   // Assorted bonuses and penalties
   const Score BishopPawns       = S(  8, 12);
+  const Score BishopPawns2      = S(  3,  4);
   const Score CloseEnemies      = S(  7,  0);
   const Score Hanging           = S( 52, 30);
   const Score HinderPassedPawn  = S(  8,  1);
@@ -349,6 +350,10 @@ namespace {
             {
                 // Penalty according to number of pawns on the same color square as the bishop
                 score -= BishopPawns * pe->pawns_on_same_color_squares(Us, s);
+
+                // Additional penalty for any remaining pawns thus lowering the value of the bishop
+                // on a pawn crowded board
+                score -= BishopPawns2 * (pos.count<PAWN>() - pe->pawns_on_same_color_squares(Us, s) - 4);
 
                 // Bonus for bishop on a long diagonal which can "see" both center squares
                 if (more_than_one(Center & (attacks_bb<BISHOP>(s, pos.pieces(PAWN)) | s)))
