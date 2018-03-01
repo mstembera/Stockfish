@@ -164,6 +164,7 @@ namespace {
 
   // Assorted bonuses and penalties
   const Score BishopPawns       = S(  8, 12);
+  const Score KnightPawns       = S(  6,  9);
   const Score CloseEnemies      = S(  7,  0);
   const Score Hanging           = S( 52, 30);
   const Score HinderPassedPawn  = S(  8,  1);
@@ -353,6 +354,11 @@ namespace {
                 // Bonus for bishop on a long diagonal which can "see" both center squares
                 if (more_than_one(Center & (attacks_bb<BISHOP>(s, pos.pieces(PAWN)) | s)))
                     score += LongRangedBishop;
+            }
+            else //Pt == KNIGHT
+            {
+                // Bonus according to number of pawns
+                score += KnightPawns * (pos.count<PAWN>(Us) - 4);
             }
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
