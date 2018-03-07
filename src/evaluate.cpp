@@ -168,6 +168,7 @@ namespace {
   const Score Hanging           = S( 52, 30);
   const Score HinderPassedPawn  = S(  8,  1);
   const Score KnightOnQueen     = S( 21, 11);
+  const Score KnightOnRook      = S( 10,  6);
   const Score LongRangedBishop  = S( 22,  0);
   const Score MinorBehindPawn   = S( 16,  0);
   const Score PawnlessFlank     = S( 20, 80);
@@ -605,6 +606,21 @@ namespace {
            & ~stronglyProtected;
 
         score += KnightOnQueen * popcount(b);
+    }
+
+    // Bonus for knight threats on the next move towards enemy rooks
+    if (pos.count<ROOK>(Them) > 0)
+    {
+        const Square* s = pos.squares<ROOK>(Them);
+        b = 0;
+        for (int i = 0; i < pos.count<ROOK>(Them); ++i)
+            b |= pos.attacks_from<KNIGHT>(s[i]);
+
+        b &=   attackedBy[Us][KNIGHT]
+            & ~pos.pieces(Us, PAWN, KING)
+            & ~stronglyProtected;
+
+        score += KnightOnRook * popcount(b);
     }
 
     if (T)
