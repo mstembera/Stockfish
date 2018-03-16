@@ -505,6 +505,9 @@ namespace {
   template<Tracing T> template<Color Us>
   Score Evaluation<T>::threats() const {
 
+    if (!pos.non_pawn_material())
+        return SCORE_ZERO;
+
     const Color     Them     = (Us == WHITE ? BLACK   : WHITE);
     const Direction Up       = (Us == WHITE ? NORTH   : SOUTH);
     const Bitboard  TRank3BB = (Us == WHITE ? Rank3BB : Rank6BB);
