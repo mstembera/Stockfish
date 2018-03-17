@@ -22,6 +22,10 @@
 
 #include "movepick.h"
 
+namespace PSQT {
+    extern int psqDelta[PIECE_NB][SQUARE_NB * SQUARE_NB];
+}
+
 namespace {
 
   enum Stages {
@@ -122,7 +126,9 @@ void MovePicker::score() {
           m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + (*contHistory[0])[pos.moved_piece(m)][to_sq(m)]
                    + (*contHistory[1])[pos.moved_piece(m)][to_sq(m)]
-                   + (*contHistory[3])[pos.moved_piece(m)][to_sq(m)];
+                   + (*contHistory[3])[pos.moved_piece(m)][to_sq(m)]
+                   + PSQT::psqDelta[pos.moved_piece(m)][from_to(m)];
+
 
       else // Type == EVASIONS
       {

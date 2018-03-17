@@ -101,6 +101,7 @@ const Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
+int psqDelta[PIECE_NB][SQUARE_NB * SQUARE_NB];
 
 // init() initializes piece-square tables: the white halves of the tables are
 // copied from Bonus[] adding the piece value, then the black halves of the
@@ -121,6 +122,25 @@ void init() {
           psq[~pc][~s] = -psq[pc][s];
       }
   }
+
+  for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
+  {
+      for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
+      {
+          for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
+          {
+              int pcB = pc + (B_PAWN - W_PAWN);
+              int fromTo = (int)make_move(s1, s2);
+
+              psqDelta[pc][fromTo]  = (  mg_value(psq[pc][s2]  - psq[pc][s1])
+                                       + eg_value(psq[pc][s2]  - psq[pc][s1]))  / 8;
+              psqDelta[pcB][fromTo] = (  mg_value(psq[pcB][s2] - psq[pcB][s1])
+                                       + eg_value(psq[pcB][s2] - psq[pcB][s1])) / 8;
+          }
+
+      }
+  }
+
 }
 
 } // namespace PSQT
