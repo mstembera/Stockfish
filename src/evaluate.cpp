@@ -165,7 +165,8 @@ namespace {
   // Assorted bonuses and penalties
   constexpr Score BishopPawns        = S(  8, 12);
   constexpr Score CloseEnemies       = S(  7,  0);
-  constexpr Score Connectivity       = S(  3,  1);
+  constexpr Score ConnectivityPiece  = S(  2,  1);
+  constexpr Score ConnectivityPawn   = S(  4,  2);
   constexpr Score CorneredBishop     = S( 50, 50);
   constexpr Score Hanging            = S( 52, 30);
   constexpr Score HinderPassedPawn   = S(  8,  1);
@@ -602,13 +603,13 @@ namespace {
     }
 
     // Connectivity: ensure that knights, bishops, rooks, and queens are protected
-    b =   (pos.pieces(Us) ^ pos.pieces(Us, PAWN, KING)) & (attackedBy[Us][ALL_PIECES] ^ attackedBy[Us][PAWN]);
+    b = (pos.pieces(Us) ^ pos.pieces(Us, PAWN, KING)) & (attackedBy[Us][ALL_PIECES] ^ attackedBy[Us][PAWN]);
 
-    score += Connectivity * popcount(b);
+    score += ConnectivityPiece * popcount(b);
 
     b = (pos.pieces(Us) ^ pos.pieces(Us, PAWN, KING)) & attackedBy[Us][PAWN];
 
-    score += Connectivity * 2 * popcount(b);
+    score += ConnectivityPawn * popcount(b);
 
     if (T)
         Trace::add(THREAT, Us, score);
