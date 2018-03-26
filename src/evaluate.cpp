@@ -272,7 +272,8 @@ namespace {
     if (pos.non_pawn_material(Them) >= RookValueMg + KnightValueMg)
     {
         kingRing[Us] = attackedBy[Us][KING];
-        if (relative_rank(Us, pos.square<KING>(Us)) == RANK_1)
+        if (   relative_rank(Us, pos.square<KING>(Us)) == RANK_1
+            || relative_rank(Us, pos.square<KING>(Us)) == RANK_2)
             kingRing[Us] |= shift<Up>(kingRing[Us]);
 
         if (file_of(pos.square<KING>(Us)) == FILE_H)
