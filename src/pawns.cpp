@@ -107,6 +107,7 @@ namespace {
     e->pawnAttacks[Us]   = pawn_attacks_bb<Us>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
+    e->mobile[Us] = 0;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -176,6 +177,9 @@ namespace {
 
         if (doubled && !supported)
             score -= Doubled;
+
+        // count mobile pawns
+        e->mobile[Us] += lever || !(theirPawns & (s + Up));
     }
 
     return score;
