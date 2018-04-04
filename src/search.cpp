@@ -357,15 +357,16 @@ void Thread::search() {
               delta = Value(18);
               alpha = std::max(previousScore - delta,-VALUE_INFINITE);
               beta  = std::min(previousScore + delta, VALUE_INFINITE);
-
-              ct =  Options["Contempt"] * PawnValueEg / 100; // From centipawns
-
-              // Adjust contempt based on root move's previousScore (dynamic contempt)
-              ct += int(std::round(48 * atan(float(previousScore) / 128)));
-
-              contempt = (us == WHITE ?  make_score(ct, ct / 2)
-                                      : -make_score(ct, ct / 2));
           }
+
+          ct =  Options["Contempt"] * PawnValueEg / 100; // From centipawns
+
+          // Adjust contempt based on root move's previousScore (dynamic contempt)
+          if (rootMoves[PVIdx].previousScore != -VALUE_INFINITE)
+              ct += int(std::round(48 * atan(float(rootMoves[PVIdx].previousScore) / 128)));
+
+          contempt = (us == WHITE ?  make_score(ct, ct / 2)
+                                  : -make_score(ct, ct / 2));
 
           // Start with a small aspiration window and, in the case of a fail
           // high/low, re-search with a bigger window until we don't fail
