@@ -88,6 +88,7 @@ struct MainThread : public Thread {
   double bestMoveChanges, previousTimeReduction;
   Value previousScore;
   int callsCnt;
+  int shuffleCnt;
 };
 
 

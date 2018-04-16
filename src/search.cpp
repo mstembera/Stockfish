@@ -468,9 +468,23 @@ void Thread::search() {
               double bestMoveInstability = 1.0 + mainThread->bestMoveChanges;
               bestMoveInstability *= std::pow(mainThread->previousTimeReduction, 0.528) / timeReduction;
 
+              // Move twice as fast when shuffling
+              if (Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * 0.5 / 581)
+              {
+                  if (rootMoves[0].score != mainThread->previousScore ||
+                      type_of(rootMoves[0].pv[0]) != NORMAL ||
+                      rootPos.piece_on(to_sq(rootMoves[0].pv[0])) != NO_PIECE ||
+                      type_of(rootPos.piece_on(from_sq(rootMoves[0].pv[0]))) == PAWN)
+                      mainThread->shuffleCnt = 0;
+                  else
+
+                      mainThread->shuffleCnt++;
+              }
+              double shuffleFactor = (mainThread->shuffleCnt > 7) ? 0.5 : 1.0;
+
               // Stop the search if we have only one legal move, or if available time elapsed
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor / 581)
+                  || Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * shuffleFactor / 581)
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
