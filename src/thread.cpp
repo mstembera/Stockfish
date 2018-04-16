@@ -146,7 +146,8 @@ void ThreadPool::clear() {
       th->clear();
 
   main()->callsCnt = 0;
-  main()->shuffleCnt = 0;
+  main()->shufflePly = -1;
+  main()->shuffleScore = VALUE_INFINITE;
   main()->previousScore = VALUE_INFINITE;
   main()->previousTimeReduction = 1.0;
 }

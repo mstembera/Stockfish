@@ -469,22 +469,23 @@ void Thread::search() {
               bestMoveInstability *= std::pow(mainThread->previousTimeReduction, 0.528) / timeReduction;
 
               // Move twice as fast when shuffling
-              if (Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * 0.5 / 581)
+              if (Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * 0.4 / 580)
               {
-                  if (rootMoves[0].score != mainThread->previousScore ||
+                  if (abs(rootMoves[0].score - mainThread->shuffleScore) > 2 ||
                       type_of(rootMoves[0].pv[0]) != NORMAL ||
                       rootPos.piece_on(to_sq(rootMoves[0].pv[0])) != NO_PIECE ||
-                      type_of(rootPos.piece_on(from_sq(rootMoves[0].pv[0]))) == PAWN)
-                      mainThread->shuffleCnt = 0;
-                  else
-
-                      mainThread->shuffleCnt++;
+                      type_of(rootPos.piece_on(from_sq(rootMoves[0].pv[0]))) == PAWN ||
+                      mainThread->shufflePly == -1)
+                  {
+                      mainThread->shuffleScore = rootMoves[0].score;
+                      mainThread->shufflePly = rootPos.game_ply();
+                  }
               }
-              double shuffleFactor = (mainThread->shuffleCnt > 7) ? 0.5 : 1.0;
+              double shuffleFactor = (rootPos.game_ply() - mainThread->shufflePly > 12 && rootPos.rule50_count() > 12) ? 0.4 : 1.0;
 
               // Stop the search if we have only one legal move, or if available time elapsed
               if (   rootMoves.size() == 1
-                  || Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * shuffleFactor / 581)
+                  || Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * shuffleFactor / 580)
               {
                   // If we are allowed to ponder do not stop the search now but
                   // keep pondering until the GUI sends "ponderhit" or "stop".
