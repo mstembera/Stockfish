@@ -468,10 +468,10 @@ void Thread::search() {
               double bestMoveInstability = 1.0 + mainThread->bestMoveChanges;
               bestMoveInstability *= std::pow(mainThread->previousTimeReduction, 0.528) / timeReduction;
 
-              // Move twice as fast when shuffling
-              if (Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * 0.4 / 580)
+              // Move faster when shuffling
+              if (Time.elapsed() > Time.optimum() * bestMoveInstability * improvingFactor * 0.3 / 580)
               {
-                  if (abs(rootMoves[0].score - mainThread->shuffleScore) > 2 ||
+                  if (abs(rootMoves[0].score - mainThread->shuffleScore) > 3 ||
                       type_of(rootMoves[0].pv[0]) != NORMAL ||
                       rootPos.piece_on(to_sq(rootMoves[0].pv[0])) != NO_PIECE ||
                       type_of(rootPos.piece_on(from_sq(rootMoves[0].pv[0]))) == PAWN ||
@@ -481,7 +481,7 @@ void Thread::search() {
                       mainThread->shufflePly = rootPos.game_ply();
                   }
               }
-              double shuffleFactor = (rootPos.game_ply() - mainThread->shufflePly > 12 && rootPos.rule50_count() > 12) ? 0.4 : 1.0;
+              double shuffleFactor = (rootPos.game_ply() - mainThread->shufflePly > 12 && rootPos.rule50_count() > 12) ? 0.3 : 1.0;
 
               // Stop the search if we have only one legal move, or if available time elapsed
               if (   rootMoves.size() == 1
