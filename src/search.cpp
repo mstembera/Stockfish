@@ -481,7 +481,7 @@ void Thread::search() {
                       mainThread->shufflePly = rootPos.game_ply();
                   }
               }
-              double shuffleFactor = (rootPos.game_ply() - mainThread->shufflePly > 12 && rootPos.rule50_count() > 12) ? 0.3 : 1.0;
+              double shuffleFactor = (rootPos.game_ply() - mainThread->shufflePly > 10 && rootPos.rule50_count() > 10) ? 0.3 : 1.0;
 
               // Stop the search if we have only one legal move, or if available time elapsed
               if (   rootMoves.size() == 1
