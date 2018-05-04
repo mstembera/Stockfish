@@ -216,8 +216,8 @@ namespace {
     Bitboard attackedBy[COLOR_NB][PIECE_TYPE_NB];
 
     // attackedBy2[color] are the squares attacked by 2 pieces of a given color,
-    // possibly via x-ray or by one pawn and one piece. Diagonal x-ray through
-    // pawn or squares attacked by 2 pawns are not explicitly added.
+    // possibly via x-ray or by one pawn and one piece or by 2 pawns. Diagonal
+    // x-ray through pawn are not explicitly added.
     Bitboard attackedBy2[COLOR_NB];
 
     // kingRing[color] are the squares adjacent to the king, plus (only for a
@@ -266,7 +266,7 @@ namespace {
     attackedBy[Us][KING] = pos.attacks_from<KING>(pos.square<KING>(Us));
     attackedBy[Us][PAWN] = pe->pawn_attacks(Us);
     attackedBy[Us][ALL_PIECES] = attackedBy[Us][KING] | attackedBy[Us][PAWN];
-    attackedBy2[Us]            = attackedBy[Us][KING] & attackedBy[Us][PAWN];
+    attackedBy2[Us] = pe->pawn_attacks2(Us) | (attackedBy[Us][KING] & attackedBy[Us][PAWN]);
 
     // Init our king safety tables only if we are going to use them
     if (pos.non_pawn_material(Them) >= RookValueMg + KnightValueMg)
