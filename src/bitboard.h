@@ -191,7 +191,7 @@ constexpr Bitboard pawn_attacks_bb(Bitboard b) {
 /// squares in the given bitboard.
 
 template<Color C>
-constexpr Bitboard pawn_attacks_bb2(Bitboard b) {
+constexpr Bitboard pawn_attacks2_bb(Bitboard b) {
   return C == WHITE ? shift<NORTH_WEST>(b) & shift<NORTH_EAST>(b)
                     : shift<SOUTH_WEST>(b) & shift<SOUTH_EAST>(b);
 }

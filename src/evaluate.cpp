@@ -219,6 +219,7 @@ namespace {
     // possibly via x-ray or by one pawn and one piece or by 2 pawns. Diagonal
     // x-ray through pawn are not explicitly added.
     Bitboard attackedBy2[COLOR_NB];
+    Bitboard attackedBy2P[COLOR_NB];
 
     // kingRing[color] are the squares adjacent to the king, plus (only for a
     // king on its first rank) the squares two ranks in front. For instance,
@@ -266,7 +267,7 @@ namespace {
     attackedBy[Us][KING] = pos.attacks_from<KING>(pos.square<KING>(Us));
     attackedBy[Us][PAWN] = pe->pawn_attacks(Us);
     attackedBy[Us][ALL_PIECES] = attackedBy[Us][KING] | attackedBy[Us][PAWN];
-    attackedBy2[Us] = pe->pawn_attacks2(Us) | (attackedBy[Us][KING] & attackedBy[Us][PAWN]);
+    attackedBy2[Us] = attackedBy[Us][KING] & attackedBy[Us][PAWN];
 
     // Init our king safety tables only if we are going to use them
     if (pos.non_pawn_material(Them) >= RookValueMg + KnightValueMg)
@@ -404,6 +405,8 @@ namespace {
                 score -= WeakQueen;
         }
     }
+    attackedBy2P[Us] = attackedBy2[Us] | pe->pawn_attacks2(Us);
+
     if (T)
         Trace::add(Pt, Us, score);
 
@@ -433,12 +436,12 @@ namespace {
 
         // Attacked squares defended at most once by our queen or king
         weak =  attackedBy[Them][ALL_PIECES]
-              & ~attackedBy2[Us]
+              & ~attackedBy2P[Us]
               & (~attackedBy[Us][ALL_PIECES] | attackedBy[Us][KING] | attackedBy[Us][QUEEN]);
 
         // Analyse the safe enemy's checks which are possible on next move
         safe  = ~pos.pieces(Them);
-        safe &= ~attackedBy[Us][ALL_PIECES] | (weak & attackedBy2[Them]);
+        safe &= ~attackedBy[Us][ALL_PIECES] | (weak & attackedBy2P[Them]);
 
         b1 = attacks_bb<ROOK  >(ksq, pos.pieces() ^ pos.pieces(Us, QUEEN));
         b2 = attacks_bb<BISHOP>(ksq, pos.pieces() ^ pos.pieces(Us, QUEEN));
@@ -499,7 +502,7 @@ namespace {
     // Find the squares that opponent attacks in our king flank, and the squares
     // which are attacked twice in that flank but not defended by our pawns.
     b1 = attackedBy[Them][ALL_PIECES] & kf & Camp;
-    b2 = b1 & attackedBy2[Them] & ~attackedBy[Us][PAWN];
+    b2 = b1 & attackedBy2P[Them] & ~attackedBy[Us][PAWN];
 
     // King tropism, to anticipate slow motion attacks on our king
     score -= CloseEnemies * (popcount(b1) + popcount(b2));
