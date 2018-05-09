@@ -151,8 +151,8 @@ namespace {
 
   // PassedFile[File] contains a bonus according to the file of a passed pawn
   constexpr Score PassedFile[FILE_NB] = {
-    S( 15,  7), S(-5, 14), S( 1, -5), S(-22,-11),
-    S(-22,-11), S( 1, -5), S(-5, 14), S( 15,  7)
+    S(14, 5), S(-6, 7), S(-2, -5), S(-23,-13),
+    S(-20,-9), S(4, -5), S(-4, 20), S(16, 9)
   };
 
   // PassedDanger[Rank] contains a term to weight the passed score
