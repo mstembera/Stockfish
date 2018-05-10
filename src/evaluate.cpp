@@ -133,11 +133,11 @@ namespace {
   // which piece type attacks which one. Attacks on lesser pieces which are
   // pawn-defended are not considered.
   constexpr Score ThreatByMinor[PIECE_TYPE_NB] = {
-    S(0, 0), S(0, 31), S(39, 42), S(57, 44), S(68, 112), S(47, 120)
+    S(0, 0), S(0, 31), S(39, 42), S(57, 44), S(68, 112), S(47, 120), S(0, 0)
   };
 
   constexpr Score ThreatByRook[PIECE_TYPE_NB] = {
-    S(0, 0), S(0, 24), S(38, 71), S(38, 61), S(0, 38), S(36, 38)
+    S(0, 0), S(0, 24), S(38, 71), S(38, 61), S(0, 38), S(36, 38), S(0, 0)
   };
 
   // ThreatByKing[on one/on many] contains bonuses for king attacks on
@@ -521,7 +521,7 @@ namespace {
     constexpr Direction Up       = (Us == WHITE ? NORTH   : SOUTH);
     constexpr Bitboard  TRank3BB = (Us == WHITE ? Rank3BB : Rank6BB);
 
-    Bitboard b, weak, nonPawnEnemies, stronglyProtected, safeThreats;
+    Bitboard b, weak, defended, nonPawnEnemies, stronglyProtected, safeThreats;
     Score score = SCORE_ZERO;
 
     // Non-pawn enemies
@@ -538,8 +538,7 @@ namespace {
     // Bonus according to the kind of attacking pieces
     if (nonPawnEnemies | weak)
     {
-        b =  (((pos.pieces(Them) ^ pos.pieces(Them, PAWN, BISHOP)) | weak) & attackedBy[Us][KNIGHT])
-           | (((pos.pieces(Them) ^ pos.pieces(Them, PAWN, KNIGHT)) | weak) & attackedBy[Us][BISHOP]);
+        b = (pos.pieces(Them, QUEEN, ROOK) | weak) & (attackedBy[Us][KNIGHT] | attackedBy[Us][BISHOP]);
         while (b)
         {
             Square s = pop_lsb(&b);
