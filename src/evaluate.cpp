@@ -165,6 +165,7 @@ namespace {
   constexpr Score BishopPawns        = S(  3,  5);
   constexpr Score CloseEnemies       = S(  7,  0);
   constexpr Score Connectivity       = S(  3,  1);
+  constexpr Score SquareControl      = S(  0,  2);
   constexpr Score CorneredBishop     = S( 50, 50);
   constexpr Score Hanging            = S( 52, 30);
   constexpr Score HinderPassedPawn   = S(  8,  1);
@@ -215,10 +216,11 @@ namespace {
     // is also calculated is ALL_PIECES.
     Bitboard attackedBy[COLOR_NB][PIECE_TYPE_NB];
 
-    // attackedBy2[color] are the squares attacked by 2 pieces of a given color,
+    // attackedByN[color] are the squares attacked by N pieces of a given color,
     // possibly via x-ray or by one pawn and one piece. Diagonal x-ray through
     // pawn or squares attacked by 2 pawns are not explicitly added.
-    Bitboard attackedBy2[COLOR_NB];
+    Bitboard attackedBy2[COLOR_NB], attackedBy3[COLOR_NB], attackedBy4[COLOR_NB],
+             attackedBy5[COLOR_NB];
 
     // kingRing[color] are the squares adjacent to the king, plus (only for a
     // king on its first rank) the squares two ranks in front. For instance,
@@ -267,6 +269,7 @@ namespace {
     attackedBy[Us][PAWN] = pe->pawn_attacks(Us);
     attackedBy[Us][ALL_PIECES] = attackedBy[Us][KING] | attackedBy[Us][PAWN];
     attackedBy2[Us]            = attackedBy[Us][KING] & attackedBy[Us][PAWN];
+    attackedBy3[Us] = attackedBy4[Us] = attackedBy5[Us] = 0;
 
     // Init our king safety tables only if we are going to use them
     if (pos.non_pawn_material(Them) >= RookValueMg + KnightValueMg)
@@ -315,6 +318,9 @@ namespace {
         if (pos.blockers_for_king(Us) & s)
             b &= LineBB[pos.square<KING>(Us)][s];
 
+        attackedBy5[Us] |= attackedBy4[Us] & b;
+        attackedBy4[Us] |= attackedBy3[Us] & b;
+        attackedBy3[Us] |= attackedBy2[Us] & b;
         attackedBy2[Us] |= attackedBy[Us][ALL_PIECES] & b;
         attackedBy[Us][Pt] |= b;
         attackedBy[Us][ALL_PIECES] |= b;
@@ -617,6 +623,10 @@ namespace {
     b = (pos.pieces(Us) ^ pos.pieces(Us, PAWN, KING)) & attackedBy[Us][ALL_PIECES];
     score += Connectivity * popcount(b);
 
+    // Bonus for controlling highly contested squares
+    score += SquareControl * popcount(  (attackedBy3[Us] & ~attackedBy3[Them])
+                                      | (attackedBy4[Us] & ~attackedBy4[Them])
+                                      | (attackedBy5[Us] & ~attackedBy5[Them]));
     if (T)
         Trace::add(THREAT, Us, score);
 
