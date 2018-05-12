@@ -531,8 +531,7 @@ namespace {
     // Squares strongly protected by the enemy, either because they defend the
     // square with a pawn, or because they defend the square twice and we don't.
     stronglyProtected =  attackedBy[Them][PAWN]
-                       | (attackedBy2[Them] & ~attackedBy2[Us])
-                       | (attackedBy3[Them] & ~attackedBy3[Us]);
+                       | (attackedBy2[Them] & ~attackedBy2[Us]);
 
     // Non-pawn enemies, strongly protected
     defended = nonPawnEnemies & stronglyProtected;
@@ -569,8 +568,11 @@ namespace {
 
         // Bonus for overload (non-pawn enemies attacked and defended exactly once)
         b =  nonPawnEnemies
-           & attackedBy[Us][ALL_PIECES]   & ~attackedBy2[Us]
-           & attackedBy[Them][ALL_PIECES] & ~attackedBy2[Them];
+           & (   (  attackedBy[Us][ALL_PIECES]   & ~attackedBy2[Us]
+                  & attackedBy[Them][ALL_PIECES] & ~attackedBy2[Them])
+               | (  attackedBy2[Us]   & ~attackedBy3[Us]
+                  & attackedBy2[Them] & ~attackedBy3[Them]));
+
         score += Overload * popcount(b);
     }
 
