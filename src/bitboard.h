@@ -135,6 +135,10 @@ constexpr bool more_than_one(Bitboard b) {
   return b & (b - 1);
 }
 
+constexpr bool more_than_two(Bitboard b) {
+    return more_than_one(b & (b - 1));
+}
+
 /// rank_bb() and file_bb() return a bitboard representing all the squares on
 /// the given file or rank.
 

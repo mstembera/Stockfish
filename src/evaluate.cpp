@@ -597,7 +597,7 @@ namespace {
 
     score += ThreatByPawnPush * popcount(b);
 
-    // Bonus for threats on the next moves against enemy queen
+    // Bonus for threats on the next move against enemy queen
     if (pos.count<QUEEN>(Them) == 1)
     {
         Square s = pos.square<QUEEN>(Them);
@@ -611,6 +611,45 @@ namespace {
            | (attackedBy[Us][ROOK  ] & pos.attacks_from<ROOK  >(s));
 
         score += SliderOnQueen * popcount(b & safeThreats & attackedBy2[Us]);
+    }
+
+    // Bonus for knight forks on the next move
+    Bitboard knights = pos.pieces(Us, KNIGHT);
+    if (knights)
+    {
+        Bitboard kq = pos.pieces(Them, KING, QUEEN);
+        Bitboard kqr = kq | pos.pieces(Them, ROOK);
+
+        if (more_than_one(kqr))
+        {			
+            do
+            {
+                Square s1 = pop_lsb(&knights);
+                b = (pos.blockers_for_king(Us) & s1) 
+                    ? 0 : pos.attacks_from<KNIGHT>(s1);
+                b &= mobilityArea[Us] & ~stronglyProtected;
+
+                while (b)
+                {
+                    Square s2 = pop_lsb(&b);
+                    Bitboard forkKQR = kqr & pos.attacks_from<KNIGHT>(s2);
+
+                    if (more_than_one(forkKQR))
+                    {
+                        if (more_than_two(forkKQR))
+                            score += make_score(80, 40);
+                        else
+                        {
+                            Bitboard forkKQ = kq & pos.attacks_from<KNIGHT>(s2);
+                            if (more_than_one(forkKQ))
+                                score += make_score(40, 20);
+                            else
+                                score += make_score(20, 10);
+                        }
+                    }
+                }
+            } while (knights);
+        }
     }
 
     // Connectivity: ensure that knights, bishops, rooks, and queens are protected
