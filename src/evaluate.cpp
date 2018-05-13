@@ -617,9 +617,8 @@ namespace {
     Bitboard knights = pos.pieces(Us, KNIGHT);
     if (knights)
     {
-        Bitboard kq = pos.pieces(Them, KING, QUEEN);
-        Bitboard kqr = kq | pos.pieces(Them, ROOK);
-
+        Bitboard kqr = pos.pieces(Them, KING, QUEEN) | (pos.pieces(Them, ROOK) & ~attackedBy[Them][ALL_PIECES]);
+        
         if (more_than_one(kqr))
         {			
             do
@@ -635,18 +634,8 @@ namespace {
                     Bitboard forkKQR = kqr & pos.attacks_from<KNIGHT>(s2);
 
                     if (more_than_one(forkKQR))
-                    {
-                        if (more_than_two(forkKQR))
-                            score += make_score(80, 40);
-                        else
-                        {
-                            Bitboard forkKQ = kq & pos.attacks_from<KNIGHT>(s2);
-                            if (more_than_one(forkKQ))
-                                score += make_score(40, 20);
-                            else
-                                score += make_score(20, 10);
-                        }
-                    }
+                        score += more_than_two(forkKQR)
+                            ? make_score(70, 30) : make_score(35, 15);
                 }
             } while (knights);
         }
