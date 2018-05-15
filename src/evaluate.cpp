@@ -266,7 +266,7 @@ namespace {
     attackedBy[Us][KING] = pos.attacks_from<KING>(pos.square<KING>(Us));
     attackedBy[Us][PAWN] = pe->pawn_attacks(Us);
     attackedBy[Us][ALL_PIECES] = attackedBy[Us][KING] | attackedBy[Us][PAWN];
-    attackedBy2[Us] = (pe->pawn_attacks2(Us) & ~pe->pawn_attacks(Them)) | (attackedBy[Us][KING] & attackedBy[Us][PAWN]);
+    attackedBy2[Us]            = attackedBy[Us][KING] & attackedBy[Us][PAWN];
 
     // Init our king safety tables only if we are going to use them
     if (pos.non_pawn_material(Them) >= RookValueMg + KnightValueMg)
@@ -404,6 +404,9 @@ namespace {
                 score -= WeakQueen;
         }
     }
+
+    attackedBy2[Us] &= ~pe->pawn_attacks2(Them);
+
     if (T)
         Trace::add(Pt, Us, score);
 
