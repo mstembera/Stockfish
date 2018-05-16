@@ -863,6 +863,10 @@ namespace {
             + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
             + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
 
+    Bitboard a2W = attackedBy2[WHITE], a2B = attackedBy2[BLACK];
+    attackedBy2[WHITE] &= ~(a2B & attackedBy[BLACK][PAWN]);
+    attackedBy2[BLACK] &= ~(a2W & attackedBy[WHITE][PAWN]);
+
     score += mobility[WHITE] - mobility[BLACK];
 
     score +=  king<   WHITE>() - king<   BLACK>()
