@@ -198,6 +198,9 @@ Entry* probe(const Position& pos) {
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
 
+  Bitboard pawns = (e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]) ^ 0xFF;
+  e->pawnSpan = pawns ? 1 + msb(pawns) - lsb(pawns) : 0;
+
   return e;
 }
 
