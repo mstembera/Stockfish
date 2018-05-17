@@ -198,6 +198,18 @@ Entry* probe(const Position& pos) {
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
 
+  constexpr Bitboard FilesAB    = FileABB | FileBBB;
+  constexpr Bitboard FilesABC   = FileABB | FileBBB | FileCBB;
+  constexpr Bitboard FilesABCD  = FileABB | FileBBB | FileCBB | FileDBB;
+  constexpr Bitboard FilesEFGH  = FileEBB | FileFBB | FileGBB | FileHBB;
+  constexpr Bitboard FilesFGH   = FileFBB | FileGBB | FileHBB;
+  constexpr Bitboard FilesGH    = FileGBB | FileHBB;
+
+  e->areSeparated = 
+         ((pos.pieces(PAWN) & FilesAB)   && (pos.pieces(PAWN) & FilesEFGH))
+      || ((pos.pieces(PAWN) & FilesABC)  && (pos.pieces(PAWN) & FilesFGH))
+      || ((pos.pieces(PAWN) & FilesABCD) && (pos.pieces(PAWN) & FilesGH));
+
   return e;
 }
 
