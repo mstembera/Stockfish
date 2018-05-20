@@ -764,6 +764,10 @@ namespace {
   template<Tracing T>
   Score Evaluation<T>::initiative(Value eg) const {
 
+    Value npm = pos.non_pawn_material();
+    if (npm >= MidgameLimit)
+        return SCORE_ZERO;
+
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
 
@@ -777,6 +781,9 @@ namespace {
                     + 16 * pawnsOnBothFlanks
                     + 48 * !pos.non_pawn_material()
                     -136 ;
+
+    npm = std::min(std::max(npm, EndgameLimit), MidgameLimit);
+    complexity = interpolate(npm, MidgameLimit, EndgameLimit, 0, complexity);
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so

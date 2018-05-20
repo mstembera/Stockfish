@@ -48,6 +48,11 @@ inline TimePoint now() {
         (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
+template<typename T1, typename T2>
+inline T2 interpolate(T1 x, T1 x0, T1 x1, T2 y0, T2 y1) {
+  return T2(y0 + (y1 - y0) * (x - x0) / (x1 - x0));
+}
+
 template<class Entry, int Size>
 struct HashTable {
   Entry* operator[](Key key) { return &table[(uint32_t)key & (Size - 1)]; }
