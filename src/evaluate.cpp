@@ -776,7 +776,7 @@ namespace {
                     + 12 * pos.count<PAWN>()
                     + 16 * pawnsOnBothFlanks
                     + 48 * !pos.non_pawn_material()
-                    + king_eg / 8
+                    + king_eg / 16
                     - 138;
 
     // Now apply the bonus: note that we find the attacking side by extracting
@@ -858,6 +858,7 @@ namespace {
     initialize<WHITE>();
     initialize<BLACK>();
 
+    
     // Pieces should be evaluated first (populate attack tables)
     score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
             + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
@@ -866,13 +867,13 @@ namespace {
 
     score += mobility[WHITE] - mobility[BLACK];
 
-    Score scoreKing = king<WHITE>() - king<BLACK>();
-    score +=  scoreKing
+    Score kW = king<WHITE>(), kB = king<BLACK>();
+    score +=  kW - kB
             + threats<WHITE>() - threats<BLACK>()
             + passed< WHITE>() - passed< BLACK>()
             + space<  WHITE>() - space<  BLACK>();
 
-    score += initiative(eg_value(score), (Value)abs(eg_value(scoreKing)));
+    score += initiative(eg_value(score), eg_value(kW + kB));
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = scale_factor(eg_value(score));
