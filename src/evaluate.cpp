@@ -77,6 +77,10 @@ namespace {
   constexpr Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
   constexpr Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
   constexpr Bitboard Center      = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
+  constexpr Bitboard FilesAB     = FileABB | FileBBB;
+  constexpr Bitboard FilesABC    = FileABB | FileBBB | FileCBB;
+  constexpr Bitboard FilesFGH    = FileFBB | FileGBB | FileHBB;
+  constexpr Bitboard FilesGH     = FileGBB | FileHBB;
 
   constexpr Bitboard KingFlank[FILE_NB] = {
     QueenSide,   QueenSide, QueenSide,
@@ -767,16 +771,16 @@ namespace {
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
 
-    bool pawnsOnBothFlanks =    (   (pos.pieces(PAWN) & QueenSide)
-                                 && (pos.pieces(PAWN) & (FileFBB | FileGBB | FileHBB)))
-                             || (   (pos.pieces(PAWN) & KingSide)
-                                 && (pos.pieces(PAWN) & (FileABB | FileBBB | FileCBB)));
+    bool pawnsOnBothFlanks =
+           ((pos.pieces(PAWN) & FilesAB)   && (pos.pieces(PAWN) & KingSide))
+        || ((pos.pieces(PAWN) & FilesABC)  && (pos.pieces(PAWN) & FilesFGH))
+        || ((pos.pieces(PAWN) & QueenSide) && (pos.pieces(PAWN) & FilesGH));
 
     // Compute the initiative bonus for the attacking side
     int complexity =   8 * outflanking
                     +  8 * pe->pawn_asymmetry()
                     + 12 * pos.count<PAWN>()
-                    + 16 * pawnsOnBothFlanks
+                    + 20 * pawnsOnBothFlanks
                     + 48 * !pos.non_pawn_material()
                     -136 ;
 
