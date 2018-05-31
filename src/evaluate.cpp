@@ -771,7 +771,7 @@ namespace {
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
 
-    bool pawnsOnBothFlanks =
+    bool multiplePawnRegions =
            ((pos.pieces(PAWN) & FilesAB)   && (pos.pieces(PAWN) & KingSide))
         || ((pos.pieces(PAWN) & FilesABC)  && (pos.pieces(PAWN) & FilesFGH))
         || ((pos.pieces(PAWN) & QueenSide) && (pos.pieces(PAWN) & FilesGH));
@@ -780,9 +780,9 @@ namespace {
     int complexity =   8 * outflanking
                     +  8 * pe->pawn_asymmetry()
                     + 12 * pos.count<PAWN>()
-                    + 20 * pawnsOnBothFlanks
+                    + 24 * multiplePawnRegions
                     + 48 * !pos.non_pawn_material()
-                    -136 ;
+                    -138 ;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
