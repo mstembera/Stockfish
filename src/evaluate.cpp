@@ -825,6 +825,11 @@ namespace {
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
 
+  inline Score adjust_mg(Score s, int dx, int x) {
+
+      return make_score(mg_value(s) * (x + dx) / x, eg_value(s));
+  }
+
   template<Tracing T>
   Value Evaluation<T>::value() {
 
@@ -859,7 +864,7 @@ namespace {
 
     // Pieces should be evaluated first (populate attack tables)
     score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
-            + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
+            + adjust_mg(pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>(), -1, 64)
             + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
             + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
 
