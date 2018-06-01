@@ -825,6 +825,11 @@ namespace {
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
 
+  inline Score adjust_score(Score s, int dx, int x) {
+
+      return make_score(mg_value(s) * (x + dx) / x, eg_value(s) * (x + dx) / x);
+  }
+
   template<Tracing T>
   Value Evaluation<T>::value() {
 
@@ -861,7 +866,7 @@ namespace {
     score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
             + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
             + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
-            + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
+            + adjust_score(pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >(), 1, 64);
 
     score += mobility[WHITE] - mobility[BLACK];
 
