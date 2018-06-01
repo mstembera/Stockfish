@@ -874,7 +874,7 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + threats<WHITE>() - threats<BLACK>()
             + passed< WHITE>() - passed< BLACK>()
-            + adjust_score(space<  WHITE>() - space<  BLACK>(), -1, 64);
+            + adjust_score(space<  WHITE>() - space<  BLACK>(), -3, 128);
 
     score += initiative(eg_value(score));
 
