@@ -825,6 +825,12 @@ namespace {
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
 
+  
+  inline Score adjust_score(Score s, int dx, int x) {
+
+      return make_score(mg_value(s) * (x + dx) / x, eg_value(s) * (x + dx) / x);
+  }
+
   template<Tracing T>
   Value Evaluation<T>::value() {
 
@@ -868,7 +874,7 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + threats<WHITE>() - threats<BLACK>()
             + passed< WHITE>() - passed< BLACK>()
-            + space<  WHITE>() - space<  BLACK>();
+            + adjust_score(space<  WHITE>() - space<  BLACK>(), -1, 64);
 
     score += initiative(eg_value(score));
 
