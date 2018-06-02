@@ -30,6 +30,11 @@
 #include "pawns.h"
 #include "thread.h"
 
+int dxm[13] = { 0 };
+int dxe[13] = { 0 };
+
+TUNE(SetRange(-100, 100), dxm, dxe);
+
 namespace Trace {
 
   enum Tracing { NO_TRACE, TRACE };
@@ -824,6 +829,11 @@ namespace {
   // Evaluation::value() is the main function of the class. It computes the various
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
+  
+  inline Score adjust_score(Score s, int dm, int de, int x = 1024) {
+
+      return make_score(mg_value(s) * (x + dm) / x, eg_value(s) * (x + de) / x);
+  }
 
   template<Tracing T>
   Value Evaluation<T>::value() {
@@ -841,11 +851,14 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + pos.this_thread()->contempt;
+    int dxi = 0;
+    Score score = adjust_score(pos.psq_score(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(me->imbalance(), dxm[dxi], dxe[dxi++]);
+    score += pos.this_thread()->contempt;
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
-    score += pe->pawn_score(WHITE) - pe->pawn_score(BLACK);
+    score += adjust_score(pe->pawn_score(WHITE) - pe->pawn_score(BLACK), dxm[dxi], dxe[dxi++]);
 
     // Early exit if score is high
     Value v = (mg_value(score) + eg_value(score)) / 2;
@@ -858,19 +871,19 @@ namespace {
     initialize<BLACK>();
 
     // Pieces should be evaluated first (populate attack tables)
-    score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
-            + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
-            + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
-            + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
+    score += adjust_score(pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >(), dxm[dxi], dxe[dxi++]);
 
-    score += mobility[WHITE] - mobility[BLACK];
+    score += adjust_score(mobility[WHITE] - mobility[BLACK], dxm[dxi], dxe[dxi++]);
 
-    score +=  king<   WHITE>() - king<   BLACK>()
-            + threats<WHITE>() - threats<BLACK>()
-            + passed< WHITE>() - passed< BLACK>()
-            + space<  WHITE>() - space<  BLACK>();
+    score += adjust_score(king<   WHITE>() - king<   BLACK>(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(threats<WHITE>() - threats<BLACK>(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(passed< WHITE>() - passed< BLACK>(), dxm[dxi], dxe[dxi++]);
+    score += adjust_score(space<  WHITE>() - space<  BLACK>(), dxm[dxi], dxe[dxi++]);
 
-    score += initiative(eg_value(score));
+    score += adjust_score(initiative(eg_value(score)), 0, dxe[dxi++]);
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = scale_factor(eg_value(score));
