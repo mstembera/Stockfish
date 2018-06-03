@@ -61,6 +61,8 @@ constexpr Bitboard Rank7BB = Rank1BB << (8 * 6);
 constexpr Bitboard Rank8BB = Rank1BB << (8 * 7);
 
 extern int SquareDistance[SQUARE_NB][SQUARE_NB];
+extern int FileDistance[SQUARE_NB][SQUARE_NB];
+extern int RankDistance[SQUARE_NB][SQUARE_NB];
 
 extern Bitboard SquareBB[SQUARE_NB];
 extern Bitboard FileBB[FILE_NB];
@@ -257,8 +259,8 @@ template<typename T> inline int distance(T x, T y) { return x < y ? y - x : x - 
 template<> inline int distance<Square>(Square x, Square y) { return SquareDistance[x][y]; }
 
 template<typename T1, typename T2> inline int distance(T2 x, T2 y);
-template<> inline int distance<File>(Square x, Square y) { return distance(file_of(x), file_of(y)); }
-template<> inline int distance<Rank>(Square x, Square y) { return distance(rank_of(x), rank_of(y)); }
+template<> inline int distance<File>(Square x, Square y) { return FileDistance[x][y]; }
+template<> inline int distance<Rank>(Square x, Square y) { return RankDistance[x][y]; }
 
 
 /// attacks_bb() returns a bitboard representing all the squares attacked by a
