@@ -824,6 +824,11 @@ namespace {
   // Evaluation::value() is the main function of the class. It computes the various
   // parts of the evaluation and returns the value of the position from the point
   // of view of the side to move.
+  
+  inline Score adjust_score(Score s, int dm, int de) {
+
+    return make_score(mg_value(s) * (1024 + dm) / 1024, eg_value(s) * (1024 + de) / 1024);
+  }
 
   template<Tracing T>
   Value Evaluation<T>::value() {
@@ -841,11 +846,11 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + pos.this_thread()->contempt;
+    Score score = pos.psq_score() + adjust_score(me->imbalance(), 4, 0) + pos.this_thread()->contempt;
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
-    score += pe->pawn_score(WHITE) - pe->pawn_score(BLACK);
+    score += adjust_score(pe->pawn_score(WHITE) - pe->pawn_score(BLACK), 0, 8);
 
     // Early exit if score is high
     Value v = (mg_value(score) + eg_value(score)) / 2;
@@ -858,19 +863,19 @@ namespace {
     initialize<BLACK>();
 
     // Pieces should be evaluated first (populate attack tables)
-    score +=  pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
+    score +=  adjust_score(pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>(), -4, 4)
             + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
-            + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
-            + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
+            + adjust_score(pieces<WHITE, ROOK>() - pieces<BLACK, ROOK>(), -1, -7)
+            + pieces<WHITE, QUEEN>() - pieces<BLACK, QUEEN>();
 
-    score += mobility[WHITE] - mobility[BLACK];
+    score += adjust_score(mobility[WHITE] - mobility[BLACK], -2, 5);
 
     score +=  king<   WHITE>() - king<   BLACK>()
-            + threats<WHITE>() - threats<BLACK>()
+            + adjust_score(threats<WHITE>() - threats<BLACK>(), -3, 6)
             + passed< WHITE>() - passed< BLACK>()
             + space<  WHITE>() - space<  BLACK>();
 
-    score += initiative(eg_value(score));
+    score += adjust_score(initiative(eg_value(score)), 0, 5);
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = scale_factor(eg_value(score));
