@@ -255,7 +255,7 @@ inline bool aligned(Square s1, Square s2, Square s3) {
 /// distance() functions return the distance between x and y, defined as the
 /// number of steps for a king in x to reach y. Works with squares, ranks, files.
 
-template<typename T> inline int distance(T x, T y) { return x < y ? y - x : x - y; }
+template<typename T> inline int distance(T x, T y) { return std::abs(x - y); }
 template<> inline int distance<Square>(Square x, Square y) { return SquareDistance[x][y]; }
 
 template<typename T1, typename T2> inline int distance(T2 x, T2 y);
