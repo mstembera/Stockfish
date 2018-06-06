@@ -870,7 +870,10 @@ namespace {
             + passed< WHITE>() - passed< BLACK>()
             + space<  WHITE>() - space<  BLACK>();
 
-    score += initiative(eg_value(score));
+    Score initScore = initiative(eg_value(score));
+    score += initScore;
+    score -= make_score(0, eg_value(pos.this_thread()->contempt) * int(eg_value(initScore)) / 256);
+
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     ScaleFactor sf = scale_factor(eg_value(score));
