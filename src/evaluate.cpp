@@ -872,7 +872,7 @@ namespace {
 
     Score initScore = initiative(eg_value(score));
     score += initScore;
-    score -= make_score(0, eg_value(pos.this_thread()->contempt) * int(eg_value(initScore)) / 512);
+    score += make_score(0, eg_value(pos.this_thread()->contempt) * int(eg_value(initScore)) / 512);
 
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
