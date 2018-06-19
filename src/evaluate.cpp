@@ -841,7 +841,8 @@ namespace {
     // Initialize score by reading the incrementally updated scores included in
     // the position object (material + piece square tables) and the material
     // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + pos.this_thread()->contempt;
+    Score score = pos.psq_score() + me->imbalance()
+        + ((pos.side_to_move() == pos.this_thread()->rootColor) ? pos.this_thread()->contempt : SCORE_ZERO);
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
