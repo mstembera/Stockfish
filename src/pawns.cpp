@@ -216,15 +216,9 @@ Entry* probe(const Position& pos) {
               int bCnt1 = popcount(maskA & bp), bCnt2 = popcount(maskB & bp);
 
               if (wCnt1 == 1 && wCnt2 == 1 && bCnt1 + bCnt2 == 1)
-              {
                   e->scores[WHITE] += make_score(3, 30);
-                  break;
-              }else
-              if (bCnt1 == 1 && bCnt2 == 1 && wCnt1 + wCnt2 == 1)
-              {
+              else if (bCnt1 == 1 && bCnt2 == 1 && wCnt1 + wCnt2 == 1)
                   e->scores[BLACK] += make_score(3, 30);
-                  break;
-              }
           }
 
           maskA = maskB;
