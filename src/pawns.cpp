@@ -190,9 +190,47 @@ Entry* probe(const Position& pos) {
   e->key = key;
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
-  e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
+  int openFiles = e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK];
+  e->openFiles = popcount(openFiles);
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
+
+  constexpr Bitboard gapMask[7] = { FileCBB,  FileABB | FileDBB, FileBBB | FileEBB,
+      FileCBB | FileFBB, FileDBB | FileGBB, FileEBB | FileHBB, FileFBB };
+
+  if (   (~e->semiopenFiles[WHITE] & ~e->semiopenFiles[BLACK] & 0xFF)
+      && pos.count<PAWN>() >= 3
+      && (openFiles & (FileCBB | FileDBB | FileEBB | FileFBB)))
+  {
+      Bitboard wp = pos.pieces(WHITE, PAWN);
+      Bitboard bp = pos.pieces(BLACK, PAWN);
+      Bitboard maskA = FileABB, maskB = FileBBB;
+      
+      for(int idx = 0; idx < 7; ++idx)
+      {
+          if (   !(gapMask[idx] & (wp | bp))
+              && ((maskA | maskB) & wp)
+              && ((maskA | maskB) & bp))
+          {
+              int wCnt1 = popcount(maskA & wp), wCnt2 = popcount(maskB & wp);
+              int bCnt1 = popcount(maskA & bp), bCnt2 = popcount(maskB & bp);
+
+              if (wCnt1 == 1 && wCnt2 == 1 && bCnt1 + bCnt2 == 1)
+              {
+                  e->scores[WHITE] += make_score(3, 30);
+                  break;
+              }else
+              if (bCnt1 == 1 && bCnt2 == 1 && wCnt1 + wCnt2 == 1)
+              {
+                  e->scores[BLACK] += make_score(3, 30);
+                  break;
+              }
+          }
+
+          maskA = maskB;
+          maskB = shift<EAST>(maskB);
+      }
+  }
 
   return e;
 }
