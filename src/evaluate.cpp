@@ -764,8 +764,8 @@ namespace {
   template<Tracing T>
   Score Evaluation<T>::initiative(Value eg) const {
 
-    int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
-                     - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
+    int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 14
+                     - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 10;
 
     bool pawnsOnBothFlanks =   (pos.pieces(PAWN) & QueenSide)
                             && (pos.pieces(PAWN) & KingSide);
@@ -773,7 +773,7 @@ namespace {
     // Compute the initiative bonus for the attacking side
     int complexity =   8 * pe->pawn_asymmetry()
                     + 12 * pos.count<PAWN>()
-                    + 12 * outflanking
+                    +      outflanking
                     + 16 * pawnsOnBothFlanks
                     + 48 * !pos.non_pawn_material()
                     -136 ;
