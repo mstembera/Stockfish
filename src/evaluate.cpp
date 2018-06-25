@@ -764,8 +764,8 @@ namespace {
   template<Tracing T>
   Score Evaluation<T>::initiative(Value eg) const {
 
-    int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 13
-                     - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 9;
+    int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 12
+                     - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK)) * 8;
 
     bool pawnsOnBothFlanks =   (pos.pieces(PAWN) & QueenSide)
                             && (pos.pieces(PAWN) & KingSide);
