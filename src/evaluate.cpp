@@ -764,7 +764,7 @@ namespace {
   template<Tracing T>
   Score Evaluation<T>::initiative(Value eg) const {
 
-    if (std::abs(eg) < 12)
+    if (std::abs(eg) < 15)
         return SCORE_ZERO;
 
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
