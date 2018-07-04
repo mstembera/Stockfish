@@ -62,8 +62,8 @@ namespace {
   enum NodeType { NonPV, PV };
 
   // Sizes and phases of the skip-blocks, used for distributing search depths across the threads
-  constexpr int SkipSize[]  = { 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
-  constexpr int SkipPhase[] = { 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7 };
+  constexpr int SkipSize[]  = { 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3 };
+  constexpr int SkipPhase[] = { 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5 };
 
   // Razor and futility margins
   constexpr int RazorMargin[] = {0, 590, 604};
@@ -330,7 +330,7 @@ void Thread::search() {
       // Distribute search depths across the helper threads
       if (idx > 0)
       {
-          int i = (idx - 1) % 20;
+          int i = (idx - 1) % 12;
           if (((rootDepth / ONE_PLY + rootPos.game_ply() + SkipPhase[i]) / SkipSize[i]) % 2)
               continue;  // Retry with an incremented rootDepth
       }
