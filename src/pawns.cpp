@@ -35,6 +35,11 @@ namespace {
  constexpr Score Isolated = S( 5, 15);
  constexpr Score Backward = S( 9, 24);
  constexpr Score Doubled  = S(11, 56);
+ int SemiOpen_mg[4] = { 0, 0, 0, 0 };
+ int SemiOpen_eg[4] = { 0, 0, 0, 0 };
+                                
+ TUNE(SetRange(-100, 100), SemiOpen_mg);
+ TUNE(SetRange(-100, 100), SemiOpen_eg);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -143,6 +148,17 @@ namespace {
 
         if (doubled && !supported)
             score -= Doubled;
+    }
+
+    uint64_t semiOpen = e->semiopenFiles[Us];
+    while (semiOpen)
+    {
+        File f = (File)pop_lsb(&semiOpen);
+
+        if (f <= FILE_D)
+            score += make_score(SemiOpen_mg[f], SemiOpen_eg[f]);
+        else
+            score += make_score(SemiOpen_mg[FILE_H - f], SemiOpen_eg[FILE_H - f]);
     }
 
     return score;
