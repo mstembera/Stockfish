@@ -34,7 +34,12 @@ namespace {
   // Pawn penalties
  constexpr Score Isolated = S( 5, 15);
  constexpr Score Backward = S( 9, 24);
- constexpr Score Doubled  = S(11, 56);
+ //constexpr Score Doubled  = S(11, 56);
+ int Doubled_mg[4] = { 11, 11, 11, 11 };
+ int Doubled_eg[4] = { 56, 56, 56, 56 };
+
+ TUNE(SetRange(-32, 64), Doubled_mg);
+ TUNE(SetRange( 0, 128), Doubled_eg);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -142,7 +147,12 @@ namespace {
             score -= Backward, e->weakUnopposed[Us] += !opposed;
 
         if (doubled && !supported)
-            score -= Doubled;
+        {
+            if (f <= FILE_D)
+                score -= make_score(Doubled_mg[f], Doubled_eg[f]);
+            else
+                score -= make_score(Doubled_mg[FILE_H - f], Doubled_eg[FILE_H - f]);
+        }
     }
 
     return score;
