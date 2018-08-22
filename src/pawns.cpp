@@ -32,9 +32,12 @@ namespace {
   #define S(mg, eg) make_score(mg, eg)
 
   // Pawn penalties
- constexpr Score Isolated = S( 5, 15);
- constexpr Score Backward = S( 9, 24);
- constexpr Score Doubled  = S(11, 56);
+ constexpr Score Isolated   = S( 5, 15);
+ constexpr Score Backward   = S( 9, 24);
+ constexpr Score Doubled    = S(11, 56);
+ constexpr Score SemiOpen[] = { S(-5,-4), S(-1,-7), S( 0,-9), S( 2,-6),
+                                S( 2,-6), S( 0,-9), S(-1,-7), S(-5,-4) };
+
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -144,6 +147,10 @@ namespace {
         if (doubled && !supported)
             score -= Doubled;
     }
+
+    for (File f = FILE_A; f <= FILE_H; ++f)
+        if (e->semiopenFiles[Us] & (1 << f))
+            score += SemiOpen[f];
 
     return score;
   }
