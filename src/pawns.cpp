@@ -145,7 +145,7 @@ namespace {
             score -= Doubled;
     }
 
-    score += make_score(popcount(e->pawnAttacks[Us]), 0);
+    score += make_score(popcount(e->pawnAttacks[Us]) * 2, 0);
      
     return score;
   }
