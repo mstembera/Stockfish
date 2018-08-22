@@ -147,7 +147,7 @@ namespace {
 
     constexpr Bitboard rank3 = (Us == WHITE ? Rank3BB : Rank6BB);
     int holes = popcount(rank3 & ~e->pawnAttacks[Us]);
-    score -= make_score(holes * 2, 0);
+    score -= make_score(holes * 3, 0);
      
     return score;
   }
