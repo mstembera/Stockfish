@@ -146,8 +146,10 @@ namespace {
     }
 
     constexpr Bitboard rank3 = (Us == WHITE ? Rank3BB : Rank6BB);
-    int holes = popcount(rank3 & ~e->pawnAttacks[Us]);
-    score -= make_score(holes * 4, 0);
+    constexpr Bitboard rank4 = (Us == WHITE ? Rank4BB : Rank5BB);
+    int holes3 = popcount(rank3 & ~e->pawnAttacks[Us]);
+    int holes4 = popcount(rank4 & ~e->pawnAttacks[Us]);
+    score -= make_score(holes3 * 3 + holes4, 0);
      
     return score;
   }
