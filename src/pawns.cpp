@@ -144,11 +144,13 @@ namespace {
         if (doubled && !supported)
             score -= Doubled;
     }
-
+    
     constexpr Bitboard rank3 = (Us == WHITE ? Rank3BB : Rank6BB);
-    int holes = popcount(rank3 & ~(e->pawnAttacks[Us] | ourPawns));
-    score -= make_score(holes * 3, 0);
-     
+    constexpr Bitboard rank4 = (Us == WHITE ? Rank4BB : Rank5BB);
+    Bitboard holes =   (rank3 & ~e->pawnAttacks[Us])
+                     | (rank4 & ~(e->pawnAttacks[Us] | pawn_attacks_bb<Us>(shift<Up>(ourPawns))));
+    score -= make_score(popcount(holes) * 3, 0);
+
     return score;
   }
 
