@@ -193,6 +193,14 @@ Entry* probe(const Position& pos) {
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
 
+  Bitboard mobW = shift<NORTH>(pos.pieces(WHITE, PAWN)) & ~pos.pieces(PAWN);
+  //mobW |= shift<NORTH>(mobW & Rank3BB) & ~pos.pieces(PAWN);
+  mobW |= e->pawnAttacks[WHITE] & pos.pieces(BLACK, PAWN);
+  Bitboard mobB = shift<SOUTH>(pos.pieces(BLACK, PAWN)) & ~pos.pieces(PAWN);
+  //mobB |= shift<SOUTH>(mobB & Rank6BB) & ~pos.pieces(PAWN);
+  mobB |= e->pawnAttacks[BLACK] & pos.pieces(WHITE, PAWN);
+  e->mobility = popcount(mobW) + popcount(mobB);
+
   return e;
 }
 
