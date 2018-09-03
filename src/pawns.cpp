@@ -35,9 +35,13 @@ namespace {
  constexpr Score Isolated = S( 5, 15);
  constexpr Score Backward = S( 9, 24);
  constexpr Score Doubled  = S(11, 56);
+ constexpr Score Mass[9] = { S(0, 0), S(0, 0), S(0, 0), S(2, 7), S(3, 12), S(4, 16), S(5, 20), S(5, 20), S(5, 20) };
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
+
+  // Largest pawn mass indexed by open files
+  uint8_t massCount[256];
 
   // Strength of pawn shelter for our king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind our king.
@@ -145,6 +149,9 @@ namespace {
             score -= Doubled;
     }
 
+    int massCnt = massCount[e->semiopenFiles[Us]];
+    score += Mass[massCnt];
+
     return score;
   }
 
@@ -170,6 +177,31 @@ void init() {
 
       Connected[opposed][phalanx][support][r] = make_score(v, v * (r - 2) / 4);
   }
+
+  for (int openFiles = 0; openFiles < 256; ++openFiles)
+  {
+      int maxMass = 0, mass = 0;
+      Bitboard pawnFiles = 0xFF ^ openFiles;
+      int f = -1;
+
+      while (pawnFiles)
+      {
+          int fNext = pop_lsb(&pawnFiles);
+
+          if (f >= 0 && fNext > f + 1)
+          {
+              maxMass = std::max(maxMass, mass);
+              mass = 1;
+          }
+          else
+              ++mass;
+
+          f = fNext;
+      }
+      maxMass = std::max(maxMass, mass);
+      massCount[openFiles] = maxMass;
+  }
+
 }
 
 
