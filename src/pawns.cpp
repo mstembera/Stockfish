@@ -35,9 +35,17 @@ namespace {
   constexpr Score Backward = S( 9, 24);
   constexpr Score Doubled  = S(11, 56);
   constexpr Score Isolated = S( 5, 15);
+ int Islands_mg[5] = { 0, 0, 0, 0, 0 };
+ int Islands_eg[5] = { 0, 0, 0, 0, 0 };
+
+ TUNE(SetRange(-50, 50), Islands_mg);
+ TUNE(SetRange(-50, 50), Islands_eg);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
+
+  // Number of pawn islands indexed by open files
+  uint8_t islandCount[256];
 
   // Strength of pawn shelter for our king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind our king.
@@ -145,6 +153,9 @@ namespace {
             score -= Doubled;
     }
 
+    int islandCnt = islandCount[e->semiopenFiles[Us]];
+    score += make_score(Islands_mg[islandCnt], Islands_eg[islandCnt]);
+
     return score;
   }
 
@@ -170,6 +181,21 @@ void init() {
 
       Connected[opposed][phalanx][support][r] = make_score(v, v * (r - 2) / 4);
   }
+
+  for (int openFiles = 0; openFiles < 256; ++openFiles)
+  {
+      islandCount[openFiles] = 0;
+      Bitboard pawnFiles = 0xFF ^ openFiles;
+      int f = INT_MIN;
+
+      while (pawnFiles)
+      {
+          int fNext = pop_lsb(&pawnFiles);
+          islandCount[openFiles] += fNext > f + 1;
+          f = fNext;
+      }
+  }
+
 }
 
 
