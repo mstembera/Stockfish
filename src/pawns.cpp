@@ -35,7 +35,7 @@ namespace {
  constexpr Score Isolated = S( 5, 15);
  constexpr Score Backward = S( 9, 24);
  constexpr Score Doubled  = S(11, 56);
- constexpr Score Islands[5] = { S(3, 5), S(3, 5), S(0, 0), S(-10, -12), S(-14, -18) };
+ constexpr Score Islands[5] = { S( -8,  0), S(0, 0), S(0, 8), S(-8, -10), S(-15, -15) };
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
