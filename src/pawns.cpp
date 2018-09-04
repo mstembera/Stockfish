@@ -40,7 +40,7 @@ namespace {
   int Islands_eg[30] = { 0 };
 
   TUNE(SetRange(-50, 50), Islands_mg);
-  TUNE(SetRange(-50, 50), Islands_mg);
+  TUNE(SetRange(-50, 50), Islands_eg);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
