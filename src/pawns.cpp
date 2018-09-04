@@ -35,9 +35,18 @@ namespace {
   constexpr Score Backward = S( 9, 24);
   constexpr Score Doubled  = S(11, 56);
   constexpr Score Isolated = S( 5, 15);
+  //constexpr Score Islands[30] = { S(0,0) };
+  int Islands_mg[30] = { 0 };
+  int Islands_eg[30] = { 0 };
+
+  TUNE(SetRange(-50, 50), Islands_mg);
+  TUNE(SetRange(-50, 50), Islands_mg);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
+
+  // Largest pawn mass indexed by open files
+  uint8_t islandID[256];
 
   // Strength of pawn shelter for our king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind our king.
@@ -145,6 +154,9 @@ namespace {
             score -= Doubled;
     }
 
+    int iid = islandID[e->semiopenFiles[Us]];
+    score += make_score(Islands_mg[iid], Islands_eg[iid]);
+
     return score;
   }
 
@@ -170,6 +182,56 @@ void init() {
 
       Connected[opposed][phalanx][support][r] = make_score(v, v * (r - 2) / 4);
   }
+
+
+  // Generate a unique id for each pawn island configuration type
+  std::pair<int, int> idList[256];
+  for (int openFiles = 0; openFiles < 256; ++openFiles)
+  {
+      int iCnt[4] = { 0 }, ii = 0;
+
+      Bitboard pawnFiles = 0xFF ^ openFiles;
+      int f = -1;
+      while (pawnFiles)
+      {
+          int fNext = pop_lsb(&pawnFiles);
+          if (f >= 0 && fNext > f + 1)
+              ++ii;
+              
+          iCnt[ii]++;
+          f = fNext;
+      }
+
+#if 1 // any order
+      std::sort(iCnt, iCnt + 4,
+          [](const int& a, const int& b) { return a > b; });
+
+      int key = iCnt[0] * 1000 + iCnt[1] * 100 + iCnt[2] * 10 + iCnt[3];
+#else // left right symmetrical
+      int key1 = iCnt[0] * 1000 + iCnt[1] * 100 + iCnt[2] * 10 + iCnt[3];
+      int key2 = iCnt[3] * 1000 + iCnt[2] * 100 + iCnt[1] * 10 + iCnt[0];
+      int key = std::max(key1, key2);
+#endif 
+      idList[openFiles].first = openFiles;
+      idList[openFiles].second = key;
+  }
+
+  std::sort(idList, idList + 256,
+      [](const std::pair<int, int>& a, const std::pair<int, int>& b) { return a.second > b.second; });
+
+  int key = idList[0].second, id = 0; 
+  for (int i = 0; i < 256; ++i)
+  {
+      if (key != idList[i].second)
+      {
+          ++id;
+          key = idList[i].second;
+      }
+
+      islandID[idList[i].first] = id;
+  }
+  assert(id == 29);
+
 }
 
 
