@@ -858,7 +858,7 @@ namespace {
     {
         Bitboard bB = pos.pieces(BLACK, BISHOP);
         Bitboard goodSquares = (bB & DarkSquares) ? ~DarkSquares : DarkSquares;
-        Bitboard wP = pos.pieces(WHITE) ^ pos.pieces(WHITE, BISHOP);
+        Bitboard wP = pos.pieces(WHITE) ^ pos.pieces(WHITE, BISHOP, PAWN);
         int cnt = popcount(wP & goodSquares) - popcount(wP & ~goodSquares);
         score += BishopSquares * cnt;
     }
@@ -866,7 +866,7 @@ namespace {
     {
         Bitboard wB = pos.pieces(WHITE, BISHOP);
         Bitboard goodSquares = (wB & DarkSquares) ? ~DarkSquares : DarkSquares;
-        Bitboard bP = pos.pieces(BLACK) ^ pos.pieces(BLACK, BISHOP);
+        Bitboard bP = pos.pieces(BLACK) ^ pos.pieces(BLACK, BISHOP, PAWN);
         int cnt = popcount(bP & goodSquares) - popcount(bP & ~goodSquares);
         score -= BishopSquares * cnt;
     }
