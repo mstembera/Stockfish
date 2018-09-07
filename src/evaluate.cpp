@@ -156,6 +156,7 @@ namespace {
 
   // Assorted bonuses and penalties
   constexpr Score BishopPawns        = S(  3,  7);
+  constexpr Score BishopSquares      = S(  0,  4);
   constexpr Score CloseEnemies       = S(  6,  0);
   constexpr Score CorneredBishop     = S( 50, 50);
   constexpr Score Hanging            = S( 57, 32);
@@ -852,6 +853,23 @@ namespace {
             + threats<WHITE>() - threats<BLACK>()
             + passed< WHITE>() - passed< BLACK>()
             + space<  WHITE>() - space<  BLACK>();
+
+    if (pos.count<BISHOP>(BLACK) == 1)
+    {
+        Bitboard bB = pos.pieces(BLACK, BISHOP);
+        Bitboard goodSquares = (bB & DarkSquares) ? ~DarkSquares : DarkSquares;
+        Bitboard wP = pos.pieces(WHITE) ^ pos.pieces(WHITE, BISHOP);
+        int cnt = popcount(wP & goodSquares) - popcount(wP & ~goodSquares);
+        score += BishopSquares * cnt;
+    }
+    if (pos.count<BISHOP>(WHITE) == 1)
+    {
+        Bitboard wB = pos.pieces(WHITE, BISHOP);
+        Bitboard goodSquares = (wB & DarkSquares) ? ~DarkSquares : DarkSquares;
+        Bitboard bP = pos.pieces(BLACK) ^ pos.pieces(BLACK, BISHOP);
+        int cnt = popcount(bP & goodSquares) - popcount(bP & ~goodSquares);
+        score -= BishopSquares * cnt;
+    }
 
     score += initiative(eg_value(score));
 
