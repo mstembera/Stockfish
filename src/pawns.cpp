@@ -193,6 +193,12 @@ Entry* probe(const Position& pos) {
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
 
+  constexpr Bitboard QueenSide = FileABB | FileBBB | FileCBB | FileDBB;
+  constexpr Bitboard KingSide  = FileEBB | FileFBB | FileGBB | FileHBB;
+  e->flankImbalance = 
+        std::abs(popcount(pos.pieces(WHITE, PAWN) & QueenSide) - popcount(pos.pieces(BLACK, PAWN) & QueenSide))
+      + std::abs(popcount(pos.pieces(WHITE, PAWN) & KingSide)  - popcount(pos.pieces(BLACK, PAWN) & KingSide));
+
   return e;
 }
 
