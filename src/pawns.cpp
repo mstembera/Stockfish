@@ -145,6 +145,8 @@ namespace {
             score -= Doubled;
     }
 
+    score -= make_score(0, popcount(e->semiopenFiles[Us]) * 4 - 12);
+
     return score;
   }
 
