@@ -253,7 +253,7 @@ namespace {
 
     // Find our pawns that are blocked or on the first two ranks
     Bitboard b = pos.pieces(Us, PAWN) 
-        & ((shift<Down>(pos.pieces()) & ~shift<DownLeft>(pos.pieces(Them)) & ~shift<DownRight>(pos.pieces(Them))) | LowRanks);
+        & (shift<Down>(pos.pieces()) | LowRanks) & ~shift<DownLeft>(pos.pieces(Them)) & ~shift<DownRight>(pos.pieces(Them));
 
     // Squares occupied by those pawns, by our king or queen, or controlled by enemy pawns
     // are excluded from the mobility area.
