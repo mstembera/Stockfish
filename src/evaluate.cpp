@@ -324,12 +324,12 @@ namespace {
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
-        if (Pt == KNIGHT)
+        if (Pt == KNIGHT && mob)
         {
             // Two move mobility
             Bitboard twoStep = expand<KNIGHT>(b & mobilityArea[Us]) & mobilityArea[Us];
-            int mob2 = popcount(twoStep) - 16;
-            mobility[Us] += make_score(mob2, mob2);
+            int mob2Bonus = popcount(twoStep) * 3 / mob - 10;
+            mobility[Us] += make_score(mob2Bonus, mob2Bonus);
         }
 
         if (Pt == BISHOP || Pt == KNIGHT)
