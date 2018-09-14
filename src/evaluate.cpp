@@ -374,7 +374,7 @@ namespace {
         {
             // Bonus for access to 7th rank
             constexpr Bitboard Rank7 = (Us == WHITE ? Rank7BB : Rank2BB);
-            if (b & mobilityArea[Us] & Rank7)
+            if ((b & mobilityArea[Us] & Rank7) && !((1ULL << s) & Rank7))
                 score += make_score(10, 1);
 
             // Bonus for aligning rook with enemy pawns on the same rank/file
