@@ -491,6 +491,33 @@ namespace {
             score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
         }
     }
+    else
+    {
+        // King infiltration
+        constexpr Direction Down      = (Us == WHITE ? SOUTH : NORTH);
+        constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
+        constexpr Direction DownLeft  = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
+        constexpr Bitboard  Rank7 = (Us == WHITE ? Rank7BB : Rank2BB);
+
+        Bitboard blockedPawns = pos.pieces(Us, PAWN)
+            & shift<Down>(pos.pieces())
+            & ~shift<DownLeft>(pos.pieces(Them))
+            & ~shift<DownRight>(pos.pieces(Them));
+
+        Bitboard available = ~(attackedBy[Them][ALL_PIECES] | blockedPawns);
+        Bitboard reachable = (attackedBy[Us][KING] | pos.pieces(Us, KING)) & available;
+
+        while (!(reachable & Rank7))
+        {        
+            Bitboard expanded = expand<KING>(reachable) & available;
+            if (expanded == reachable)
+                break;
+            reachable = expanded;    
+        }
+
+        if (reachable & Rank7)
+            score += make_score(0, 24);
+    }
 
     // Penalty when our king is on a pawnless flank
     if (!(pos.pieces(PAWN) & kingFlank))
