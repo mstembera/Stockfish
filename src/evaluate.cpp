@@ -323,6 +323,17 @@ namespace {
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
+        // Trapped Bishop
+        if (Pt == BISHOP)
+        {
+            if (mob < 3)
+            {
+                Bitboard r = pos.reachable_from<BISHOP>(s, mobilityArea[Us]);
+                if (popcount(r) <= 4)
+                    score -= make_score(20, 20);
+            }
+        }
+
         if (Pt == BISHOP || Pt == KNIGHT)
         {
             // Bonus if piece is on an outpost square or can reach one

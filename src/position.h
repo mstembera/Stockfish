@@ -114,6 +114,7 @@ public:
   template<PieceType> Bitboard attacks_from(Square s) const;
   template<PieceType> Bitboard attacks_from(Square s, Color c) const;
   Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const;
+  template<PieceType> Bitboard reachable_from(Square s, Bitboard allowed) const;
 
   // Properties of moves
   bool legal(Move m) const;
@@ -274,6 +275,20 @@ inline bool Position::castling_impeded(CastlingRight cr) const {
 
 inline Square Position::castling_rook_square(CastlingRight cr) const {
   return castlingRookSquare[cr];
+}
+
+template<PieceType Pt>
+inline Bitboard Position::reachable_from(Square s, Bitboard allowed) const {
+
+    Bitboard b1, b2 = (1ULL << s) | (attacks_from<Pt>(s) & allowed);
+    
+    do 
+    {
+        b1 = b2;
+        b2 = expand<Pt>(b1) & allowed;
+    } while (b1 != b2);
+
+    return b1;
 }
 
 template<PieceType Pt>
