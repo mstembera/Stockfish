@@ -324,6 +324,14 @@ namespace {
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
+        if (Pt == KNIGHT)
+        {
+            // Two move mobility
+            Bitboard twoStep = expand<KNIGHT>(b & mobilityArea[Us]) & mobilityArea[Us];
+            int mob2 = popcount(twoStep) - 16;
+            mobility[Us] += make_score(mob2, mob2);
+        }
+
         if (Pt == BISHOP || Pt == KNIGHT)
         {
             // Bonus if piece is on an outpost square or can reach one
