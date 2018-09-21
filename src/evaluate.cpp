@@ -372,11 +372,6 @@ namespace {
 
         if (Pt == ROOK)
         {
-            // Bonus for access to 7th rank
-            constexpr Bitboard Rank7 = (Us == WHITE ? Rank7BB : Rank2BB);
-            if ((b & mobilityArea[Us] & Rank7) && !((1ULL << s) & Rank7))
-                score += make_score(10, 1);
-
             // Bonus for aligning rook with enemy pawns on the same rank/file
             if (relative_rank(Us, s) >= RANK_5)
                 score += RookOnPawn * popcount(pos.pieces(Them, PAWN) & PseudoAttacks[ROOK][s]);
@@ -612,6 +607,11 @@ namespace {
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
+
+    // Bonus for rook access to 7th rank
+    constexpr Bitboard Rank7 = (Us == WHITE ? Rank7BB : Rank2BB);
+    if ((attackedBy[Us][ROOK] & mobilityArea[Us] & ~stronglyProtected & Rank7))
+        score += make_score(12, 0);
 
     if (T)
         Trace::add(THREAT, Us, score);
