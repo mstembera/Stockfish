@@ -165,8 +165,10 @@ constexpr Bitboard shift(Bitboard b) {
         : D == SOUTH_EAST ? (b & ~FileHBB) >>  7 : D == SOUTH_WEST ? (b & ~FileABB) >> 9
         : D == NNE        ? (b & ~FileHBB) << 17 : D == NNW        ? (b & ~FileABB) << 15
         : D == SSE        ? (b & ~FileHBB) >> 15 : D == SSW        ? (b & ~FileABB) >> 17
-        : D == ENE ? (b & ~(FileGBB|FileHBB)) << 10 : D == WNW ? (b & ~(FileABB|FileBBB)) <<  6
-        : D == ESE ? (b & ~(FileGBB|FileHBB)) >>  6 : D == WSW ? (b & ~(FileABB|FileBBB)) >> 10
+        : D == ENE        ? (b & ~(FileGBB|FileHBB)) << 10
+        : D == WNW        ? (b & ~(FileABB|FileBBB)) <<  6
+        : D == ESE        ? (b & ~(FileGBB|FileHBB)) >>  6
+        : D == WSW        ? (b & ~(FileABB|FileBBB)) >> 10
         : 0;
 }
 
@@ -182,18 +184,18 @@ constexpr Bitboard pawn_attacks_bb(Bitboard b) {
 
 
 /// expand() returns all the squares a piece could reach if it moved from any
-/// of the current squares a distance of 0 or 1.
+/// of the current squares a distance of 1.
 
 template<PieceType Pt>
 inline Bitboard expand(Bitboard b) {
 
     switch (Pt)
     {
-    case KNIGHT : return b | shift<NNE>(b) | shift<NNW>(b) | shift<ENE>(b) | shift<WNW>(b)
-                           | shift<SSE>(b) | shift<SSW>(b) | shift<ESE>(b) | shift<WSW>(b);
-    case BISHOP : return b | shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
-                           | shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
-    case ROOK   : return b | shift<NORTH>(b) | shift<SOUTH>(b) | shift<WEST>(b) | shift<EAST>(b);
+    case KNIGHT : return   shift<NNE>(b) | shift<NNW>(b) | shift<ENE>(b) | shift<WNW>(b)
+                         | shift<SSE>(b) | shift<SSW>(b) | shift<ESE>(b) | shift<WSW>(b);
+    case BISHOP : return   shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
+                         | shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
+    case ROOK   : return   shift<NORTH>(b) | shift<SOUTH>(b) | shift<WEST>(b) | shift<EAST>(b);
     case QUEEN  :
     case KING   : return expand<BISHOP>(b) | expand<ROOK>(b);
     }

@@ -614,11 +614,9 @@ namespace {
     {
         safe = mobilityArea[Us] & ~stronglyProtected;
 
-        b = attackedBy[Us][KNIGHT] & safe;
+        b = attackedBy[Us][KNIGHT] & expand<KNIGHT>(pos.pieces(Them, ROOK));
 
-        b = expand<KNIGHT>(b) & ~b;
-
-        score += KnightOnRook * popcount(b & pos.pieces(Them, ROOK));
+        score += KnightOnRook * popcount(b & safe);
     }
 
     if (T)
