@@ -159,10 +159,14 @@ inline Bitboard file_bb(Square s) {
 
 template<Direction D>
 constexpr Bitboard shift(Bitboard b) {
-  return  D == NORTH      ?  b             << 8 : D == SOUTH      ?  b             >> 8
-        : D == EAST       ? (b & ~FileHBB) << 1 : D == WEST       ? (b & ~FileABB) >> 1
-        : D == NORTH_EAST ? (b & ~FileHBB) << 9 : D == NORTH_WEST ? (b & ~FileABB) << 7
-        : D == SOUTH_EAST ? (b & ~FileHBB) >> 7 : D == SOUTH_WEST ? (b & ~FileABB) >> 9
+  return  D == NORTH      ?  b             <<  8 : D == SOUTH      ?  b             >> 8
+        : D == EAST       ? (b & ~FileHBB) <<  1 : D == WEST       ? (b & ~FileABB) >> 1
+        : D == NORTH_EAST ? (b & ~FileHBB) <<  9 : D == NORTH_WEST ? (b & ~FileABB) << 7
+        : D == SOUTH_EAST ? (b & ~FileHBB) >>  7 : D == SOUTH_WEST ? (b & ~FileABB) >> 9
+        : D == NNE        ? (b & ~FileHBB) << 17 : D == NNW        ? (b & ~FileABB) << 15
+        : D == SSE        ? (b & ~FileHBB) >> 15 : D == SSW        ? (b & ~FileABB) >> 17
+        : D == ENE ? (b & ~(FileGBB|FileHBB)) << 10 : D == WNW ? (b & ~(FileABB|FileBBB)) <<  6
+        : D == ESE ? (b & ~(FileGBB|FileHBB)) >>  6 : D == WSW ? (b & ~(FileABB|FileBBB)) >> 10
         : 0;
 }
 
@@ -174,6 +178,28 @@ template<Color C>
 constexpr Bitboard pawn_attacks_bb(Bitboard b) {
   return C == WHITE ? shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
                     : shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
+}
+
+
+/// expand() returns all the squares a piece could reach if it moved from any
+/// of the current squares a distance of 0 or 1.
+
+template<PieceType Pt>
+inline Bitboard expand(Bitboard b) {
+
+    switch (Pt)
+    {
+    case KNIGHT : return b | shift<NNE>(b) | shift<NNW>(b) | shift<ENE>(b) | shift<WNW>(b)
+                           | shift<SSE>(b) | shift<SSW>(b) | shift<ESE>(b) | shift<WSW>(b);
+    case BISHOP : return b | shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
+                           | shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
+    case ROOK   : return b | shift<NORTH>(b) | shift<SOUTH>(b) | shift<WEST>(b) | shift<EAST>(b);
+    case QUEEN  :
+    case KING   : return expand<BISHOP>(b) | expand<ROOK>(b);
+    }
+
+    assert(!"Unsupported type.");
+    return 0;
 }
 
 

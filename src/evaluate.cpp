@@ -162,6 +162,7 @@ namespace {
   constexpr Score HinderPassedPawn   = S(  8,  0);
   constexpr Score KingProtector      = S(  6,  6);
   constexpr Score KnightOnQueen      = S( 21, 11);
+  constexpr Score KnightOnRook       = S( 10,  5);
   constexpr Score LongDiagonalBishop = S( 46,  0);
   constexpr Score MinorBehindPawn    = S( 16,  0);
   constexpr Score Overload           = S( 13,  6);
@@ -606,6 +607,18 @@ namespace {
            | (attackedBy[Us][ROOK  ] & pos.attacks_from<ROOK  >(s));
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
+    }
+
+    // Bonus for knight threats on the next moves against enemy rooks
+    if (pos.pieces(Them, ROOK) && attackedBy[Us][KNIGHT])
+    {
+        safe = mobilityArea[Us] & ~stronglyProtected;
+
+        b = attackedBy[Us][KNIGHT] & safe;
+
+        b = expand<KNIGHT>(b) & ~b;
+
+        score += KnightOnRook * popcount(b & pos.pieces(Them, ROOK));
     }
 
     if (T)
