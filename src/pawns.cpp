@@ -35,6 +35,7 @@ namespace {
   constexpr Score Backward = S( 9, 24);
   constexpr Score Doubled  = S(11, 56);
   constexpr Score Isolated = S( 5, 15);
+  constexpr Score MostAdvanced = S(2, 0);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -76,6 +77,7 @@ namespace {
     Square s;
     bool opposed, backward;
     Score score = SCORE_ZERO;
+    Rank maxRank = RANK_1;
     const Square* pl = pos.squares<PAWN>(Us);
 
     Bitboard ourPawns   = pos.pieces(  Us, PAWN);
@@ -94,6 +96,7 @@ namespace {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
         File f = file_of(s);
+        maxRank = std::max(maxRank, relative_rank(Us, s));
 
         e->semiopenFiles[Us]   &= ~(1 << f);
         e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
@@ -144,6 +147,8 @@ namespace {
         if (doubled && !supported)
             score -= Doubled;
     }
+
+    score += MostAdvanced * maxRank;
 
     return score;
   }
