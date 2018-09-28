@@ -172,6 +172,7 @@ namespace {
   constexpr Score ThreatByRank       = S( 16,  3);
   constexpr Score ThreatBySafePawn   = S(173,102);
   constexpr Score TrappedRook        = S( 92,  0);
+  constexpr Score TrappedBishop      = S( 75,  0);
   constexpr Score WeakQueen          = S( 50, 10);
   constexpr Score WeakUnopposedPawn  = S(  5, 29);
 
@@ -326,11 +327,13 @@ namespace {
         // Trapped Bishop
         if (Pt == BISHOP)
         {
-            if (mob < 3)
+            if (mob <= 3)
             {
-                Bitboard r = pos.reachable_from<BISHOP>(s, mobilityArea[Us]);
-                if (popcount(r) <= 4)
-                    score -= make_score(20, 20);
+                Bitboard area = pos.reachable_from<BISHOP>(s, mobilityArea[Us]);
+                int mob2 = popcount(area);
+
+                if (mob2 <= 4)
+                    score -= TrappedBishop - make_score(mob2 * 15, 0);
             }
         }
 

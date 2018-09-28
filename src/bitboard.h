@@ -178,15 +178,18 @@ constexpr Bitboard pawn_attacks_bb(Bitboard b) {
 
 
 /// expand() returns all the squares a piece could reach if it moved from any
-/// of the current squares a distance of 0 or 1.
+/// of the current squares a distance of 1.
 
 template<PieceType Pt>
 inline Bitboard expand(Bitboard b) {
 
     switch (Pt)
     {
-    case BISHOP : return b | shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b) | shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
-    case ROOK   : return b | shift<NORTH>(b) | shift<SOUTH>(b) | shift<WEST>(b) | shift<EAST>(b);
+    //case KNIGHT : return   shift<NNE>(b) | shift<NNW>(b) | shift<ENE>(b) | shift<WNW>(b)
+                         //| shift<SSE>(b) | shift<SSW>(b) | shift<ESE>(b) | shift<WSW>(b);
+    case BISHOP : return   shift<NORTH_WEST>(b) | shift<NORTH_EAST>(b)
+                         | shift<SOUTH_WEST>(b) | shift<SOUTH_EAST>(b);
+    case ROOK   : return   shift<NORTH>(b) | shift<SOUTH>(b) | shift<WEST>(b) | shift<EAST>(b);
     case QUEEN  :
     case KING   : return expand<BISHOP>(b) | expand<ROOK>(b);
     }

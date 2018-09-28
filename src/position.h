@@ -285,7 +285,7 @@ inline Bitboard Position::reachable_from(Square s, Bitboard allowed) const {
     do 
     {
         b1 = b2;
-        b2 = expand<Pt>(b1) & allowed;
+        b2 = (expand<Pt>(b1) | b1) & allowed;
     } while (b1 != b2);
 
     return b1;
