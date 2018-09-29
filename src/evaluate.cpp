@@ -383,7 +383,12 @@ namespace {
             else if (mob <= 3)
             {
                 File kf = file_of(pos.square<KING>(Us));
-                if ((kf < FILE_E) == (file_of(s) < kf))
+                
+                constexpr int lowerMask[FILE_NB]  = {  0x0,  0x1,  0x3,  0x7,  0xF, 0x1F, 0x3F, 0x7F };
+                constexpr int higherMask[FILE_NB] = { 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80,  0x0 };
+
+                if (    (kf <  FILE_E && file_of(s) < kf && !(pe->semiopen_files(Us) &  lowerMask[kf]))
+                     || (kf >= FILE_E && file_of(s) > kf && !(pe->semiopen_files(Us) & higherMask[kf])))
                     score -= (TrappedRook - make_score(mob * 22, 0)) * (1 + !pos.can_castle(Us));
             }
         }
