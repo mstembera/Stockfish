@@ -246,20 +246,22 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   Bitboard pawns = pos.pieces(Us, PAWN);
   if (pawns)
   {
-      int d = 0;
+      int d = 0, f = 16;
       do
       {
           Bitboard dRing = DistanceRingBB[ksq][++d] & pawns;
 
           if (dRing)
           {
-              avgKingPawnDistance += popcount(dRing) * d;
+              avgKingPawnDistance += popcount(dRing) * d * f;
               pawns &= ~dRing;
           }
 
+          f -= 2;
+
       } while (pawns);
 
-      avgKingPawnDistance = 16 * avgKingPawnDistance / popcount(pos.pieces(Us, PAWN));
+      avgKingPawnDistance = avgKingPawnDistance / pos.count<PAWN>(Us);
   }
 
   Value bonus = evaluate_shelter<Us>(pos, ksq);
