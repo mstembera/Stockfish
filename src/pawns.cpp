@@ -241,31 +241,12 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
 
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.can_castle(Us);
-  int avgKingPawnDistance = 0;
-  
-  Bitboard pawns = pos.pieces(Us, PAWN);
+  int minKingPawnDistance = 0;
+
+  Bitboard pawns = passedPawns[Us] ? passedPawns[Us] : pos.pieces(Us, PAWN);
+
   if (pawns)
-  {
-      int d = 0, w = 16, dw = 0, cnt = 0;
-      do
-      {
-          Bitboard dRing = DistanceRingBB[ksq][++d] & pawns;
-
-          if (dRing)
-          {
-              int n = popcount(dRing);
-              avgKingPawnDistance += d * n * w;
-              pawns &= ~dRing;
-              dw = 4;
-              cnt += n;
-          }
-
-          w -= dw;
-
-      } while (pawns && w > 0);
-
-      avgKingPawnDistance = avgKingPawnDistance / cnt;
-  }
+      while (!(DistanceRingBB[ksq][++minKingPawnDistance] & pawns)) {}
 
   Value bonus = evaluate_shelter<Us>(pos, ksq);
 
@@ -276,7 +257,7 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   if (pos.can_castle(MakeCastling<Us, QUEEN_SIDE>::right))
       bonus = std::max(bonus, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)));
 
-  return make_score(bonus, -avgKingPawnDistance);
+  return make_score(bonus, -16 * minKingPawnDistance);
 }
 
 // Explicit template instantiation
