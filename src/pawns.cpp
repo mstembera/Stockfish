@@ -39,6 +39,9 @@ namespace {
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
 
+  Score Formation[256] = { Score(0) };
+  TUNE(SetRange(-100, 100), Formation);
+
   // Strength of pawn shelter for our king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind our king.
   constexpr Value ShelterStrength[int(FILE_NB) / 2][RANK_NB] = {
@@ -144,6 +147,8 @@ namespace {
         if (doubled && !supported)
             score -= Doubled;
     }
+
+    score += Formation[e->semiopenFiles[Us] ^ 0xFF];
 
     return score;
   }
