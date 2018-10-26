@@ -601,6 +601,14 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    if (pos.count<ROOK>(Them) && pos.count<QUEEN>(Us) == 1)
+    {
+        Square ks = pos.square<KING>(Us);
+        Square qs = pos.square<QUEEN>(Us);
+        if(rank_of(ks) == rank_of(qs) || file_of(ks) == file_of(qs))
+            score -= make_score(0, 10);
+    }
+
     if (T)
         Trace::add(THREAT, Us, score);
 
