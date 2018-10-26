@@ -606,7 +606,7 @@ namespace {
         Square ks = pos.square<KING>(Us);
         Square qs = pos.square<QUEEN>(Us);
         if(rank_of(ks) == rank_of(qs) || file_of(ks) == file_of(qs))
-            score -= make_score(0, 10);
+            score -= make_score(0, 20);
     }
 
     if (T)
