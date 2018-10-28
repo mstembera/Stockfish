@@ -601,6 +601,10 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    if (   pos.count<QUEEN>(Us) == 1
+        && file_bb(file_of(pos.square<QUEEN>(Us))) & pos.pieces(Them, ROOK))
+            score -= make_score(0, 15);
+
     if (file_bb(file_of(pos.square<KING>(Us))) & pos.pieces(Them, QUEEN, ROOK))
         score -= make_score(0, 15);
 
