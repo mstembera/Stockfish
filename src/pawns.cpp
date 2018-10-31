@@ -172,6 +172,36 @@ void init() {
   }
 }
 
+template<Color Us>
+bool blocked(const Position& pos)
+{
+    constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
+    constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
+    constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
+    constexpr Direction DownLeft = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
+    constexpr Bitboard  Rank1 = (Us == WHITE ? Rank1BB : Rank8BB);
+    constexpr Bitboard  Rank6 = (Us == WHITE ? Rank6BB : Rank3BB);
+
+    Bitboard blockedPawns =   pos.pieces(Us, PAWN)
+                            & shift<Down>(pos.pieces(Them, PAWN))
+                            & ~shift<DownLeft>(pos.pieces(Them, PAWN))
+                            & ~shift<DownRight>(pos.pieces(Them, PAWN));
+
+    blockedPawns |= pos.pieces(Us, PAWN) & shift<Down>(blockedPawns);
+
+    Bitboard allowed = ~(blockedPawns | pawn_attacks_bb<Them>(pos.pieces(Them, PAWN)));
+    Bitboard reachable = Rank1 & allowed, previous;
+
+    do
+    {
+        previous = reachable;
+        reachable |= expand<KING>(reachable) & allowed;
+        
+    }
+    while (!(reachable & Rank6) && reachable != previous);
+
+    return !(reachable & Rank6);
+}
 
 /// Pawns::probe() looks up the current position's pawns configuration in
 /// the pawns hash table. It returns a pointer to the Entry if the position
@@ -192,6 +222,9 @@ Entry* probe(const Position& pos) {
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
+
+  e->isBlocked[WHITE] = blocked<WHITE>(pos);
+  e->isBlocked[BLACK] = blocked<BLACK>(pos);
 
   return e;
 }
