@@ -154,7 +154,7 @@ namespace {
     Bitboard inwardAttacks = theirPawns
         & (shift<inwardQ>(ourPawns & queenSide) | shift<inwardK>(ourPawns & kingSide));
     
-    int inwardBonus = popcount(inwardAttacks) * 6;
+    int inwardBonus = popcount(inwardAttacks) * 3;
     score += make_score(inwardBonus, 0);
 
     return score;
