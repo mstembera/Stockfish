@@ -145,17 +145,30 @@ namespace {
             score -= Doubled;
     }
 
-    // Bonus for ability to capture towards the center
-    constexpr Direction inwardQ  = (Us == WHITE) ? NORTH_EAST : SOUTH_EAST;
-    constexpr Direction inwardK  = (Us == WHITE) ? NORTH_WEST : SOUTH_WEST;
-    constexpr Bitboard queenSide = FileABB | FileBBB;
-    constexpr Bitboard kingSide  = FileGBB | FileHBB;
+    // Bonus for the ability to capture toward the center
+    constexpr Direction dirQ = (Us == WHITE) ? SOUTH_WEST : NORTH_WEST;
+    constexpr Direction dirK = (Us == WHITE) ? SOUTH_EAST : NORTH_EAST;
+    Bitboard attacksQ = ourPawns & (FileABB | FileBBB | FileCBB) & shift<dirQ>(theirPawns);
+    Bitboard attacksK = ourPawns & (FileFBB | FileGBB | FileHBB) & shift<dirK>(theirPawns);
 
-    Bitboard inwardAttacks = theirPawns
-        & (shift<inwardQ>(ourPawns & queenSide) | shift<inwardK>(ourPawns & kingSide));
-    
-    int inwardBonus = popcount(inwardAttacks) * 4;
-    score += make_score(inwardBonus, 0);
+    int  mg_bonus = 0, eg_bonus = 0;
+    while (attacksQ)
+    {
+        Square s1 = pop_lsb(&attacksQ), s2 = s1 - dirQ;
+        Score ds = PSQT::psq[PAWN][s2] - PSQT::psq[PAWN][s1];
+        mg_bonus += std::max((int)mg_value(ds), 0);
+        eg_bonus += std::max((int)eg_value(ds), 0);
+    }
+    while (attacksK)
+    {
+        Square s1 = pop_lsb(&attacksK), s2 = s1 - dirK;
+        Score ds = PSQT::psq[PAWN][s2] - PSQT::psq[PAWN][s1];
+        mg_bonus += std::max((int)mg_value(ds), 0);
+        eg_bonus += std::max((int)eg_value(ds), 0);
+    }
+       
+    score += make_score(mg_bonus / 4, eg_bonus / 16);
+
 
     return score;
   }
