@@ -148,13 +148,13 @@ namespace {
     // Bonus for ability to capture towards the center
     constexpr Direction inwardQ  = (Us == WHITE) ? NORTH_EAST : SOUTH_EAST;
     constexpr Direction inwardK  = (Us == WHITE) ? NORTH_WEST : SOUTH_WEST;
-    constexpr Bitboard queenSide = FileABB | FileBBB | FileCBB;
-    constexpr Bitboard kingSide  = FileFBB | FileGBB | FileHBB;
+    constexpr Bitboard queenSide = FileABB | FileBBB;
+    constexpr Bitboard kingSide  = FileGBB | FileHBB;
 
     Bitboard inwardAttacks = theirPawns
         & (shift<inwardQ>(ourPawns & queenSide) | shift<inwardK>(ourPawns & kingSide));
     
-    int inwardBonus = popcount(inwardAttacks) * 3;
+    int inwardBonus = popcount(inwardAttacks) * 4;
     score += make_score(inwardBonus, 0);
 
     return score;
