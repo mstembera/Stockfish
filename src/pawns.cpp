@@ -145,6 +145,31 @@ namespace {
             score -= Doubled;
     }
 
+    // Score possible pawn exchanges
+    constexpr Direction dirQ = (Us == WHITE) ? SOUTH_WEST : NORTH_WEST;
+    constexpr Direction dirK = (Us == WHITE) ? SOUTH_EAST : NORTH_EAST;
+    Bitboard attacksQ = ourPawns & shift<dirQ>(theirPawns);
+    Bitboard attacksK = ourPawns & shift<dirK>(theirPawns);
+
+    Score bonus = SCORE_ZERO;
+    while (attacksQ)
+    {
+        s = pop_lsb(&attacksQ);
+        bonus +=  PSQT::psq[PAWN][relative_square(Us, s - dirQ)]
+                - PSQT::psq[PAWN][relative_square(Us, s)]
+                + PSQT::psq[PAWN][relative_square(Them, s - dirQ)]
+                - PSQT::psq[PAWN][relative_square(Them, s)];
+    }
+    while (attacksK)
+    {
+        s = pop_lsb(&attacksK);
+        bonus +=  PSQT::psq[PAWN][relative_square(Us, s - dirK)]
+                - PSQT::psq[PAWN][relative_square(Us, s)]
+                + PSQT::psq[PAWN][relative_square(Them, s - dirK)]
+                - PSQT::psq[PAWN][relative_square(Them, s)];
+    }
+    score += bonus / 8;
+
     return score;
   }
 
