@@ -32,9 +32,10 @@ namespace {
   #define S(mg, eg) make_score(mg, eg)
 
   // Pawn penalties
-  constexpr Score Backward = S( 9, 24);
-  constexpr Score Doubled  = S(11, 56);
-  constexpr Score Isolated = S( 5, 15);
+  constexpr Score Backward   = S( 9, 24);
+  constexpr Score Doubled    = S(11, 56);
+  constexpr Score Isolated   = S( 5, 15);
+  constexpr Score Restricted = S( 4,  4);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -66,6 +67,7 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = (Us == WHITE ? NORTH : SOUTH);
+    constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
 
     Bitboard b, neighbours, stoppers, doubled, supported, phalanx;
     Bitboard lever, leverPush;
@@ -140,6 +142,11 @@ namespace {
         if (doubled && !supported)
             score -= Doubled;
     }
+
+    Bitboard restricted = shift<Down>(theirPawns) & ~theirPawns & ~ourPawns;
+    restricted = (restricted & pawn_attacks_bb<Us>(ourPawns)  & ~pawn_attacks_bb<Them>(theirPawns))
+               | (restricted & pawn_attacks2_bb<Us>(ourPawns) & ~pawn_attacks2_bb<Them>(theirPawns));
+    score += Restricted * popcount(restricted);
 
     return score;
   }
