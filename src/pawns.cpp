@@ -35,7 +35,7 @@ namespace {
   constexpr Score Backward   = S( 9, 24);
   constexpr Score Doubled    = S(11, 56);
   constexpr Score Isolated   = S( 5, 15);
-  constexpr Score Restricted = S( 5,  6);
+  constexpr Score Restricted = S( 6,  5);
 
   // Connected pawn bonus by opposed, phalanx, #support and rank
   Score Connected[2][2][3][RANK_NB];
@@ -144,8 +144,7 @@ namespace {
     }
 
     Bitboard restricted = shift<Down>(theirPawns) & ~theirPawns & ~ourPawns;
-    restricted = (restricted & pawn_attacks_bb<Us>(ourPawns)  & ~pawn_attacks_bb<Them>(theirPawns))
-               | (restricted & pawn_attacks2_bb<Us>(ourPawns) & ~pawn_attacks2_bb<Them>(theirPawns));
+    restricted = (restricted & pawn_attacks_bb<Us>(ourPawns)  & ~pawn_attacks_bb<Them>(theirPawns));
     score += Restricted * popcount(restricted);
 
     return score;
