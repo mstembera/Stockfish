@@ -566,6 +566,11 @@ namespace {
                 &  attackedBy[Us][ALL_PIECES];
     score += RestrictedPiece * popcount(restricted);
 
+    // Penalty for not attacking on both wings in a balanced way
+    int wingDelta = abs( popcount(attackedBy[Us][ALL_PIECES] & KingSide)
+                       - popcount(attackedBy[Us][ALL_PIECES] & QueenSide));
+    score -= make_score(wingDelta, 0);
+
     // Bonus for enemy unopposed weak pawns
     if (pos.pieces(Us, ROOK, QUEEN))
         score += WeakUnopposedPawn * pe->weak_unopposed(Them);
