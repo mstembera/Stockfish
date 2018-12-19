@@ -517,9 +517,9 @@ namespace {
 
     // Squares strongly protected by the enemy, either because they defend the
     // square with a pawn, or because they defend the square twice and we don't.
-    stronglyProtected = ( attackedBy[Them][PAWN]
-                         | (attackedBy2[Them] & ~attackedBy2[Us]))
-                       & ~double_pawn_attacks_bb<Us>(pos.pieces(Us, PAWN));
+    stronglyProtected =  ( (attackedBy[Them][PAWN] | (attackedBy2[Them] & ~attackedBy2[Us]))
+                          & ~double_pawn_attacks_bb<Us>(pos.pieces(Us, PAWN)))
+                       | double_pawn_attacks_bb<Them>(pos.pieces(Them, PAWN));
 
     // Non-pawn enemies, strongly protected
     defended = nonPawnEnemies & stronglyProtected;
