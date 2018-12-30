@@ -270,7 +270,7 @@ void MainThread::search() {
       auto square = [](int64_t x) { return x * x; };
       for (Thread* th : Threads)
           votes[th->rootMoves[0].pv[0]] += 200 + square(th->rootMoves[0].score - minScore + 1)
-                                               * int64_t(th->completedDepth * 3 - minDepth * 2);
+                                               * int64_t(th->completedDepth * 4 - minDepth * 3);
 
       // Select best thread
       int64_t bestVote = votes[this->rootMoves[0].pv[0]];
