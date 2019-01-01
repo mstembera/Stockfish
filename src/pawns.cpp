@@ -141,6 +141,8 @@ namespace {
             score -= Doubled;
     }
 
+    e->chainBases[Us] = pawn_attacks_bb<Us>(ourPawns & ~e->pawnAttacks[Us]) & ourPawns;
+
     return score;
   }
 
