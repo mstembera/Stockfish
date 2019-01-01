@@ -171,6 +171,7 @@ namespace {
   constexpr Score TrappedRook        = S( 96,  4);
   constexpr Score WeakQueen          = S( 49, 15);
   constexpr Score WeakUnopposedPawn  = S( 12, 23);
+  constexpr Score ChainBases         = S(  3,  8);
 
 #undef S
 
@@ -593,10 +594,9 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
-
     // Bonus for attacking the bases of pawn chains
-    int baseAttacks = popcount(attackedBy[Us][ALL_PIECES] & pe->chain_bases(Them));
-    score += make_score(0, baseAttacks * 4);
+    Bitboard chainAttacks = (attackedBy[Us][ALL_PIECES] ^ attackedBy[Us][PAWN]) & pe->chain_bases(Them);
+    score += ChainBases * popcount(chainAttacks);
 
     if (T)
         Trace::add(THREAT, Us, score);
