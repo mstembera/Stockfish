@@ -72,6 +72,7 @@ struct Entry {
   int semiopenFiles[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
   int asymmetry;
+  int ramCnt;
 };
 
 typedef HashTable<Entry, 16384> Table;
