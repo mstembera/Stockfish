@@ -141,27 +141,6 @@ namespace {
             score -= Doubled;
     }
 
-    constexpr Direction UpLeft  = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
-    constexpr Direction UpRight = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
-    Bitboard chainBase = ourPawns & ~e->pawnAttacks[Us];
-    if (chainBase)
-    {
-        int lengthL = 0, lengthR = 0;
-        Bitboard chainL = chainBase, chainR = chainBase;
-        do
-        {
-            lengthL++;
-            chainL = shift<UpLeft>(chainL) & ourPawns;
-        } while (chainL);
-        do
-        {
-            lengthR++;
-            chainR = shift<UpRight>(chainR) & ourPawns;
-        } while (chainR);
-
-        int bonusL = std::max(std::max(lengthL, lengthR) - 2, 0);
-        score += make_score(10, 5) * bonusL;
-    }
     return score;
   }
 
@@ -273,9 +252,29 @@ Score Entry::do_king_safety(const Position& pos) {
   if (pos.can_castle(Us | QUEEN_SIDE))
       bonus = std::max(bonus, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)));
 
-  return make_score(bonus, -16 * minKingPawnDistance);
-}
+  Score score = make_score(bonus, -16 * minKingPawnDistance);
 
+  constexpr Color Them = (Us == WHITE ? BLACK : WHITE);
+  Entry* pe = pos.this_thread()->pawnsTable[pos.pawn_key()];
+  Bitboard chainBase = pawns & ~pe->pawnAttacks[Us];
+  if (chainBase)
+  {
+      constexpr Direction UpLeft  = (Us == WHITE ? NORTH_WEST : SOUTH_WEST);
+      constexpr Direction UpRight = (Us == WHITE ? NORTH_EAST : SOUTH_EAST);
+      int length = 1;
+
+      if (file_of(pos.square<KING>(Them)) >= FILE_E)
+          while ((chainBase = shift<UpRight>(chainBase) & pawns))
+              length++;
+      else
+          while ((chainBase = shift<UpLeft>(chainBase) & pawns))
+              length++;
+
+      score += make_score(12, 6) * std::max(length - 2, 0);
+  }
+
+  return score;
+}
 // Explicit template instantiation
 template Score Entry::do_king_safety<WHITE>(const Position& pos);
 template Score Entry::do_king_safety<BLACK>(const Position& pos);
