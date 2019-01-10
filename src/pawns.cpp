@@ -141,6 +141,27 @@ namespace {
             score -= Doubled;
     }
 
+    constexpr Direction UpLeft  = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
+    constexpr Direction UpRight = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
+    Bitboard chainBase = ourPawns & ~e->pawnAttacks[Us];
+    if (chainBase)
+    {
+        int lengthL = 0, lengthR = 0;
+        Bitboard chainL = chainBase, chainR = chainBase;
+        do
+        {
+            lengthL++;
+            chainL = shift<UpLeft>(chainL) & ourPawns;
+        } while (chainL);
+        do
+        {
+            lengthR++;
+            chainR = shift<UpRight>(chainR) & ourPawns;
+        } while (chainR);
+
+        int bonusL = std::max(std::max(lengthL, lengthR) - 2, 0);
+        score += make_score(10, 5) * bonusL;
+    }
     return score;
   }
 
