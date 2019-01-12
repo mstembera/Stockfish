@@ -598,11 +598,7 @@ namespace {
         Bitboard queenOverload =  pos.pieces(Us, ALL_PIECES)
                                 & attackedBy[Them][ALL_PIECES]
                                 & attackedBy[Us][QUEEN]
-                                & ~(  attackedBy[Us][PAWN]
-                                    | attackedBy[Us][KNIGHT]
-                                    | attackedBy[Us][BISHOP]
-                                    | attackedBy[Us][ROOK]
-                                    | attackedBy[Us][KING]);
+                                & ~attackedBy2[Us];
         if (more_than_one(queenOverload))
             score -= make_score(25, 25);
     }
