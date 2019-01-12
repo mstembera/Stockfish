@@ -593,6 +593,17 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    Bitboard kingOverload =   pos.pieces(Us, ALL_PIECES)
+                            & attackedBy[Them][ALL_PIECES]
+                            & attackedBy[Us][KING]
+                            & ~(  attackedBy[Us][PAWN]
+                                | attackedBy[Us][KNIGHT]
+                                | attackedBy[Us][BISHOP]
+                                | attackedBy[Us][ROOK]
+                                | attackedBy[Us][QUEEN]);
+    if (more_than_one(kingOverload))
+        score -= make_score(10, 25);
+
     if (T)
         Trace::add(THREAT, Us, score);
 
