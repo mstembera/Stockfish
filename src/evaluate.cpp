@@ -596,13 +596,9 @@ namespace {
     if (attackedBy[Us][BISHOP])
     {
         Bitboard bishopOverload =  pos.pieces(Us, ALL_PIECES)
-                                & attackedBy[Them][ALL_PIECES]
-                                & attackedBy[Us][BISHOP]
-                                & ~(  attackedBy[Us][PAWN]
-                                    | attackedBy[Us][KNIGHT]
-                                    | attackedBy[Us][ROOK]
-                                    | attackedBy[Us][QUEEN]
-                                    | attackedBy[Us][KING]);
+                                 & attackedBy[Them][ALL_PIECES]
+                                 & attackedBy[Us][BISHOP]
+                                 & ~attackedBy2[Us];
         if (more_than_one(bishopOverload))
             score -= make_score(25, 25);
     }
