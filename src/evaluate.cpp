@@ -599,7 +599,9 @@ namespace {
                                  & attackedBy[Them][ALL_PIECES]
                                  & attackedBy[Us][BISHOP]
                                  & ~attackedBy2[Us];
-        if (more_than_one(bishopOverload))
+        if (more_than_one(bishopOverload & DarkSquares))
+            score -= make_score(25, 25);
+        if (more_than_one(bishopOverload & ~DarkSquares))
             score -= make_score(25, 25);
     }
 
