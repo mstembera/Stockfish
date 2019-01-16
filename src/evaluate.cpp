@@ -347,9 +347,7 @@ namespace {
                     score += LongDiagonalBishop;
             }
             else //Pt == KNIGHT
-            {
-                score += make_score(15, 15) * std::max(pe->ramCnt - 2, 0);
-            }
+                score += make_score(5, 20) * std::max(pe->ramCnt - 2, 0);
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
             // pawn diagonally in front of it is a very serious problem, especially
