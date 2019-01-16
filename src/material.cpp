@@ -218,12 +218,12 @@ Entry* probe(const Position& pos) {
   e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
 
   if (   pos.count<QUEEN>(WHITE) + 1 == pos.count<QUEEN>(BLACK)
-      && pos.count<BISHOP>(WHITE) + pos.count<KNIGHT>(WHITE) == pos.count<BISHOP>(BLACK) + pos.count<KNIGHT>(BLACK) + 3)
-      e->value += 12;
+      && pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) == pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) + 3)
+      e->value += 24;
   else
   if (   pos.count<QUEEN>(BLACK) + 1 == pos.count<QUEEN>(WHITE)
-      && pos.count<BISHOP>(BLACK) + pos.count<KNIGHT>(BLACK) == pos.count<BISHOP>(WHITE) + pos.count<KNIGHT>(WHITE) + 3)
-      e->value -= 12;
+      && pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) == pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) + 3)
+      e->value -= 24;
 
   return e;
 }
