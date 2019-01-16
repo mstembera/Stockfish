@@ -31,9 +31,46 @@ namespace {
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
+  void presort(ExtMove* begin, ExtMove* end, int limit) {
+
+      if (end - begin > 8)
+      {
+          constexpr int dP = 4;
+          ExtMove *p1 = begin - 1, *p2 = end - 1;
+
+          while (p1 + dP < p2 && p2->value < limit)
+              --p2;
+          if (p2 - p1 <= dP)
+              return;
+
+          bool forward = true;
+          while (true)
+          {
+              if (forward)
+                  do 
+                      ++p1;
+                  while (p2 - dP > p1 && p1->value < limit);
+              else
+                  do 
+                      --p2;
+                  while (p1 + dP < p2 && p2->value < limit);
+
+              if (p2 - p1 <= dP)
+                  break;
+
+              if (p1->value < p2->value)
+                  std::swap(*p1, *p2);
+              else
+                  forward = !forward;
+          }
+      }
+  }
+
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
   void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+
+    presort(begin, end, limit);
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
