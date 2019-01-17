@@ -188,6 +188,10 @@ Entry* probe(const Position& pos) {
   e->asymmetry = popcount(  (e->passedPawns[WHITE]   | e->passedPawns[BLACK])
                           | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
 
+  Bitboard rams = (pos.pieces(WHITE, PAWN) & ~e->pawnAttacks[BLACK])
+      & shift<SOUTH>(pos.pieces(BLACK, PAWN) & ~e->pawnAttacks[WHITE]);
+  e->ramCount = popcount(rams);
+
   return e;
 }
 
