@@ -744,7 +744,7 @@ namespace {
 
     // Compute the initiative bonus for the attacking side
     int complexity =   8 * pe->pawn_asymmetry()
-                    - 16 * std::max(pe->ram_count() - 2, 0)
+                    -  8 * std::max(pe->ram_count() - 2, 0)
                     + 12 * pos.count<PAWN>()
                     + 12 * outflanking
                     + 16 * pawnsOnBothFlanks
