@@ -91,6 +91,9 @@ namespace {
   // KingAttackWeights[PieceType] contains king attack weights by piece type
   constexpr int KingAttackWeights[PIECE_TYPE_NB] = { 0, 0, 77, 55, 44, 10 };
 
+  // Rams[] contains a penalty according to the number of pawn rams
+  constexpr int Rams[] = { -2, 0, 2, 12, 30, 40, 45, 48, 50 };
+
   // Penalties for enemy's safe checks
   constexpr int QueenSafeCheck  = 780;
   constexpr int RookSafeCheck   = 880;
@@ -744,7 +747,7 @@ namespace {
 
     // Compute the initiative bonus for the attacking side
     int complexity =   8 * pe->pawn_asymmetry()
-                    -  8 * std::max(pe->ram_count() - 2, 0)
+                    -      Rams[pe->ram_count()]
                     + 12 * pos.count<PAWN>()
                     + 12 * outflanking
                     + 16 * pawnsOnBothFlanks
