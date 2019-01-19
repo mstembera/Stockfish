@@ -39,6 +39,10 @@ void TTEntry::save(Key k, Value v, bool PvNode, Bound b, Depth d, Move m, Value 
   if (m || (k >> 48) != key16)
       move16 = (uint16_t)m;
 
+  // Preserve any existing PvNode for the same position
+  if (PvNode || (k >> 48) != key16)
+      genBound8 = (genBound8 & 0xFB) | PvNode << 2;
+
   // Overwrite less valuable entries
   if (  (k >> 48) != key16
       || d / ONE_PLY > depth8 - 4
@@ -47,7 +51,7 @@ void TTEntry::save(Key k, Value v, bool PvNode, Bound b, Depth d, Move m, Value 
       key16     = (uint16_t)(k >> 48);
       value16   = (int16_t)v;
       eval16    = (int16_t)ev;
-      genBound8 = (uint8_t)(TT.generation8 | PvNode << 2 | b);
+      genBound8 = (uint8_t)(TT.generation8 | (genBound8 & 0x4) | b);
       depth8    = (int8_t)(d / ONE_PLY);
   }
 }
