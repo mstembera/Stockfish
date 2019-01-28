@@ -718,7 +718,7 @@ namespace {
     behind |= shift<Down>(shift<Down>(behind));
 
     int bonus = popcount(safe) + popcount(behind & safe);
-    int weight =  (pos.count<ALL_PIECES>(Us) * 3 - pos.count<PAWN>(Us) * 2) / 2
+    int weight =  ((pos.count<ALL_PIECES>(Us) - pos.count<KNIGHT>(Us)) * 15 + 6) / 13
                 - 2 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]);
 
     Score score = make_score(bonus * weight * weight / 16, 0);
