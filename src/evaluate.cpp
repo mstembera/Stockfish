@@ -232,6 +232,8 @@ namespace {
     // a white knight on g5 and black's king is on g8, this white knight adds 2
     // to kingAttacksCount[WHITE].
     int kingAttacksCount[COLOR_NB];
+
+    int knightKingDistance;
   };
 
 
@@ -272,6 +274,8 @@ namespace {
     kingAttackersCount[Them] = popcount(kingRing[Us] & pe->pawn_attacks(Them));
     kingRing[Us] &= ~double_pawn_attacks_bb<Us>(pos.pieces(Us, PAWN));
     kingAttacksCount[Them] = kingAttackersWeight[Them] = 0;
+
+    knightKingDistance = INT_MAX;
   }
 
 
@@ -346,6 +350,8 @@ namespace {
                 if (more_than_one(attacks_bb<BISHOP>(s, pos.pieces(PAWN)) & Center))
                     score += LongDiagonalBishop;
             }
+            else
+                knightKingDistance = std::min(knightKingDistance, distance(s, pos.square<KING>(Us)));
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
             // pawn diagonally in front of it is a very serious problem, especially
@@ -482,7 +488,7 @@ namespace {
     kingDanger +=        kingAttackersCount[Them] * kingAttackersWeight[Them]
                  +  69 * kingAttacksCount[Them]
                  + 185 * popcount(kingRing[Us] & weak)
-                 - 100 * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
+                 -  90 * bool(knightKingDistance < 4)
                  + 150 * popcount(pos.blockers_for_king(Us) | unsafeChecks)
                  +   5 * tropism * tropism / 16
                  - 873 * !pos.count<QUEEN>(Them)
