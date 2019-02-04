@@ -331,7 +331,7 @@ namespace {
                 score += MinorBehindPawn;
 
             // Penalty if the piece is far from the king
-            score -= KingProtector * int(1 + Pt == KNIGHT) * distance(s, pos.square<KING>(Us));
+            score -= KingProtector * int(1 + (Pt == KNIGHT)) * distance(s, pos.square<KING>(Us));
 
             if (Pt == BISHOP)
             {
