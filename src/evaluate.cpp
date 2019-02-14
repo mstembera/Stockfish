@@ -319,7 +319,7 @@ namespace {
             if (bb & s)
                 score += Outpost * (Pt == KNIGHT ? 4 : 2)
                                  * (1 + bool(attackedBy[Us][PAWN] & s))
-                                 * (6 - distance(s, pos.square<KING>(Them)));
+                                 * (7 - distance(s, pos.square<KING>(Them)));
 
             else if (bb &= b & ~pos.pieces(Us))
                 score += Outpost * (Pt == KNIGHT ? 6 : 3)
