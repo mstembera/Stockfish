@@ -603,7 +603,7 @@ namespace {
         Bitboard bb = OutpostRanks & ~(pe->pawn_attacks_span(Them) | attackedBy2[Them]);
 
         if (bb & s)
-            score += Outpost * (1 + bool((attackedBy[Us][PAWN] | attackedBy2[Us]) & s)) * 4;
+            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & s)) * 4;
         else if (bb &= pos.attacks_from<KNIGHT>(s) & ~pos.pieces(Us))
             score += Outpost * (1 + bool(attackedBy[Us][PAWN] & bb)) * 2;
     }
@@ -615,7 +615,7 @@ namespace {
         Bitboard bb = OutpostRanks & ~(pe->pawn_attacks_span(Them) | attackedBy2[Them]);
 
         if (bb & s)
-            score += Outpost * (1 + bool((attackedBy[Us][PAWN] | attackedBy2[Us]) & s)) * 2;
+            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & s)) * 2;
         else if (bb &= pos.attacks_from<BISHOP>(s) & ~pos.pieces(Us))
             score += Outpost * (1 + bool(attackedBy[Us][PAWN] & bb));
     }
