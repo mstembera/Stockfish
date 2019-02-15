@@ -278,10 +278,11 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
-   
+    constexpr Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
+                                                   : Rank5BB | Rank4BB | Rank3BB);
     const Square* pl = pos.squares<Pt>(Us);
 
-    Bitboard b;
+    Bitboard b, bb;
     Score score = SCORE_ZERO;
 
     attackedBy[Us][Pt] = 0;
@@ -313,6 +314,16 @@ namespace {
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
+            // Bonus if piece is on an outpost square or can reach one
+            bb = OutpostRanks & ~pe->pawn_attacks_span(Them);
+            if (bb & s)
+                score += Outpost * (Pt == KNIGHT ? 4 : 2)
+                                 * (1 + bool(attackedBy[Us][PAWN] & s) + bool(b & kingRing[Them]));
+
+            else if (bb &= b & ~pos.pieces(Us))
+                score += Outpost * (Pt == KNIGHT ? 2 : 1)
+                                 * (1 + bool(attackedBy[Us][PAWN] & bb));
+
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)
                 score += MinorBehindPawn;
@@ -590,34 +601,6 @@ namespace {
            | (attackedBy[Us][ROOK  ] & pos.attacks_from<ROOK  >(s));
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
-    }
-
-
-    // Bonus if piece is on an outpost square or can reach one
-    constexpr Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
-                                                   : Rank5BB | Rank4BB | Rank3BB);
-    Bitboard knights = pos.pieces(Us, KNIGHT);
-    while (knights)
-    {
-        Square s = pop_lsb(&knights);
-        Bitboard bb = OutpostRanks & ~(pe->pawn_attacks_span(Them) | attackedBy2[Them]);
-
-        if (bb & s)
-            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & s)) * 4;
-        else if (bb &= pos.attacks_from<KNIGHT>(s) & ~pos.pieces(Us))
-            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & bb)) * 2;
-    }
-
-    Bitboard bishops = pos.pieces(Us, BISHOP);
-    while (bishops)
-    {
-        Square s = pop_lsb(&bishops);
-        Bitboard bb = OutpostRanks & ~(pe->pawn_attacks_span(Them) | attackedBy2[Them]);
-
-        if (bb & s)
-            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & s)) * 2;
-        else if (bb &= pos.attacks_from<BISHOP>(s) & ~pos.pieces(Us))
-            score += Outpost * (1 + bool(attackedBy[Us][PAWN] & bb));
     }
 
     if (T)
