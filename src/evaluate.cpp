@@ -603,6 +603,12 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    if (bool(pos.pieces(Us, BISHOP) &  DarkSquares) > bool(pos.pieces(Them, BISHOP) &  DarkSquares))
+        score += make_score(0, 12);
+
+    if (bool(pos.pieces(Us, BISHOP) & ~DarkSquares) > bool(pos.pieces(Them, BISHOP) & ~DarkSquares))
+        score += make_score(0, 12);
+
     if (T)
         Trace::add(THREAT, Us, score);
 
