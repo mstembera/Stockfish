@@ -955,8 +955,8 @@ moves_loop: // When in check, search starts from here
                && (pos.blockers_for_king(~us) & from_sq(move) || pos.see_ge(move)))
           extension = ONE_PLY;
 
-      // Castling extension
-      else if (type_of(move) == CASTLING)
+      // Castling or promotion extension
+      else if (type_of(move) == CASTLING || type_of(move) == PROMOTION)
           extension = ONE_PLY;
 
       // Calculate new depth for this move
