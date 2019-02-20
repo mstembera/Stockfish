@@ -958,6 +958,8 @@ moves_loop: // When in check, search starts from here
       // Castling extension
       else if (type_of(move) == CASTLING)
           extension = ONE_PLY;
+      else if (type_of(movedPiece) == PAWN && (rank_of(to_sq(move)) == relative_rank(us, RANK_7)))
+          extension = ONE_PLY;
 
       // Calculate new depth for this move
       newDepth = depth - ONE_PLY + extension;
