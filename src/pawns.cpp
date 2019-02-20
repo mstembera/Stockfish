@@ -141,6 +141,12 @@ namespace {
             score -= Doubled;
     }
 
+    Bitboard pawnsOn4th = ourPawns & rank_bb(relative_rank(Us, RANK_4));
+    if (!pawnsOn4th)
+        score -= make_score(16, 0);
+    else if (!more_than_one(pawnsOn4th))
+        score -= make_score( 6, 0);
+
     return score;
   }
 
