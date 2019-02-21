@@ -262,7 +262,7 @@ void MainThread::search() {
       // Vote according to score and depth
       for (Thread* th : Threads)
       {
-          int64_t s = th->rootMoves[0].score - minScore + 15;
+          int64_t s = th->rootMoves[0].score - minScore + 6;
           votes[th->rootMoves[0].pv[0]] += 200 + s * s * int(th->completedDepth);
       }
 
