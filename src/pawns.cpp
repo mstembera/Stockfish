@@ -143,10 +143,8 @@ namespace {
 
     constexpr Bitboard Center = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
     Bitboard centerPawns = ourPawns & Center;
-    if (more_than_one(centerPawns))
-        score += make_score(18, 0);
-    else if(centerPawns)
-        score += make_score(12, 0);
+    if (!centerPawns)
+        score -= make_score(15, 0);
 
     return score;
   }
