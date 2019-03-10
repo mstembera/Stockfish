@@ -285,6 +285,47 @@ Value Endgame<KQKR>::operator()(const Position& pos) const {
   return strongSide == pos.side_to_move() ? result : -result;
 }
 
+/// KR vs KR.
+template<>
+Value Endgame<KRKR>::operator()(const Position& pos) const {
+
+  assert(verify_material(pos, strongSide, RookValueMg, 0));
+  assert(verify_material(pos, weakSide, RookValueMg, 0));
+
+  Value result = VALUE_DRAW;
+  Color us = pos.side_to_move();
+  Square winnerKSq = pos.square<KING>(us);
+  Square loserKSq = pos.square<KING>(~us);
+  Square winnerRSq = pos.square<ROOK>(us);
+  Square loserRSq = pos.square<ROOK>(~us);
+
+  if (   !(pos.attacks_from<KING>(loserKSq) & loserRSq)
+      && ((pos.attacks_from<KING>(winnerKSq) | pos.attacks_from<ROOK>(winnerRSq)) & loserRSq))
+      result = VALUE_KNOWN_WIN;
+
+  return us == strongSide ? result : -result;
+}
+
+/// KQ vs KQ.
+template<>
+Value Endgame<KQKQ>::operator()(const Position& pos) const {
+
+    assert(verify_material(pos, strongSide, QueenValueMg, 0));
+    assert(verify_material(pos, weakSide, QueenValueMg, 0));
+
+    Value result = VALUE_DRAW;
+    Color us = pos.side_to_move();
+    Square winnerKSq = pos.square<KING>(us);
+    Square loserKSq = pos.square<KING>(~us);
+    Square winnerQSq = pos.square<QUEEN>(us);
+    Square loserQSq = pos.square<QUEEN>(~us);
+
+    if (   !(pos.attacks_from<KING>(loserKSq) & loserQSq)
+        && ((pos.attacks_from<KING>(winnerKSq) | pos.attacks_from<QUEEN>(winnerQSq)) & loserQSq))
+        result = VALUE_KNOWN_WIN;
+
+    return us == strongSide ? result : -result;
+}
 
 /// KNN vs KP. Simply push the opposing king to the corner.
 template<>
