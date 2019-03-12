@@ -710,14 +710,14 @@ namespace {
     if (file_of(ksq) > FILE_E)
     {
         SpaceMask |= Us == WHITE
-            ? (FileABB | FileBBB) & (Rank2BB | Rank3BB | Rank4BB)
-            : (FileABB | FileBBB) & (Rank7BB | Rank6BB | Rank5BB);
+            ? FileBBB & (Rank2BB | Rank3BB | Rank4BB)
+            : FileBBB & (Rank7BB | Rank6BB | Rank5BB);
     }else
     if (file_of(ksq) < FILE_D)
     {
         SpaceMask |= Us == WHITE
-            ? (FileGBB | FileHBB) & (Rank2BB | Rank3BB | Rank4BB)
-            : (FileGBB | FileHBB) & (Rank7BB | Rank6BB | Rank5BB);
+            ? FileGBB & (Rank2BB | Rank3BB | Rank4BB)
+            : FileGBB & (Rank7BB | Rank6BB | Rank5BB);
     }
 
     // Find the available squares for our pieces inside the area defined by SpaceMask
