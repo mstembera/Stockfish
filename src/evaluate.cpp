@@ -711,14 +711,14 @@ namespace {
                    & ~pos.pieces(Us, PAWN)
                    & ~attackedBy[Them][PAWN];
 
-    // Find all squares which are at most four squares behind some friendly pawn
-    Bitboard behind = shift<Down>(pos.pieces(Us, PAWN));
+    // Find all squares which are at most three squares behind some friendly pawn
+    Bitboard behind = pos.pieces(Us, PAWN);
     behind |= shift<Down>(behind);
     behind |= shift<Down>(shift<Down>(behind));
 
     int bonus = popcount(safe) + popcount(behind & safe);
     int weight =  pos.count<ALL_PIECES>(Us)
-                - 2 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]);
+                - 2 * popcount(pe->semiopenFiles[Us]);
 
     Score score = make_score(bonus * weight * weight / 16, 0);
 
