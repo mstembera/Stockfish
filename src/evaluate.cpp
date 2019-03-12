@@ -694,6 +694,10 @@ namespace {
   // twice. Finally, the space bonus is multiplied by a weight. The aim is to
   // improve play on game opening.
 
+  
+  int SW[5] = { 30, 30, 30, 30, 30 };
+  TUNE(SetRange(0, 100), SW);
+
   template<Tracing T> template<Color Us>
   Score Evaluation<T>::space() const {
 
@@ -717,8 +721,10 @@ namespace {
     behind |= shift<Down>(shift<Down>(behind));
 
     int bonus = popcount(safe) + popcount(behind & safe);
-    int weight =  pos.count<ALL_PIECES>(Us)
-                - 2 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]);
+    int weight =  (pos.count<PAWN>(Us) * SW[0]   + pos.count<KNIGHT>(Us) * SW[1]
+                 + pos.count<BISHOP>(Us) * SW[2] + pos.count<ROOK>(Us) * SW[3]
+                 + pos.count<QUEEN>(Us) * SW[4]) / 30
+                 - 2 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]) + 1;
 
     Score score = make_score(bonus * weight * weight / 16, 0);
 
