@@ -716,11 +716,13 @@ namespace {
     behind |= shift<Down>(behind);
     behind |= shift<Down>(shift<Down>(behind));
 
-    int bonus = popcount(safe) + popcount(behind & safe) - 2;
-    int weight =  pos.count<ALL_PIECES>(Us)
-                - 2 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]);
+    int bonus = popcount(safe) + popcount(behind & safe);
+    int weight =   pos.count<PAWN>(Us) * 35   + pos.count<KNIGHT>(Us) * 32
+                 + pos.count<BISHOP>(Us) * 33 + pos.count<ROOK>(Us) * 35
+                 + pos.count<QUEEN>(Us) * 31  + 32
+                 - 64 * popcount(pe->semiopenFiles[WHITE] & pe->semiopenFiles[BLACK]);
 
-    Score score = make_score(bonus * weight * weight / 16, 0);
+    Score score = make_score(bonus * weight * weight / 16384, 0);
 
     if (T)
         Trace::add(SPACE, Us, score);
