@@ -70,14 +70,14 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 
 /// MovePicker constructor for quiescence search
 MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHistory* mh,
-                       const CapturePieceToHistory* cph, const PieceToHistory** ch, Square rs)
+                       const CapturePieceToHistory* cph, const PieceToHistory** ch, Bitboard rs)
            : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch), recaptureSquare(rs), depth(d) {
 
   assert(d <= DEPTH_ZERO);
 
   stage = pos.checkers() ? EVASION_TT : QSEARCH_TT;
   ttMove =   ttm
-          && (depth > DEPTH_QS_RECAPTURES || to_sq(ttm) == recaptureSquare)
+          && (depth > DEPTH_QS_RECAPTURES || recaptureSquare & to_sq(ttm))
           && pos.pseudo_legal(ttm) ? ttm : MOVE_NONE;
   stage += (ttMove == MOVE_NONE);
 }
@@ -241,7 +241,7 @@ top:
 
   case QCAPTURE:
       if (select<Best>([&](){ return   depth > DEPTH_QS_RECAPTURES
-                                    || to_sq(move) == recaptureSquare; }))
+                                    || recaptureSquare & to_sq(move); }))
           return move;
 
       // If we did not find any move and we do not try checks, we have finished

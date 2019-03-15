@@ -1319,7 +1319,10 @@ moves_loop: // When in check, search starts from here
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory,
                                       &thisThread->captureHistory,
                                       contHist,
-                                      to_sq((ss-1)->currentMove));
+                                      SquareBB[to_sq((ss-1)->currentMove)]
+                                      | to_sq((ss-2)->currentMove)
+                                      | to_sq((ss-3)->currentMove)
+                                      | to_sq((ss-4)->currentMove));
 
     // Loop through the moves until no moves remain or a beta cutoff occurs
     while ((move = mp.next_move()) != MOVE_NONE)

@@ -121,7 +121,7 @@ public:
   MovePicker(const Position&, Move, Depth, const ButterflyHistory*,
                                            const CapturePieceToHistory*,
                                            const PieceToHistory**,
-                                           Square);
+                                           Bitboard);
   MovePicker(const Position&, Move, Depth, const ButterflyHistory*,
                                            const CapturePieceToHistory*,
                                            const PieceToHistory**,
@@ -143,7 +143,7 @@ private:
   ExtMove refutations[3], *cur, *endMoves, *endBadCaptures;
   int stage;
   Move move;
-  Square recaptureSquare;
+  Bitboard recaptureSquare;
   Value threshold;
   Depth depth;
   ExtMove moves[MAX_MOVES];
