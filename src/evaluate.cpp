@@ -301,6 +301,9 @@ namespace {
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
+        if (more_than_one(b & mobilityArea[Us] & Center))
+            mobility[Us] += make_score(0, 10);
+
         if (Pt == BISHOP || Pt == KNIGHT)
         {
             // Bonus if piece is on an outpost square or can reach one
