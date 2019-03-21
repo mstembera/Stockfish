@@ -103,6 +103,10 @@ namespace {
     Move best = MOVE_NONE;
   };
 
+
+  std::atomic<Depth> MaxCompletedDepth;
+  std::atomic<int> StartedDepthCnt[DEPTH_MAX];
+
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
 
@@ -189,6 +193,10 @@ void MainThread::search() {
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
+
+  MaxCompletedDepth = DEPTH_ZERO;
+  for (unsigned i = 0; i < DEPTH_MAX; ++i)
+      StartedDepthCnt[i] = 0;
 
   if (rootMoves.empty())
   {
@@ -334,6 +342,16 @@ void Thread::search() {
          && !Threads.stop
          && !(Limits.depth && mainThread && rootDepth / ONE_PLY > Limits.depth))
   {
+      // Dynamically distribute search depths across the helper threads
+      if (   idx > 0   
+          && (   StartedDepthCnt[rootDepth] * 2 >= (int)Threads.size()
+              || rootDepth <= MaxCompletedDepth))
+      {
+          ++StartedDepthCnt[rootDepth];
+          continue;
+      }
+      ++StartedDepthCnt[rootDepth];
+
       // Age out PV variability metric
       if (mainThread)
           mainThread->bestMoveChanges *= 0.517;
@@ -442,7 +460,12 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
+      {
           completedDepth = rootDepth;
+
+          if (MaxCompletedDepth < rootDepth)
+              MaxCompletedDepth = rootDepth;
+      }
 
       if (rootMoves[0].pv[0] != lastBestMove) {
          lastBestMove = rootMoves[0].pv[0];
