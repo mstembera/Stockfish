@@ -104,7 +104,6 @@ namespace {
   };
 
 
-  std::atomic<Depth> MaxCompletedDepth;
   std::atomic<int> StartedDepthCnt[DEPTH_MAX];
 
   template <NodeType NT>
@@ -194,7 +193,6 @@ void MainThread::search() {
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
 
-  MaxCompletedDepth = DEPTH_ZERO;
   for (unsigned i = 0; i < DEPTH_MAX; ++i)
       StartedDepthCnt[i] = 0;
 
@@ -343,12 +341,10 @@ void Thread::search() {
          && !(Limits.depth && mainThread && rootDepth / ONE_PLY > Limits.depth))
   {
       // Dynamically distribute search depths across the helper threads
-      if (   idx > 0   
-          && (   StartedDepthCnt[rootDepth] * 2 >= (int)Threads.size()
-              || rootDepth <= MaxCompletedDepth))
+      if (idx > 0 && StartedDepthCnt[rootDepth] * 2 >= (int)Threads.size())
       {
           ++StartedDepthCnt[rootDepth];
-          continue;
+          rootDepth = std::min(rootDepth + ONE_PLY, DEPTH_MAX - ONE_PLY);
       }
       ++StartedDepthCnt[rootDepth];
 
@@ -460,12 +456,7 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
-      {
           completedDepth = rootDepth;
-
-          if (MaxCompletedDepth < rootDepth)
-              MaxCompletedDepth = rootDepth;
-      }
 
       if (rootMoves[0].pv[0] != lastBestMove) {
          lastBestMove = rootMoves[0].pv[0];
