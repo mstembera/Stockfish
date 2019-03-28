@@ -214,6 +214,17 @@ Entry* probe(const Position& pos) {
     pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK) } };
 
   e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
+
+  // Better to still have one rook when down the exchange than none.
+  if (   pos.count<ROOK>(WHITE) + 1 == pos.count<ROOK>(BLACK)
+      && pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) == pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) + 1)
+
+      e->value += pos.count<ROOK>(WHITE) ? 15 : -15;
+  else
+  if (   pos.count<ROOK>(BLACK) + 1 == pos.count<ROOK>(WHITE)
+      && pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) == pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) + 1)
+      e->value -= pos.count<ROOK>(BLACK) ? 15 : -15;
+
   return e;
 }
 
