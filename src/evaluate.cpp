@@ -257,9 +257,7 @@ namespace {
     kingAttacksCount[Them] = kingAttackersWeight[Them] = 0;
 
     // Remove from kingRing[] the squares defended by two pawns
-    kingRing[Us] &= ~(  pawn_double_attacks_bb<Us>(pos.pieces(Us, PAWN))
-                      | ( (attackedBy[Us][KNIGHT] | attackedBy[Us][BISHOP] | attackedBy[Us][ROOK])
-                         & attackedBy[Us][PAWN]));
+    kingRing[Us] &= ~attackedBy[Us][PAWN];
   }
 
 
