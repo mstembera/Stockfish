@@ -243,7 +243,7 @@ namespace {
     attackedBy2[Us]            = attackedBy[Us][KING] & attackedBy[Us][PAWN];
 
     // Init our king safety tables
-    kingRing[Us] = attackedBy[Us][KING];
+    kingRing[Us] = attackedBy[Us][KING] | pos.pieces(Us, KING);
     if (relative_rank(Us, ksq) == RANK_1)
         kingRing[Us] |= shift<Up>(kingRing[Us]);
 
@@ -257,7 +257,8 @@ namespace {
     kingAttacksCount[Them] = kingAttackersWeight[Them] = 0;
 
     // Remove from kingRing[] the squares defended by two pawns
-    kingRing[Us] &= ~pawn_double_attacks_bb<Us>(pos.pieces(Us, PAWN));
+    kingRing[Us] &= ~(  pawn_double_attacks_bb<Us>(pos.pieces(Us, PAWN))
+                      | (attackedBy2[Us] & attackedBy[Us][PAWN]));
   }
 
 
