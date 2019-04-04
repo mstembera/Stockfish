@@ -48,6 +48,10 @@ struct Entry {
     return pawnsOnSquares[c][bool(DarkSquares & s)];
   }
 
+  int open_file_count() const {
+    return openFileCnt;
+  }
+
   template<Color Us>
   Score king_safety(const Position& pos) {
     return  kingSquares[Us] == pos.square<KING>(Us) && castlingRights[Us] == pos.castling_rights(Us)
@@ -72,6 +76,7 @@ struct Entry {
   int semiopenFiles[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
   int passedCount;
+  int openFileCnt;
 };
 
 typedef HashTable<Entry, 16384> Table;
