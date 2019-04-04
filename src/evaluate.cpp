@@ -746,7 +746,7 @@ namespace {
 
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
-                    +  8 * std::min(pe->open_file_count(), pos.count<ROOK>() + (bool)pos.count<ROOK>())
+                    + 12 * std::min(pe->open_file_count(), pos.count<ROOK>())
                     + 11 * pos.count<PAWN>()
                     +  9 * outflanking
                     + 18 * pawnsOnBothFlanks
