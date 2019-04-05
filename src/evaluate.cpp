@@ -368,6 +368,10 @@ namespace {
                 if ((kf < FILE_E) == (file_of(s) < kf))
                     score -= TrappedRook * (1 + !pos.castling_rights(Us));
             }
+
+            // Penalty for too few open files
+            if (pe->open_file_count() < 2)
+                score -= make_score(0, 12 - pe->open_file_count() * 8);
         }
 
         if (Pt == QUEEN)
