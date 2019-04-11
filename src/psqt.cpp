@@ -101,6 +101,47 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
    { S(-10, -1), S(  6,-6), S( -5,18), S(-11,22), S( -2, 22), S(-14, 17), S( 12, 2), S( -1,  9) }
   };
 
+
+int BonusTRmg[][RANK_NB] = {
+    //{}, {},
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 }
+};
+int BonusTReg[][RANK_NB] = {
+    //{}, {},
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 }
+};
+
+int BonusTFmg[][FILE_NB / 2] = {
+    //{}, {},
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 }
+};
+int BonusTFeg[][FILE_NB / 2] = {
+    //{}, {},
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 },
+    { 0 }
+};
+
+int PBonusTRmg[RANK_NB - 2] = { 0 };
+int PBonusTReg[RANK_NB - 2] = { 0 };
+  
+int PBonusTFmg[FILE_NB] = { 0 };
+int PBonusTFeg[FILE_NB] = { 0 };
+
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
@@ -120,11 +161,34 @@ void init() {
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
       {
           File f = std::min(file_of(s), ~file_of(s));
-          psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
-                                                      : Bonus[pc][rank_of(s)][f]);
+
+          psq[ pc][ s] = score + (type_of(pc) == PAWN
+              ?   PBonus[rank_of(s)][file_of(s)]
+                + make_score(PBonusTRmg[rank_of(s) - 1], PBonusTReg[rank_of(s) - 1])
+                + make_score(PBonusTFmg[file_of(s)], PBonusTFeg[file_of(s)])
+              :   Bonus[pc][rank_of(s)][f]
+                + make_score(BonusTRmg[pc - 2][rank_of(s)], BonusTReg[pc - 2][rank_of(s)])
+                + make_score(BonusTFmg[pc - 2][f], BonusTFeg[pc - 2][f]));
+
+         //psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
+                                                    // : Bonus[pc][rank_of(s)][f]);
           psq[~pc][~s] = -psq[pc][s];
       }
   }
 }
+
+TUNE(SetRange(-40, 40), BonusTRmg, init);
+TUNE(SetRange(-40, 40), BonusTReg, init);
+
+TUNE(SetRange(-40, 40), BonusTFmg, init);
+TUNE(SetRange(-40, 40), BonusTFeg, init);
+
+TUNE(SetRange(-40, 40), PBonusTRmg, init);
+TUNE(SetRange(-40, 40), PBonusTReg, init);
+
+TUNE(SetRange(-40, 40), PBonusTFmg, init);
+TUNE(SetRange(-40, 40), PBonusTFeg, init);
+
+UPDATE_ON_LAST();
 
 } // namespace PSQT
