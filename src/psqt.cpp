@@ -120,8 +120,20 @@ void init() {
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
       {
           File f = std::min(file_of(s), ~file_of(s));
-          psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
-                                                      : Bonus[pc][rank_of(s)][f]);
+
+          if (   (type_of(pc) == KNIGHT && (s == SQ_B1 || s == SQ_G1))
+              || (type_of(pc) == BISHOP && (s == SQ_C1 || s == SQ_F1))
+              || (type_of(pc) == ROOK   && (s == SQ_A1 || s == SQ_H1))
+              || (type_of(pc) == QUEEN  &&  s == SQ_D1)
+              || (type_of(pc) == KING   &&  s == SQ_E1))
+          {
+              psq[pc][s] = score + Bonus[pc][rank_of(s)][f] - make_score(4, 0);
+          }
+          else
+          {
+              psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
+                                                          : Bonus[pc][rank_of(s)][f]);
+          }
           psq[~pc][~s] = -psq[pc][s];
       }
   }
