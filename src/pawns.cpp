@@ -228,7 +228,7 @@ Score Entry::do_king_safety(const Position& pos) {
       bonus = std::max(bonus, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)));
 
   return make_score(bonus, -16 * minKingPawnDistance
-                           + 8 * more_than_one(DistanceRingBB[ksq][minKingPawnDistance] & pawns));
+                           + 4 * popcount(DistanceRingBB[ksq][minKingPawnDistance] & pawns));
 }
 
 // Explicit template instantiation
