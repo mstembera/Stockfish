@@ -220,11 +220,11 @@ Score Entry::do_king_safety(const Position& pos) {
       while (!(DistanceRingBB[ksq][++minKingPawnDistance] & pawns)) {}
 
       Bitboard nearPawns = DistanceRingBB[ksq][minKingPawnDistance] & pawns;
-      Rank pR = RANK_1;
+      Rank pR = RANK_8;
       while (nearPawns)
-          pR = std::max(pR, relative_rank(Us, pop_lsb(&nearPawns)));
+          pR = std::min(pR, relative_rank(Us, pop_lsb(&nearPawns)));
 
-      rankBonus = (relative_rank(Us, ksq) > pR) ? 8 : (relative_rank(Us, ksq) < pR) ? -8 : 0;
+      rankBonus = (relative_rank(Us, ksq) < pR) ? 8 : (relative_rank(Us, ksq) > pR) ? -8 : 0;
   }
 
   Value bonus = evaluate_shelter<Us>(pos, ksq);
