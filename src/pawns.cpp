@@ -228,7 +228,7 @@ Score Entry::do_king_safety(const Position& pos) {
       }
 
       int kD = std::min(std::abs(file_of(ksq) - FILE_D), std::abs(file_of(ksq) - FILE_E));
-      fileBonus = (kD < pD) ? 8 : (kD > pD) ? -8 : 0;
+      fileBonus = (kD > pD) ? 8 : (kD < pD) ? -8 : 0;
   }
 
   Value bonus = evaluate_shelter<Us>(pos, ksq);
