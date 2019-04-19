@@ -212,7 +212,7 @@ Score Entry::do_king_safety(const Position& pos) {
   Square ksq = pos.square<KING>(Us);
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.castling_rights(Us);
-  int minKingPawnDistance = 0, rankBonus = 0;
+  int minKingPawnDistance = 0, fileBonus = 0;
 
   Bitboard pawns = pos.pieces(Us, PAWN);
   if (pawns)
@@ -220,11 +220,15 @@ Score Entry::do_king_safety(const Position& pos) {
       while (!(DistanceRingBB[ksq][++minKingPawnDistance] & pawns)) {}
 
       Bitboard nearPawns = DistanceRingBB[ksq][minKingPawnDistance] & pawns;
-      Rank pR = RANK_8;
+      int pD = 8;
       while (nearPawns)
-          pR = std::min(pR, relative_rank(Us, pop_lsb(&nearPawns)));
+      {
+          File pF = file_of(pop_lsb(&nearPawns));
+          pD = std::min(std::min(std::abs(pF - FILE_D), std::abs(pF - FILE_E)), pD);
+      }
 
-      rankBonus = (relative_rank(Us, ksq) < pR) ? 8 : (relative_rank(Us, ksq) > pR) ? -8 : 0;
+      int kD = std::min(std::abs(file_of(ksq) - FILE_D), std::abs(file_of(ksq) - FILE_E));
+      fileBonus = (kD > pD) ? 6 : -6;
   }
 
   Value bonus = evaluate_shelter<Us>(pos, ksq);
@@ -236,7 +240,7 @@ Score Entry::do_king_safety(const Position& pos) {
   if (pos.can_castle(Us | QUEEN_SIDE))
       bonus = std::max(bonus, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)));
 
-  return make_score(bonus, -16 * minKingPawnDistance + rankBonus);
+  return make_score(bonus, -16 * minKingPawnDistance + fileBonus);
 }
 
 // Explicit template instantiation
