@@ -788,6 +788,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
           }
 
           st->pawnKey ^= Zobrist::psq[captured][capsq];
+          prefetch2(thisThread->pawnsTable[st->pawnKey]);
       }
       else
           st->nonPawnMaterial[them] -= PieceValue[MG][captured];
