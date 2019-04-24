@@ -105,6 +105,10 @@ namespace {
       S(106,184), S(109,191), S(113,206), S(116,212) }
   };
 
+
+  Score SqaureBonus[RANK_NB/2][FILE_NB/2] = { SCORE_ZERO };
+
+
   // RookOnFile[semiopen/open] contains bonuses for each rook when there is
   // no (friendly) pawn on the rook file.
   constexpr Score RookOnFile[] = { S(18, 7), S(44, 20) };
@@ -180,6 +184,7 @@ namespace {
     Pawns::Entry* pe;
     Bitboard mobilityArea[COLOR_NB];
     Score mobility[COLOR_NB] = { SCORE_ZERO, SCORE_ZERO };
+    uint8_t mobCnt[COLOR_NB][SQUARE_NB] = { 0 };
 
     // attackedBy[color][piece type] is a bitboard representing all squares
     // attacked by a given color and piece type. Special "piece types" which
@@ -302,6 +307,13 @@ namespace {
         int mob = popcount(b & mobilityArea[Us]);
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
+
+        Bitboard mob_b = b & mobilityArea[Us];
+        while (mob_b)
+        {
+            Square mS = pop_lsb(&mob_b);           
+            mobCnt[Us][mS]++;
+        }
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
@@ -832,6 +844,28 @@ namespace {
 
     score += mobility[WHITE] - mobility[BLACK];
 
+    for (Rank r = RANK_1; r <= RANK_4; ++r)
+    {
+        Rank rr = Rank(RANK_8 - r);
+
+        for (File f = FILE_A; f <= FILE_D; ++f)
+        {
+            File ff = File(FILE_H - f);
+
+            Square s1 = make_square(f, r);
+            score += SqaureBonus[r][f] * (mobCnt[WHITE][s1] - mobCnt[BLACK][s1]);
+
+            Square s2 = make_square(f, rr);
+            score += SqaureBonus[r][f] * (mobCnt[WHITE][s2] - mobCnt[BLACK][s2]);
+
+            Square s3 = make_square(ff, r);
+            score += SqaureBonus[r][f] * (mobCnt[WHITE][s3] - mobCnt[BLACK][s3]);
+
+            Square s4 = make_square(ff, rr);
+            score += SqaureBonus[r][f] * (mobCnt[WHITE][s4] - mobCnt[BLACK][s4]);
+        }
+    }
+
     score +=  king<   WHITE>() - king<   BLACK>()
             + threats<WHITE>() - threats<BLACK>()
             + passed< WHITE>() - passed< BLACK>()
@@ -910,3 +944,18 @@ std::string Eval::trace(const Position& pos) {
 
   return ss.str();
 }
+
+
+int  SqaureBonusmg[RANK_NB / 2][FILE_NB / 2] = { 0 };
+int  SqaureBonuseg[RANK_NB / 2][FILE_NB / 2] = { 0 };
+
+void init_sb()
+{
+    for (Rank r = RANK_1; r <= RANK_4; ++r)
+        for (File f = FILE_A; f <= FILE_D; ++f)
+            SqaureBonus[r][f] = make_score(SqaureBonusmg[r][f], SqaureBonuseg[r][f]);
+}
+
+TUNE(SetRange(-50, 50), SqaureBonusmg, init_sb);
+TUNE(SetRange(-50, 50), SqaureBonuseg, init_sb);
+UPDATE_ON_LAST();
