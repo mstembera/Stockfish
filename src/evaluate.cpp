@@ -308,10 +308,10 @@ namespace {
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
-        Bitboard mob_b = b & mobilityArea[Us];
-        while (mob_b)
+        bb = b;
+        while (bb)
         {
-            Square mS = pop_lsb(&mob_b);           
+            Square mS = pop_lsb(&bb);
             mobCnt[Us][mS]++;
         }
 
