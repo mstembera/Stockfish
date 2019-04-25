@@ -105,6 +105,13 @@ namespace {
       S(106,184), S(109,191), S(113,206), S(116,212) }
   };
 
+  constexpr Score SqaureBonus[RANK_NB / 2][FILE_NB / 2] = {
+    S(-1, -5), S(-2,  1), S(-2, -2), S( 0, -2),
+    S(-2,  0), S(-2, -1), S( 0,  0), S(-1,  0),
+    S( 0,  1), S( 3,  1), S(-1,  0), S( 3, -3),
+    S(-2, -2), S( 0,  2), S(-1,  0), S( 1,  0)
+  };
+
   // RookOnFile[semiopen/open] contains bonuses for each rook when there is
   // no (friendly) pawn on the rook file.
   constexpr Score RookOnFile[] = { S(18, 7), S(44, 20) };
@@ -180,6 +187,7 @@ namespace {
     Pawns::Entry* pe;
     Bitboard mobilityArea[COLOR_NB];
     Score mobility[COLOR_NB] = { SCORE_ZERO, SCORE_ZERO };
+    uint8_t attackCnt[COLOR_NB][SQUARE_NB] = { 0 };
 
     // attackedBy[color][piece type] is a bitboard representing all squares
     // attacked by a given color and piece type. Special "piece types" which
@@ -302,6 +310,10 @@ namespace {
         int mob = popcount(b & mobilityArea[Us]);
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
+
+        bb = b;
+        while (bb)
+            attackCnt[Us][pop_lsb(&bb)]++;
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
@@ -831,6 +843,28 @@ namespace {
             + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
 
     score += mobility[WHITE] - mobility[BLACK];
+
+    for (Rank r = RANK_1; r <= RANK_4; ++r)
+    {
+        Rank rr = Rank(RANK_8 - r);
+
+        for (File f = FILE_A; f <= FILE_D; ++f)
+        {
+            File ff = File(FILE_H - f);
+
+            Square s1 = make_square(f, r);
+            score += SqaureBonus[r][f] * (attackCnt[WHITE][s1] - attackCnt[BLACK][s1]);
+
+            Square s2 = make_square(f, rr);
+            score += SqaureBonus[r][f] * (attackCnt[WHITE][s2] - attackCnt[BLACK][s2]);
+
+            Square s3 = make_square(ff, r);
+            score += SqaureBonus[r][f] * (attackCnt[WHITE][s3] - attackCnt[BLACK][s3]);
+
+            Square s4 = make_square(ff, rr);
+            score += SqaureBonus[r][f] * (attackCnt[WHITE][s4] - attackCnt[BLACK][s4]);
+        }
+    }
 
     score +=  king<   WHITE>() - king<   BLACK>()
             + threats<WHITE>() - threats<BLACK>()
