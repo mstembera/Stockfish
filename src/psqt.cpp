@@ -27,6 +27,10 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
   { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg }
 };
 
+int EsMg[RANK_NB / 2][FILE_NB / 2] = { 0 };
+int EsEg[RANK_NB / 2][FILE_NB / 2] = { 0 };
+
+
 namespace PSQT {
 
 #define S(mg, eg) make_score(mg, eg)
@@ -35,8 +39,13 @@ namespace PSQT {
 // type on a given square a (middlegame, endgame) score pair is assigned. Table
 // is defined for files A..D and white side: it is symmetric for black side and
 // second half of the files.
-constexpr Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
-  { },
+Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
+  { // Empty square
+   { S( 0, 0), S( 0, 0), S( 0, 0), S( 0, 0) },
+   { S( 0, 0), S( 0, 0), S( 0, 0), S( 0, 0) },
+   { S( 0, 0), S( 0, 0), S( 0, 0), S( 0, 0) },
+   { S( 0, 0), S( 0, 0), S( 0, 0), S( 0, 0) }
+  },
   { },
   { // Knight
    { S(-169,-105), S(-96,-74), S(-80,-46), S(-79,-18) },
@@ -110,6 +119,22 @@ Score psq[PIECE_NB][SQUARE_NB];
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
 
+  for (Rank r = RANK_1; r <= RANK_4; ++r)
+      for (File f = FILE_A; f <= FILE_D; ++f)
+      {
+          Bonus[NO_PIECE_TYPE][r][f] = make_score(EsMg[r][f], EsEg[r][f]);
+      }
+
+  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  {
+      Rank r = rank_of(s);
+      File f = std::min(file_of(s), ~file_of(s));
+
+      psq[NO_PIECE][s] = r <= RANK_4
+          ?  Bonus[NO_PIECE_TYPE][r][f]
+          : -Bonus[NO_PIECE_TYPE][RANK_8 - r][f];
+  }
+
   for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
   {
       PieceValue[MG][~pc] = PieceValue[MG][pc];
@@ -128,3 +153,8 @@ void init() {
 }
 
 } // namespace PSQT
+
+
+TUNE(SetRange(-80, 80), EsMg, PSQT::init);
+TUNE(SetRange(-80, 80), EsEg, PSQT::init);
+UPDATE_ON_LAST();
