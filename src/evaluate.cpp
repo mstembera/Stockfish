@@ -708,6 +708,7 @@ namespace {
     constexpr Bitboard SpaceMask =
       Us == WHITE ? CenterFiles & (Rank2BB | Rank3BB | Rank4BB)
                   : CenterFiles & (Rank7BB | Rank6BB | Rank5BB);
+    constexpr Bitboard FirstRank = Us == WHITE ? Rank1BB : Rank8BB;
 
     // Find the available squares for our pieces inside the area defined by SpaceMask
     Bitboard safe =   SpaceMask
@@ -724,6 +725,8 @@ namespace {
                - (16 - pos.count<PAWN>()) / 4;
 
     Score score = make_score(bonus * weight * weight / 16, 0);
+
+    score += make_score(4, 0) * std::min(popcount(~pos.pieces() & FirstRank), 5);
 
     if (T)
         Trace::add(SPACE, Us, score);
