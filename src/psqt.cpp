@@ -36,7 +36,12 @@ namespace PSQT {
 // is defined for files A..D and white side: it is symmetric for black side and
 // second half of the files.
 constexpr Score Bonus[][RANK_NB][int(FILE_NB) / 2] = {
-  { },
+  { // Empty square
+   { S( 2,  3), S(-2,  0), S( 1, -1), S(-2, -1) },
+   { S(-5,  0), S(-1,  0), S(-4,  2), S(-2,  2) },
+   { S( 1,  2), S(-2,  2), S( 2, -2), S( 1,  4) },
+   { S( 1,  0), S( 1, -2), S(-3, -2), S( 1,  4) }
+  },
   { },
   { // Knight
    { S(-169,-105), S(-96,-74), S(-80,-46), S(-79,-18) },
@@ -109,6 +114,15 @@ Score psq[PIECE_NB][SQUARE_NB];
 // copied from Bonus[] adding the piece value, then the black halves of the
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
+
+  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  {
+      Rank r = rank_of(s);
+      File f = std::min(file_of(s), ~file_of(s));
+
+      psq[NO_PIECE][s] = r <= RANK_4 ?  Bonus[NO_PIECE_TYPE][r][f]
+                                     : -Bonus[NO_PIECE_TYPE][RANK_8 - r][f];
+  }
 
   for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
   {
