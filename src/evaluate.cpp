@@ -726,7 +726,7 @@ namespace {
 
     Score score = make_score(bonus * weight * weight / 16, 0);
 
-    score -= make_score(7, 0) * popcount(pos.pieces(Us, KNIGHT, BISHOP) & FirstRank);
+    score -= make_score(6, 0) * popcount((pos.pieces(Us, KNIGHT, BISHOP) | pos.pieces(Us, QUEEN)) & FirstRank);
 
     if (T)
         Trace::add(SPACE, Us, score);
