@@ -708,7 +708,12 @@ namespace {
     constexpr Bitboard SpaceMask =
       Us == WHITE ? CenterFiles & (Rank2BB | Rank3BB | Rank4BB)
                   : CenterFiles & (Rank7BB | Rank6BB | Rank5BB);
-    constexpr Bitboard FirstRank = Us == WHITE ? Rank1BB : Rank8BB;
+    constexpr Bitboard KnightMask =
+      Us == WHITE ? (1ULL << SQ_B1) | (1ULL << SQ_G1)
+                  : (1ULL << SQ_B8) | (1ULL << SQ_G8);
+    constexpr Bitboard BishopMask =
+      Us == WHITE ? (1ULL << SQ_C1) | (1ULL << SQ_F1)
+                  : (1ULL << SQ_C8) | (1ULL << SQ_F8);
 
     // Find the available squares for our pieces inside the area defined by SpaceMask
     Bitboard safe =   SpaceMask
@@ -726,7 +731,8 @@ namespace {
 
     Score score = make_score(bonus * weight * weight / 16, 0);
 
-    score -= make_score(4, 0) * popcount(pos.pieces(Us, KNIGHT, BISHOP) & FirstRank);
+    score -=  make_score(5, 0)
+            * popcount((pos.pieces(Us, KNIGHT) & KnightMask) | (pos.pieces(Us, BISHOP) & BishopMask));
 
     if (T)
         Trace::add(SPACE, Us, score);
