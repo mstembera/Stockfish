@@ -25,6 +25,12 @@
 #include "position.h"
 #include "thread.h"
 
+int C1 = -16, C2 = 0, C3 = -10;
+
+TUNE(SetRange(-50, 0), C1);
+TUNE(SetRange(-80, 80), C2);
+TUNE(SetRange(-100, 0), C3);
+
 namespace {
 
   #define V Value
@@ -231,7 +237,7 @@ Score Entry::do_king_safety(const Position& pos) {
   if (pos.can_castle(Us | QUEEN_SIDE))
       bonus = std::max(bonus, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)));
 
-  return make_score(bonus, -16 * minPawnDist);
+  return make_score(bonus, pawns ? C1 * minPawnDist + C2 : C3 );
 }
 
 // Explicit template instantiation
