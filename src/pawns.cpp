@@ -194,9 +194,10 @@ Value Entry::evaluate_shelter(const Position& pos, Square ksq) {
       Rank theirRank = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
       int d = std::min(f, ~f);
-      safety += (f == center ? 34 : 31) * ShelterStrength[d][ourRank] / 32;
+      safety += ShelterStrength[d][ourRank];
       safety -= (ourRank && (ourRank == theirRank - 1)) ? 66 * (theirRank == RANK_3)
-                                                        : UnblockedStorm[d][theirRank];
+                                                        : UnblockedStorm[d][theirRank]
+                                                         * (f == file_of(ksq) ? 34 : 31) / 32;
   }
 
   return safety;
