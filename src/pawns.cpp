@@ -176,14 +176,18 @@ Value Entry::evaluate_shelter(const Position& pos, Square ksq) {
 
   constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
   constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
-  constexpr Bitboard BlockSquares =  (Rank1BB | Rank2BB | Rank7BB | Rank8BB)
-                                   & (FileABB | FileHBB);
+  constexpr Bitboard  BlockSquares1 = (Us == WHITE ? Rank1BB : Rank8BB) & (FileABB | FileHBB);
+  constexpr Bitboard  BlockSquares2 = (Us == WHITE ? Rank2BB : Rank7BB) & (FileABB | FileHBB);
+  constexpr Bitboard  BlockSquares3 = (Us == WHITE ? Rank3BB : Rank6BB) & (FileABB | FileHBB);
 
   Bitboard b = pos.pieces(PAWN) & ~forward_ranks_bb(Them, ksq);
   Bitboard ourPawns = b & pos.pieces(Us);
   Bitboard theirPawns = b & pos.pieces(Them);
 
-  Value safety = (shift<Down>(theirPawns) & BlockSquares & ksq) ? Value(374) : Value(5);
+  b = shift<Down>(theirPawns) & ksq;
+  Value safety = b & BlockSquares1 ? Value(400) :
+                 b & BlockSquares2 ? Value(350) :
+                 b & BlockSquares3 ? Value(50)  : Value(5);
 
   File center = clamp(file_of(ksq), FILE_B, FILE_G);
   for (File f = File(center - 1); f <= File(center + 1); ++f)
