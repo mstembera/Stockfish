@@ -25,6 +25,8 @@
 #include "position.h"
 #include "thread.h"
 
+int C1 = 374, C2 = 374, C3 = 5, C4 = 5;
+
 namespace {
 
   #define V Value
@@ -175,14 +177,18 @@ Value Entry::evaluate_shelter(const Position& pos, Square ksq) {
 
   constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
   constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
-  constexpr Bitboard  BlockRanks = (Us == WHITE ? Rank1BB | Rank2BB : Rank8BB | Rank7BB);
+  constexpr Bitboard  BlockRanks1 = (Us == WHITE ? Rank1BB : Rank8BB);
+  constexpr Bitboard  BlockRanks2 = (Us == WHITE ? Rank2BB : Rank7BB);
+  constexpr Bitboard  BlockRanks3 = (Us == WHITE ? Rank3BB : Rank6BB);
 
   Bitboard b = pos.pieces(PAWN) & ~forward_ranks_bb(Them, ksq);
   Bitboard ourPawns = b & pos.pieces(Us);
   Bitboard theirPawns = b & pos.pieces(Them);
 
-  Value safety = (shift<Down>(theirPawns) & (FileABB | FileHBB) & BlockRanks & ksq) ?
-                 Value(374) : Value(5);
+  b = shift<Down>(theirPawns) & (FileABB | FileHBB) & ksq;
+  Value safety = b & BlockRanks1 ? Value(C1) :
+                 b & BlockRanks2 ? Value(C2) :
+                 b & BlockRanks3 ? Value(C3)  : Value(C4);
 
   File center = clamp(file_of(ksq), FILE_B, FILE_G);
   for (File f = File(center - 1); f <= File(center + 1); ++f)
@@ -239,3 +245,9 @@ template Score Entry::do_king_safety<WHITE>(const Position& pos);
 template Score Entry::do_king_safety<BLACK>(const Position& pos);
 
 } // namespace Pawns
+
+
+TUNE(SetRange(275, 475), C1);
+TUNE(SetRange(275, 475), C2);
+TUNE(SetRange(-80, 80), C3);
+TUNE(SetRange(-80, 80), C4);
