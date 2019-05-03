@@ -36,7 +36,7 @@ namespace {
   void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
+        if (p->value >= limit || p->value > begin->value - 500)
         {
             ExtMove tmp = *p, *q;
             *p = *++sortedEnd;
@@ -204,7 +204,7 @@ top:
       endMoves = generate<QUIETS>(pos, cur);
 
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      partial_insertion_sort(cur, endMoves, -3800 * depth / ONE_PLY);
       ++stage;
       /* fallthrough */
 
