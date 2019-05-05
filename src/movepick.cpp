@@ -209,11 +209,21 @@ top:
       /* fallthrough */
 
   case QUIET:
-      if (select<Next>([&](){return   (!skipQuiets || cur->value > 20000)
-                                   && *cur != refutations[0].move
-                                   && *cur != refutations[1].move
-                                   && *cur != refutations[2].move;}))
+      if (!skipQuiets)
+      {
+          if (select<Next>([&](){return   *cur != refutations[0].move
+                                       && *cur != refutations[1].move
+                                       && *cur != refutations[2].move;}))
           return *(cur - 1);
+      }
+      else if (cur->value > 20000)
+      {
+          if (select<Next>([&](){return    cur->value > 20000
+                                       && *cur != refutations[0].move
+                                       && *cur != refutations[1].move
+                                       && *cur != refutations[2].move;}))
+          return *(cur - 1);
+      }
 
       // Prepare the pointers to loop over the bad captures
       cur = moves;
