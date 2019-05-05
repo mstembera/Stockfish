@@ -209,7 +209,7 @@ top:
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets
+      if (   (!skipQuiets || cur->value > 12000)
           && select<Next>([&](){return   *cur != refutations[0].move
                                       && *cur != refutations[1].move
                                       && *cur != refutations[2].move;}))
