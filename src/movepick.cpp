@@ -209,8 +209,8 @@ top:
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets 
-          && select<Next>([&](){return    cur->value > -7000 * depth / ONE_PLY
+      if (   !skipQuiets
+          && select<Next>([&](){return    cur->value > -15000 * depth / ONE_PLY
                                       && *cur != refutations[0].move
                                       && *cur != refutations[1].move
                                       && *cur != refutations[2].move;}))
