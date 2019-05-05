@@ -209,11 +209,10 @@ top:
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets
-          && select<Next>([&](){return    cur->value > -15000 * depth / ONE_PLY
-                                      && *cur != refutations[0].move
-                                      && *cur != refutations[1].move
-                                      && *cur != refutations[2].move;}))
+      if (select<Next>([&](){return   (!skipQuiets || cur->value > 15000)
+                                   && *cur != refutations[0].move
+                                   && *cur != refutations[1].move
+                                   && *cur != refutations[2].move;}))
           return *(cur - 1);
 
       // Prepare the pointers to loop over the bad captures
