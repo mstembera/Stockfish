@@ -200,16 +200,19 @@ top:
       /* fallthrough */
 
   case QUIET_INIT:
-      cur = endBadCaptures;
-      endMoves = generate<QUIETS>(pos, cur);
+      if (!skipQuiets || depth > 8)
+      {
+          cur = endBadCaptures;
+          endMoves = generate<QUIETS>(pos, cur);
 
-      score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+          score<QUIETS>();
+          partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      }
       ++stage;
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets
+      if (   (!skipQuiets || depth > 8)
           && select<Next>([&](){return   *cur != refutations[0].move
                                       && *cur != refutations[1].move
                                       && *cur != refutations[2].move;}))
