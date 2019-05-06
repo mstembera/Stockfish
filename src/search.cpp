@@ -76,7 +76,7 @@ namespace {
   }
 
   constexpr int futility_move_count(bool improving, int depth) {
-    return (5 + depth * depth) * (1 + improving) / 2;
+    return (5 + depth * depth) * (1 + improving) / 2 - 2;
   }
 
   // History and stats update bonus, based on depth
@@ -594,10 +594,10 @@ namespace {
     // starts with statScore = 0. Later grandchildren start with the last calculated
     // statScore of the previous grandchild. This influences the reduction rules in
     // LMR which are based on the statScore of parent position.
-	if (rootNode)
-		(ss + 4)->statScore = 0;
-	else
-		(ss + 2)->statScore = 0;
+    if (rootNode)
+        (ss + 4)->statScore = 0;
+    else
+        (ss + 2)->statScore = 0;
 
     // Step 4. Transposition table lookup. We don't want the score of a partial
     // search to overwrite a previous full search TT value, so we use a different
