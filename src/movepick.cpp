@@ -219,7 +219,7 @@ top:
                                         && *cur != refutations[2].move; }))
               return *(cur - 1);
       }
-      else if (0)//skipLevel <= 3)
+      else if (skipLevel <= 2)
       {
           for (; cur < endMoves && cur->value >= 18000 + 3000 * skipLevel; ++cur)
               if (   *cur != refutations[0].move
