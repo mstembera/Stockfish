@@ -542,6 +542,7 @@ namespace {
     Value bestValue, value, ttValue, eval, maxValue;
     bool ttHit, ttPv, inCheck, givesCheck, improving;
     bool captureOrPromotion, doFullDepthSearch, moveCountPruning, ttCapture;
+    int quietSkipLevel;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -854,11 +855,12 @@ moves_loop: // When in check, search starts from here
 
     value = bestValue; // Workaround a bogus 'uninitialized' warning under gcc
     moveCountPruning = false;
+    quietSkipLevel = 0;
     ttCapture = ttMove && pos.capture_or_promotion(ttMove);
 
     // Step 12. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
-    while ((move = mp.next_move(moveCountPruning)) != MOVE_NONE)
+    while ((move = mp.next_move(quietSkipLevel)) != MOVE_NONE)
     {
       assert(is_ok(move));
 
@@ -953,7 +955,8 @@ moves_loop: // When in check, search starts from here
           && bestValue > VALUE_MATED_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold
-          moveCountPruning = moveCount >= futility_move_count(improving, depth / ONE_PLY);
+          quietSkipLevel = moveCount - futility_move_count(improving, depth / ONE_PLY) + 1;
+          moveCountPruning = quietSkipLevel > 0;
 
           if (   !captureOrPromotion
               && !givesCheck

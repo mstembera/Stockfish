@@ -150,7 +150,7 @@ Move MovePicker::select(Pred filter) {
 /// MovePicker::next_move() is the most important method of the MovePicker class. It
 /// returns a new pseudo legal move every time it is called until there are no more
 /// moves left, picking the move with the highest score from a list of generated moves.
-Move MovePicker::next_move(bool skipQuiets) {
+Move MovePicker::next_move(int skipLevel) {
 
 top:
   switch (stage) {
@@ -200,20 +200,33 @@ top:
       /* fallthrough */
 
   case QUIET_INIT:
-      cur = endBadCaptures;
-      endMoves = generate<QUIETS>(pos, cur);
+      if (skipLevel <= 3)
+      {
+          cur = endBadCaptures;
+          endMoves = generate<QUIETS>(pos, cur);
 
-      score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+          score<QUIETS>();
+          partial_insertion_sort(cur, endMoves, skipLevel <= 0 ? -4000 * depth / ONE_PLY : 18000 + 3000 * skipLevel);
+      }
       ++stage;
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets
-          && select<Next>([&](){return   *cur != refutations[0].move
-                                      && *cur != refutations[1].move
-                                      && *cur != refutations[2].move;}))
-          return *(cur - 1);
+      if (skipLevel <= 0)
+      {
+          if (select<Next>([&]() {return   *cur != refutations[0].move
+                                        && *cur != refutations[1].move
+                                        && *cur != refutations[2].move; }))
+              return *(cur - 1);
+      }
+      else if (0)//skipLevel <= 3)
+      {
+          for (; cur < endMoves && cur->value >= 18000 + 3000 * skipLevel; ++cur)
+              if (   *cur != refutations[0].move
+                  && *cur != refutations[1].move
+                  && *cur != refutations[2].move)
+                    return *cur++;
+      }
 
       // Prepare the pointers to loop over the bad captures
       cur = moves;
