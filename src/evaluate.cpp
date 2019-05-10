@@ -138,14 +138,14 @@ namespace {
   constexpr Score FlankAttacks       = S(  8,  0);
   constexpr Score Hanging            = S( 69, 36);
   constexpr Score KingProtector      = S(  7,  8);
-  constexpr Score KnightOnQueen      = S( 11,  8);
+  constexpr Score KnightOnQueen      = S(  4,  3);
   constexpr Score LongDiagonalBishop = S( 45,  0);
   constexpr Score MinorBehindPawn    = S( 18,  3);
   constexpr Score Outpost            = S(  9,  3);
   constexpr Score PawnlessFlank      = S( 17, 95);
   constexpr Score RestrictedPiece    = S(  7,  7);
   constexpr Score RookOnPawn         = S( 10, 32);
-  constexpr Score SliderOnQueen      = S( 41, 13);
+  constexpr Score SliderOnQueen      = S( 16,  5);
   constexpr Score ThreatByKing       = S( 24, 89);
   constexpr Score ThreatByPawnPush   = S( 48, 39);
   constexpr Score ThreatByRank       = S( 13,  0);
@@ -587,13 +587,13 @@ namespace {
         b = attackedBy[Us][KNIGHT] & pos.attacks_from<KNIGHT>(s);
 
         if (b & safe)
-            score += KnightOnQueen * (popcount(b & safe) + (pos.side_to_move() == Us));
+            score += KnightOnQueen * (popcount(b & safe) + (pos.side_to_move() == Us) + 2);
 
         b =  (attackedBy[Us][BISHOP] & pos.attacks_from<BISHOP>(s))
            | (attackedBy[Us][ROOK  ] & pos.attacks_from<ROOK  >(s));
 
         if (b & safe & attackedBy2[Us])
-            score += SliderOnQueen * (popcount(b & safe & attackedBy2[Us]) + (pos.side_to_move() == Us));
+            score += SliderOnQueen * (popcount(b & safe & attackedBy2[Us]) + (pos.side_to_move() == Us) + 2);
     }
 
     if (T)
