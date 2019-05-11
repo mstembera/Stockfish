@@ -602,22 +602,22 @@ namespace {
     if (fawnArea)
     {
         Bitboard fawns =  (  (pos.pieces(Them, PAWN) & shift<Up>(pos.pieces(Us, PAWN)))
-                           | (pos.pieces(Them, PAWN) & attackedBy[Them][PAWN]))
+                           | (pos.pieces(Them, PAWN) & attackedBy[Them][ALL_PIECES]))
                         & fawnArea;
 
         if (fawns)
-            score -= make_score(12, 12);
+            score -= make_score(10, 10);
         else if (pos.side_to_move() == Them)
         {
-            fawns = (  (shift<Down>(pos.pieces(Them, PAWN)) & ~pos.pieces())
-                     | (attackedBy[Them][PAWN] & pos.pieces(Us)));
+            fawns =  (shift<Down>(pos.pieces(Them, PAWN)) & ~pos.pieces())
+                   | (attackedBy[Them][PAWN] & pos.pieces(Us));
 
             fawns =  (  (fawns & shift<Up>(pos.pieces(Us, PAWN)))
-                      | (fawns & attackedBy[Them][PAWN]))
+                      | (fawns & ((attackedBy[Them][ALL_PIECES] ^ attackedBy[Them][PAWN]) | attackedBy2[Them])))
                    & fawnArea;
 
             if (fawns)
-                score -= make_score(5, 5);
+                score -= make_score(3, 3);
         }
     }
 
