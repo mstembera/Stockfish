@@ -724,6 +724,13 @@ namespace {
 
     Score score = make_score(bonus * weight * weight / 16, 0);
 
+    // Multi square PSQT
+    if (   pos.piece_on(SQ_E5) != B_PAWN
+        && pos.piece_on(SQ_E6) == B_PAWN
+        && pos.piece_on(SQ_E2) != W_PAWN
+        && pos.piece_on(SQ_E3) != W_PAWN)
+        score += make_score(8, 0) * (1 - 2 * (Us == BLACK));
+
     if (T)
         Trace::add(SPACE, Us, score);
 
