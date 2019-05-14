@@ -143,10 +143,10 @@ namespace {
             score -= Doubled;
     }
 
-    if (ourPawns)
+    if (fMax > fMin)
     {
         int span = std::min(fMax - fMin, 6);
-        score += make_score(0, span * span + span);
+        score += make_score(0, (span * span  + span) / 2);
     }
 
     return score;
