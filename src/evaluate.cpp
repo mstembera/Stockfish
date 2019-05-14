@@ -499,10 +499,9 @@ namespace {
 
     constexpr Color     Them     = (Us == WHITE ? BLACK   : WHITE);
     constexpr Direction Up       = (Us == WHITE ? NORTH   : SOUTH);
-    constexpr Direction Down     = (Us == WHITE ? SOUTH   : NORTH);
     constexpr Bitboard  TRank2BB = (Us == WHITE ? Rank2BB : Rank7BB);
     constexpr Bitboard  TRank3BB = (Us == WHITE ? Rank3BB : Rank6BB);
-    constexpr Bitboard  Edges    = FileABB | FileBBB | FileGBB | FileHBB;
+    constexpr Bitboard  Flanks   = FileABB | FileBBB | FileCBB | FileFBB | FileGBB | FileHBB;
 
     Bitboard b, weak, defended, nonPawnEnemies, stronglyProtected, safe;
     Score score = SCORE_ZERO;
@@ -598,27 +597,14 @@ namespace {
     }
 
     // Thorn pawns
-    Bitboard fawnArea = kingRing[Us] & ~attackedBy[Us][PAWN] & (Edges & (TRank2BB | TRank3BB));
+    Bitboard fawnArea = kingRing[Us] & ~attackedBy[Us][PAWN] & (Flanks & (TRank2BB | TRank3BB));
     if (fawnArea)
     {
         Bitboard fawns =  (  (pos.pieces(Them, PAWN) & shift<Up>(pos.pieces(Us, PAWN)))
                            | (pos.pieces(Them, PAWN) & attackedBy[Them][ALL_PIECES]))
                         & fawnArea;
-
         if (fawns)
             score -= make_score(10, 10);
-        else if (pos.side_to_move() == Them)
-        {
-            fawns =  (shift<Down>(pos.pieces(Them, PAWN)) & ~pos.pieces())
-                   | (attackedBy[Them][PAWN] & pos.pieces(Us));
-
-            fawns =  (  (fawns & shift<Up>(pos.pieces(Us, PAWN)))
-                      | (fawns & ((attackedBy[Them][ALL_PIECES] ^ attackedBy[Them][PAWN]) | attackedBy2[Them])))
-                   & fawnArea;
-
-            if (fawns)
-                score -= make_score(3, 3);
-        }
     }
 
     if (T)
