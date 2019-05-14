@@ -70,6 +70,7 @@ namespace {
     Bitboard b, neighbours, stoppers, doubled, support, phalanx;
     Bitboard lever, leverPush;
     Square s;
+    File fMin = FILE_H, fMax = FILE_A;
     bool opposed, backward;
     Score score = SCORE_ZERO;
     const Square* pl = pos.squares<PAWN>(Us);
@@ -86,8 +87,10 @@ namespace {
     {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
-        File f = file_of(s);
         Rank r = relative_rank(Us, s);
+        File f = file_of(s);
+        fMin = std::min(fMin, f);
+        fMax = std::max(fMax, f);
 
         e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
@@ -138,6 +141,12 @@ namespace {
 
         if (doubled && !support)
             score -= Doubled;
+    }
+
+    if (ourPawns)
+    {
+        int span = std::min(fMax - fMin, 6);
+        score += make_score(0, span * span + span);
     }
 
     return score;
