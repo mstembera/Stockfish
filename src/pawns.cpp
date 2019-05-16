@@ -141,6 +141,9 @@ namespace {
             score -= Doubled;
     }
 
+    if (more_than_two(ourPawns & (FileDBB | FileEBB)))
+        score += make_score(10, 5);
+
     return score;
   }
 
