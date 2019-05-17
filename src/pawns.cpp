@@ -142,7 +142,7 @@ namespace {
     }
 
     if (more_than_two(ourPawns & (FileDBB | FileEBB)))
-        score += make_score(10, 5);
+        score += make_score(15, 5);
 
     return score;
   }
