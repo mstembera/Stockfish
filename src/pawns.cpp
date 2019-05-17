@@ -66,6 +66,7 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = (Us == WHITE ? NORTH : SOUTH);
+    constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
 
     Bitboard b, neighbours, stoppers, doubled, support, phalanx;
     Bitboard lever, leverPush;
@@ -140,6 +141,15 @@ namespace {
         if (doubled && !support)
             score -= Doubled;
     }
+
+    // Bonus for restricting leading pawns
+    Bitboard leading = theirPawns & ~pawn_attacks_bb<Us>(theirPawns);
+    Bitboard restricted =  shift<Down>(leading & ~pawn_attacks_bb<Us>(ourPawns))
+                         & ~(ourPawns | theirPawns)
+                         & pawn_attacks_bb<Us>(ourPawns)
+                         & ~pawn_attacks_bb<Them>(theirPawns);
+
+    score += make_score(7, 7) * popcount(restricted);
 
     return score;
   }
