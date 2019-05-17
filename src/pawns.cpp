@@ -149,7 +149,7 @@ namespace {
                          & pawn_attacks_bb<Us>(ourPawns)
                          & ~pawn_attacks_bb<Them>(theirPawns);
 
-    score += make_score(10, 6) * popcount(restricted);
+    score += make_score(6, 10) * popcount(restricted);
 
     return score;
   }
