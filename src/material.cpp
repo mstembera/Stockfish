@@ -24,7 +24,7 @@
 #include "material.h"
 #include "thread.h"
 
-int Omg[21] = { 0 }, Oeg[21] = { 0 }, Tmg[15] = { 0 }, Teg[15] = { 0 };
+int O[21] = { 0 }, T[15] = { 0 };
 
 using namespace std;
 
@@ -145,14 +145,14 @@ namespace Material {
             for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
             {
                 QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2]
-                                         + make_score(Omg[idxO], Oeg[idxO]);
+                                         + make_score(O[idxO], -O[idxO]);
 
                 ++idxO;
 
                 if(pt1 != pt2)
                 {
                     QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2]
-                                               + make_score(Tmg[idxT], Teg[idxT]);
+                                               + make_score(T[idxT], -T[idxT]);
                     ++idxT;
                 }
             }
@@ -267,8 +267,6 @@ Entry* probe(const Position& pos) {
 } // namespace Material
 
 
-TUNE(SetRange(-100, 100), Omg, Material::init);
-TUNE(SetRange(-100, 100), Oeg, Material::init);
-TUNE(SetRange(-100, 100), Tmg, Material::init);
-TUNE(SetRange(-100, 100), Teg, Material::init);
+TUNE(SetRange(-70, 70), O, Material::init);
+TUNE(SetRange(-70, 70), T, Material::init);
 UPDATE_ON_LAST();
