@@ -97,8 +97,10 @@ namespace {
         int v = 0;
 
         for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
-            v +=  QuadraticOurs[pt1][pt2] * pieceCount[Us][pt2]
-                + QuadraticTheirs[pt1][pt2] * pieceCount[Them][pt2];
+            v += QuadraticOurs[pt1][pt2] * pieceCount[Us][pt2];
+
+        for (int pt2 = NO_PIECE_TYPE; pt2 < pt1; ++pt2)
+            v += QuadraticTheirs[pt1][pt2] * pieceCount[Them][pt2];
 
         bonus += pieceCount[Us][pt1] * v;
     }
