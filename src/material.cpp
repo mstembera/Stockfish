@@ -24,33 +24,65 @@
 #include "material.h"
 #include "thread.h"
 
+int O[13] = { 0 }, T[11] = { 0 };
+
 using namespace std;
 
 namespace {
 
+#define S(v) int(v)
+
   // Polynomial material imbalance parameters
 
-  constexpr int QuadraticOurs[][PIECE_TYPE_NB] = {
+    constexpr int QuadraticOursBase[][PIECE_TYPE_NB] = {
     //            OUR PIECES
     // pair pawn knight bishop rook queen
-    {1438                               }, // Bishop pair
-    {  40,   38                         }, // Pawn
-    {  32,  255, -62                    }, // Knight      OUR PIECES
-    {   0,  104,   4,    0              }, // Bishop
-    { -26,   -2,  47,   105,  -208      }, // Rook
-    {-189,   24, 117,   133,  -134, -6  }  // Queen
+    { S(1438)                                        }, // Bishop pair
+    { S(  40), S( 38)                                }, // Pawn
+    { S(  32), S(255), S(-62)                        }, // Knight      OUR PIECES
+    { S(   0), S(104), S(  4), S(  0)                }, // Bishop
+    { S( -26), S( -2), S( 47), S(105), S(-208)       }, // Rook
+    { S(-189), S( 24), S(117), S(133), S(-134), S(-6)}, // Queen
+    { S(   0), S(  0), S(  0), S(  0), S(   0), S( 0), S(0)}  // Rook pair
   };
 
-  constexpr int QuadraticTheirs[][PIECE_TYPE_NB] = {
+    constexpr int QuadraticTheirsBase[][PIECE_TYPE_NB] = {
     //           THEIR PIECES
-    // pair pawn knight bishop rook queen
-    {   0                               }, // Bishop pair
-    {  36,    0                         }, // Pawn
-    {   9,   63,   0                    }, // Knight      OUR PIECES
-    {  59,   65,  42,     0             }, // Bishop
-    {  46,   39,  24,   -24,    0       }, // Rook
-    {  97,  100, -42,   137,  268,    0 }  // Queen
+    // pair pawn knight bishop rook queen rookPair
+    { S( 0)                                       }, // Bishop pair
+    { S(36), S(  0)                               }, // Pawn
+    { S( 9), S( 63), S(  0)                       }, // Knight      OUR PIECES
+    { S(59), S( 65), S( 42), S(  0)               }, // Bishop
+    { S(46), S( 39), S( 24), S(-24), S(  0)       }, // Rook
+    { S(97), S(100), S(-42), S(137), S(268), S(0) }, // Queen
+    { S( 0), S(  0), S(  0), S(  0), S(  0), S(0), S(0) }  // Rook pair
   };
+
+  int QuadraticOurs[][PIECE_TYPE_NB] = {
+    //            OUR PIECES
+    // pair pawn knight bishop rook queen rookPair
+    { S(1438)                                        }, // Bishop pair
+    { S(  40), S( 38)                                }, // Pawn
+    { S(  32), S(255), S(-62)                        }, // Knight      OUR PIECES
+    { S(   0), S(104), S(  4), S(  0)                }, // Bishop
+    { S( -26), S( -2), S( 47), S(105), S(-208)       }, // Rook
+    { S(-189), S( 24), S(117), S(133), S(-134), S(-6)}, // Queen
+    { S(   0), S(  0), S(  0), S(  0), S(   0), S( 0), S(0)}  // Rook pair
+  };
+
+  int QuadraticTheirs[][PIECE_TYPE_NB] = {
+      //           THEIR PIECES
+      // pair pawn knight bishop rook queen
+      { S(0)                                         }, // Bishop pair
+      { S(36), S(0)                                  }, // Pawn
+      { S(9),  S(63), S(0)                           }, // Knight      OUR PIECES
+      { S(59), S(65), S(42),  S(0)                   }, // Bishop
+      { S(46), S(39), S(24),  S(-24), S(0)           }, // Rook
+      { S(97), S(100),S(-42), S(137), S(268), S(0)   }, // Queen
+      { S( 0), S(  0),S(  0), S(  0), S(  0), S(0), S(0) }  // Rook pair
+  };
+
+#undef S
 
   // Endgame evaluation and scaling functions are accessed directly and not through
   // the function maps because they correspond to more than one material hash key.
@@ -89,7 +121,7 @@ namespace {
     int bonus = 0;
 
     // Second-degree polynomial material imbalance, by Tord Romstad
-    for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
+    for (int pt1 = NO_PIECE_TYPE; pt1 <= KING; ++pt1)
     {
         if (!pieceCount[Us][pt1])
             continue;
@@ -109,6 +141,34 @@ namespace {
 } // namespace
 
 namespace Material {
+
+    void init()
+    {
+        int idxO = 0, idxT = 0;
+        for (int pt1 = NO_PIECE_TYPE; pt1 <= KING; ++pt1)
+            for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
+            {
+                if(pt1 == ROOK || pt2 == ROOK || pt1 == KING || pt2 == KING)
+                {
+                    QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2] + O[idxO];
+                    ++idxO;
+                }
+                else
+                    QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2];
+
+
+                if(pt1 != pt2)
+                {
+                    if (pt1 == ROOK || pt2 == ROOK || pt1 == KING || pt2 == KING)
+                    {
+                        QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2] + T[idxT];
+                        ++idxT;
+                    }
+                    else
+                        QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2];
+                }
+            }
+    }
 
 /// Material::probe() looks up the current position's material configuration in
 /// the material hash table. It returns a pointer to the Entry if the position
@@ -205,15 +265,22 @@ Entry* probe(const Position& pos) {
 
   // Evaluate the material imbalance. We use PIECE_TYPE_NONE as a place holder
   // for the bishop pair "extended piece", which allows us to be more flexible
-  // in defining bishop pair bonuses.
+  // in defining bishop pair bonuses.  Use KING as place holder for rook pair.
   const int pieceCount[COLOR_NB][PIECE_TYPE_NB] = {
   { pos.count<BISHOP>(WHITE) > 1, pos.count<PAWN>(WHITE), pos.count<KNIGHT>(WHITE),
-    pos.count<BISHOP>(WHITE)    , pos.count<ROOK>(WHITE), pos.count<QUEEN >(WHITE) },
+    pos.count<BISHOP>(WHITE)    , pos.count<ROOK>(WHITE), pos.count<QUEEN >(WHITE),
+    pos.count<ROOK>(WHITE) > 1 },
   { pos.count<BISHOP>(BLACK) > 1, pos.count<PAWN>(BLACK), pos.count<KNIGHT>(BLACK),
-    pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK) } };
+    pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK),
+    pos.count<ROOK>(BLACK) > 1 } };
 
-  e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
+  e->value = (imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16;
   return e;
 }
 
 } // namespace Material
+
+
+TUNE(SetRange(-80, 80), O, Material::init);
+TUNE(SetRange(-80, 80), T, Material::init);
+UPDATE_ON_LAST();
