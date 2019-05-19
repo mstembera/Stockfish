@@ -24,7 +24,7 @@
 #include "material.h"
 #include "thread.h"
 
-int Omg[21] = { 0 }, Oeg[21] = { 0 }, Tmg[21] = { 0 }, Teg[21] = { 0 };
+int Omg[21] = { 0 }, Oeg[21] = { 0 }, Tmg[15] = { 0 }, Teg[15] = { 0 };
 
 using namespace std;
 
@@ -140,16 +140,21 @@ namespace Material {
 
     void init()
     {
-        int idx = 0;
+        int idxO = 0, idxT = 0;
         for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
             for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
             {
                 QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2]
-                                         + make_score(Omg[idx], Oeg[idx]);
+                                         + make_score(Omg[idxO], Oeg[idxO]);
 
-                QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2]
-                                           + make_score(Tmg[idx], Teg[idx]);
-                ++idx;
+                ++idxO;
+
+                if(pt1 != pt2)
+                {
+                    QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2]
+                                               + make_score(Tmg[idxT], Teg[idxT]);
+                    ++idxT;
+                }
             }
     }
 
