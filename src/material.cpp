@@ -35,23 +35,23 @@ namespace {
     constexpr Score QuadraticOurs[][PIECE_TYPE_NB] = {
     //            OUR PIECES
     // pair pawn knight bishop rook queen
-    { S(1437, 1433)                                                                 }, // Bishop pair
-    { S(  38,   38), S( 40,  38)                                                    }, // Pawn
-    { S(  40,   34), S(253, 253), S(-63, -65)                                       }, // Knight      OUR PIECES
-    { S(  -4,    5), S( 99, 100), S( -6,   1), S( -6,   1)                          }, // Bishop
-    { S( -33,  -21), S( -9,  -4), S( 47,  36), S(105, 108), S(-204, -208)           }, // Rook
-    { S(-186, -189), S( 19,  24), S(127, 113), S(129, 131), S(-131, -130), S(-1, -6)}  // Queen
+    { S(1436, 1440)                                                                  }, // Bishop pair
+    { S(  37,   43), S( 37,  39)                                                     }, // Pawn
+    { S(  33,   31), S(256, 254), S(-62, -62)                                        }, // Knight      OUR PIECES
+    { S(   2,   -2), S(107, 101), S(  5,   3), S(  0,    0)                          }, // Bishop
+    { S( -26,  -26), S( -2,  -2), S( 40,  54), S(107,  103), S(-212, -204)           }, // Rook
+    { S(-185, -193), S( 26,  22), S(116, 118), S(132,  134), S(-138, -130), S(-7, -5)}  // Queen
   };
 
     constexpr Score QuadraticTheirs[][PIECE_TYPE_NB] = {
     //           THEIR PIECES
     // pair pawn knight bishop rook queen
-    { S( 0,  0)                                                           }, // Bishop pair
-    { S(37, 31), S(0,   0)                                                }, // Pawn
-    { S( 8, 17), S(55, 63), S(  0,  0)                                    }, // Knight      OUR PIECES
-    { S(56, 55), S(62, 59), S( 44, 42), S(  0,   0)                       }, // Bishop
-    { S(48, 51), S(40, 35), S( 29, 22), S(-26, -23), S(  0,   0)          }, // Rook
-    { S(95, 95), S(99, 98), S(-31,-47), S(134, 132), S(275, 260), S(0, 0) }  // Queen
+    { S( 0,  0)                                                             }, // Bishop pair
+    { S(37, 35), S(  0,  0)                                                 }, // Pawn
+    { S( 9,  9), S( 60, 66), S(  0,  0)                                     }, // Knight      OUR PIECES
+    { S(59, 59), S( 71, 59), S( 43,  41), S(  0,   0)                       }, // Bishop
+    { S(46, 46), S( 37, 41), S( 24,  24), S(-24, -24), S(  0,   0)          }, // Rook
+    { S(99, 95), S(103, 97), S(-47, -37), S(135, 139), S(265, 271), S(0, 0) }  // Queen
   };
 
 #undef S
