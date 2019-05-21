@@ -652,10 +652,10 @@ namespace {
                 bb = forward_file_bb(Them, s) & pos.pieces(ROOK, QUEEN);
 
                 if (!(pos.pieces(Us) & bb))
-                    defendedSquares &= attackedBy[Us][ALL_PIECES] & ~(attackedBy[Them][PAWN] & attackedBy2[Them]);
+                    defendedSquares &= attackedBy[Us][ALL_PIECES] & ~(attackedBy[Them][PAWN] | attackedBy2[Them]);
 
                 if (!(pos.pieces(Them) & bb))
-                    unsafeSquares &= (attackedBy[Them][ALL_PIECES] | pos.pieces(Them)) & ~(attackedBy[Us][PAWN] & attackedBy2[Us]);
+                    unsafeSquares &= (attackedBy[Them][ALL_PIECES] | pos.pieces(Them)) & ~(attackedBy[Us][PAWN] | attackedBy2[Us]);
 
                 // If there aren't any enemy attacks, assign a big bonus. Otherwise
                 // assign a smaller bonus if the block square isn't attacked.
