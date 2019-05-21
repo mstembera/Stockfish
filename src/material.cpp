@@ -32,24 +32,26 @@ namespace {
 
   constexpr int QuadraticOurs[][PIECE_TYPE_NB] = {
     //            OUR PIECES
-    // pair pawn knight bishop rook queen
-    {1438                               }, // Bishop pair
-    {  40,   38                         }, // Pawn
-    {  32,  255, -62                    }, // Knight      OUR PIECES
-    {   0,  104,   4,    0              }, // Bishop
-    { -26,   -2,  47,   105,  -208      }, // Rook
-    {-189,   24, 117,   133,  -134, -6  }  // Queen
+    // pair pawn knight bishop rook queen rookMinor
+    {1438                                    }, // Bishop pair
+    {  40,   38                              }, // Pawn
+    {  32,  255, -62                         }, // Knight      OUR PIECES
+    {   0,  104,   4,    0                   }, // Bishop
+    { -26,   -2,  47,   105,  -208           }, // Rook
+    {-189,   24, 117,   133,  -134,  -6      }, // Queen
+    {  29,  -23,   6,   -17,    14, -52, -22 } // Rook for Minor
   };
 
   constexpr int QuadraticTheirs[][PIECE_TYPE_NB] = {
     //           THEIR PIECES
-    // pair pawn knight bishop rook queen
-    {   0                               }, // Bishop pair
-    {  36,    0                         }, // Pawn
-    {   9,   63,   0                    }, // Knight      OUR PIECES
-    {  59,   65,  42,     0             }, // Bishop
-    {  46,   39,  24,   -24,    0       }, // Rook
-    {  97,  100, -42,   137,  268,    0 }  // Queen
+    // pair pawn knight bishop rook queen rookMinor
+    {   0                                    }, // Bishop pair
+    {  36,    0                              }, // Pawn
+    {   9,   63,   0                         }, // Knight      OUR PIECES
+    {  59,   65,  42,     0                  }, // Bishop
+    {  46,   39,  24,   -24,    0            }, // Rook
+    {  97,  100, -42,   137,  268,    0      }, // Queen
+    {  42,   48, -23,   -44,  -11,   17,   0 }  // Rook for Minor
   };
 
   // Endgame evaluation and scaling functions are accessed directly and not through
@@ -89,7 +91,7 @@ namespace {
     int bonus = 0;
 
     // Second-degree polynomial material imbalance, by Tord Romstad
-    for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
+    for (int pt1 = NO_PIECE_TYPE; pt1 <= KING; ++pt1)
     {
         if (!pieceCount[Us][pt1])
             continue;
@@ -205,12 +207,19 @@ Entry* probe(const Position& pos) {
 
   // Evaluate the material imbalance. We use PIECE_TYPE_NONE as a place holder
   // for the bishop pair "extended piece", which allows us to be more flexible
-  // in defining bishop pair bonuses.
+  // in defining bishop pair bonuses.  Use KING as a place holder for rook for
+  // minor exchange.
   const int pieceCount[COLOR_NB][PIECE_TYPE_NB] = {
   { pos.count<BISHOP>(WHITE) > 1, pos.count<PAWN>(WHITE), pos.count<KNIGHT>(WHITE),
-    pos.count<BISHOP>(WHITE)    , pos.count<ROOK>(WHITE), pos.count<QUEEN >(WHITE) },
+    pos.count<BISHOP>(WHITE)    , pos.count<ROOK>(WHITE), pos.count<QUEEN >(WHITE),
+       pos.count<ROOK>(WHITE) == pos.count<ROOK>(BLACK) + 1
+    &&    pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) + 1
+       == pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) },
   { pos.count<BISHOP>(BLACK) > 1, pos.count<PAWN>(BLACK), pos.count<KNIGHT>(BLACK),
-    pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK) } };
+    pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK),
+       pos.count<ROOK>(BLACK) == pos.count<ROOK>(WHITE) + 1
+    &&    pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) + 1
+       == pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) } };
 
   e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
   return e;
