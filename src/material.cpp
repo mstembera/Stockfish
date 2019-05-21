@@ -281,6 +281,6 @@ Entry* probe(const Position& pos) {
 } // namespace Material
 
 
-TUNE(SetRange(-80, 80), O, Material::init);
-TUNE(SetRange(-80, 80), T, Material::init);
+TUNE(SetRange(-1200, 1200), O, Material::init);
+TUNE(SetRange(-1200, 1200), T, Material::init);
 UPDATE_ON_LAST();
