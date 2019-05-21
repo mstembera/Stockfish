@@ -277,13 +277,13 @@ Entry* probe(const Position& pos) {
     &&    pos.count<KNIGHT>(BLACK) + pos.count<BISHOP>(BLACK) + 1
        == pos.count<KNIGHT>(WHITE) + pos.count<BISHOP>(WHITE) } };
 
-  e->value = (imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16;
+  e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
   return e;
 }
 
 } // namespace Material
 
 
-TUNE(SetRange(-150, 150), O, Material::init);
-TUNE(SetRange(-150, 150), T, Material::init);
+TUNE(SetRange(-1000, 1000), O, Material::init);
+TUNE(SetRange(-1000, 1000), T, Material::init);
 UPDATE_ON_LAST();
