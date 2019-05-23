@@ -127,7 +127,7 @@ namespace {
         // Score this pawn
         if (support | phalanx)
         {
-            Bitboard blockedSupport = support & shift<Down>(theirPawns);
+            Bitboard blockedSupport = support & shift<Down>(theirPawns | ourPawns);
             int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
                    + 14 * popcount(blockedSupport)
                    + 20 * popcount(support ^ blockedSupport);
