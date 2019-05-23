@@ -24,13 +24,15 @@
 #include "material.h"
 #include "thread.h"
 
+int O[11] = { 0 }, T[9] = { 0 };
+
 using namespace std;
 
 namespace {
 
   // Polynomial material imbalance parameters
 
-  constexpr int QuadraticOurs[][PIECE_TYPE_NB] = {
+  constexpr int QuadraticOursBase[][PIECE_TYPE_NB] = {
     //            OUR PIECES
     // pair pawn knight bishop rook queen
     {1438                               }, // Bishop pair
@@ -41,7 +43,29 @@ namespace {
     {-189,   24, 117,   133,  -134, -6  }  // Queen
   };
 
-  constexpr int QuadraticTheirs[][PIECE_TYPE_NB] = {
+  constexpr int QuadraticTheirsBase[][PIECE_TYPE_NB] = {
+    //           THEIR PIECES
+    // pair pawn knight bishop rook queen
+    {   0                               }, // Bishop pair
+    {  36,    0                         }, // Pawn
+    {   9,   63,   0                    }, // Knight      OUR PIECES
+    {  59,   65,  42,     0             }, // Bishop
+    {  46,   39,  24,   -24,    0       }, // Rook
+    {  97,  100, -42,   137,  268,    0 }  // Queen
+  };
+
+  int QuadraticOurs[][PIECE_TYPE_NB] = {
+    //            OUR PIECES
+    // pair pawn knight bishop rook queen
+    {1438                               }, // Bishop pair
+    {  40,   38                         }, // Pawn
+    {  32,  255, -62                    }, // Knight      OUR PIECES
+    {   0,  104,   4,    0              }, // Bishop
+    { -26,   -2,  47,   105,  -208      }, // Rook
+    {-189,   24, 117,   133,  -134, -6  }  // Queen
+  };
+
+  int QuadraticTheirs[][PIECE_TYPE_NB] = {
     //           THEIR PIECES
     // pair pawn knight bishop rook queen
     {   0                               }, // Bishop pair
@@ -89,7 +113,7 @@ namespace {
     int bonus = 0;
 
     // Second-degree polynomial material imbalance, by Tord Romstad
-    for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
+    for (int pt1 = NO_PIECE_TYPE; pt1 <= KING; ++pt1)
     {
         if (!pieceCount[Us][pt1])
             continue;
@@ -109,6 +133,34 @@ namespace {
 } // namespace
 
 namespace Material {
+
+    void init()
+    {
+        int idxO = 0, idxT = 0;
+        for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
+            for (int pt2 = NO_PIECE_TYPE; pt2 <= pt1; ++pt2)
+            {
+                if(pt1 == NO_PIECE_TYPE || pt2 == NO_PIECE_TYPE || pt1 == BISHOP || pt2 == BISHOP)
+                {
+                    QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2] + O[idxO];
+                    ++idxO;
+                }
+                else
+                    QuadraticOurs[pt1][pt2] = QuadraticOursBase[pt1][pt2];
+
+
+                if(pt1 != pt2)
+                {
+                    if (pt1 == NO_PIECE_TYPE || pt2 == NO_PIECE_TYPE || pt1 == BISHOP || pt2 == BISHOP)
+                    {
+                        QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2] + T[idxT];
+                        ++idxT;
+                    }
+                    else
+                        QuadraticTheirs[pt1][pt2] = QuadraticTheirsBase[pt1][pt2];
+                }
+            }
+    }
 
 /// Material::probe() looks up the current position's material configuration in
 /// the material hash table. It returns a pointer to the Entry if the position
@@ -217,3 +269,8 @@ Entry* probe(const Position& pos) {
 }
 
 } // namespace Material
+
+
+TUNE(SetRange(-350, 350), O, Material::init);
+TUNE(SetRange(-350, 350), T, Material::init);
+UPDATE_ON_LAST();
