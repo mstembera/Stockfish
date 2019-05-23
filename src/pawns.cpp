@@ -66,6 +66,7 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = (Us == WHITE ? NORTH : SOUTH);
+    constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
 
     Bitboard b, neighbours, stoppers, doubled, support, phalanx;
     Bitboard lever, leverPush;
@@ -126,8 +127,10 @@ namespace {
         // Score this pawn
         if (support | phalanx)
         {
+            Bitboard blockedSupport = support & shift<Down>(theirPawns);
             int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
-                   + 17 * popcount(support);
+                   + 14 * popcount(blockedSupport)
+                   + 20 * popcount(support ^ blockedSupport);
 
             score += make_score(v, v * (r - 2) / 4);
         }
