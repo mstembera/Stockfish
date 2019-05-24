@@ -113,7 +113,7 @@ namespace {
     int bonus = 0;
 
     // Second-degree polynomial material imbalance, by Tord Romstad
-    for (int pt1 = NO_PIECE_TYPE; pt1 <= KING; ++pt1)
+    for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
     {
         if (!pieceCount[Us][pt1])
             continue;
