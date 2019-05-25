@@ -44,8 +44,12 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
-        else if (p->value < (end-1)->value - 2000)
-            std::swap(*p--, *--end);
+        else
+        {
+            --end;
+            if (p->value < end->value)
+                std::swap(*p--, *end);
+        }
   }
 
 } // namespace
