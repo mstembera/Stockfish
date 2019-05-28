@@ -502,7 +502,7 @@ namespace {
     constexpr Bitboard  TRank3BB  = (Us == WHITE ? Rank3BB : Rank6BB);
     constexpr Bitboard  TheirCamp = (Us == WHITE
                                      ? Rank5BB | Rank6BB | Rank7BB | Rank8BB
-                                     : Rank1BB | Rank2BB | Rank3BB | Rank4BB;
+                                     : Rank1BB | Rank2BB | Rank3BB | Rank4BB);
 
     Bitboard b, weak, defended, nonPawnEnemies, stronglyProtected, safe;
     Score score = SCORE_ZERO;
@@ -748,17 +748,13 @@ namespace {
     bool pawnsOnBothFlanks =   (pos.pieces(PAWN) & QueenSide)
                             && (pos.pieces(PAWN) & KingSide);
 
-    int invaders = popcount(  (pos.pieces(WHITE) & (Rank5BB | Rank6BB | Rank7BB | Rank8BB))
-                            | (pos.pieces(BLACK) & (Rank4BB | Rank3BB | Rank2BB | Rank1BB)));
-
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
                     +  9 * outflanking
                     + 18 * pawnsOnBothFlanks
-                    +  4 * invaders
                     + 49 * !pos.non_pawn_material()
-                    -108 ;
+                    -103 ;
 
     // Now apply the bonus: note that we find the attacking side by extracting
     // the sign of the endgame value, and that we carefully cap the bonus so
