@@ -497,9 +497,12 @@ namespace {
   template<Tracing T> template<Color Us>
   Score Evaluation<T>::threats() const {
 
-    constexpr Color     Them     = (Us == WHITE ? BLACK   : WHITE);
-    constexpr Direction Up       = (Us == WHITE ? NORTH   : SOUTH);
-    constexpr Bitboard  TRank3BB = (Us == WHITE ? Rank3BB : Rank6BB);
+    constexpr Color     Them      = (Us == WHITE ? BLACK   : WHITE);
+    constexpr Direction Up        = (Us == WHITE ? NORTH   : SOUTH);
+    constexpr Bitboard  TRank3BB  = (Us == WHITE ? Rank3BB : Rank6BB);
+    constexpr Bitboard  TheirCamp = (Us == WHITE
+                                     ? Rank5BB | Rank6BB | Rank7BB | Rank8BB
+                                     : Rank1BB | Rank2BB | Rank3BB | Rank4BB;
 
     Bitboard b, weak, defended, nonPawnEnemies, stronglyProtected, safe;
     Score score = SCORE_ZERO;
@@ -593,6 +596,9 @@ namespace {
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
+
+    int invaders = popcount(pos.pieces(Us) & TheirCamp);
+    score += make_score(invaders, invaders);
 
     if (T)
         Trace::add(THREAT, Us, score);
