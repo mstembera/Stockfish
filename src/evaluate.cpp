@@ -322,21 +322,21 @@ namespace {
             score -= KingProtector * distance(s, pos.square<KING>(Us));
 
 
-            if (Pt == KNIGHT)
+            if (Pt == KNIGHT && me->game_phase() < PHASE_MIDGAME)
             {
                 // Endgame penalty if out knight is far from enemy pawns.
-                Bitboard themPawns = pos.pieces(Them, PAWN);
-                if (themPawns)
+                Bitboard theirPawns = pos.pieces(Them, PAWN);
+                if (theirPawns)
                 {
                     int minPawnDist = 8;
 
-                    if (themPawns & PseudoAttacks[KING][s])
+                    if (theirPawns & PseudoAttacks[KING][s])
                         minPawnDist = 1;
 
-                    else while (themPawns)
-                        minPawnDist = std::min(minPawnDist, distance(s, pop_lsb(&themPawns)));
+                    else while (theirPawns)
+                        minPawnDist = std::min(minPawnDist, distance(s, pop_lsb(&theirPawns)));
 
-                    score -= make_score(0, minPawnDist * 2);
+                    score -= make_score(0, minPawnDist);
                 }
             }
 
