@@ -321,6 +321,25 @@ namespace {
             // Penalty if the piece is far from the king
             score -= KingProtector * distance(s, pos.square<KING>(Us));
 
+
+            if (Pt == KNIGHT)
+            {
+                // Endgame penalty if out knight is far from enemy pawns.
+                Bitboard themPawns = pos.pieces(Them, PAWN);
+                if (themPawns)
+                {
+                    int minPawnDist = 8;
+
+                    if (themPawns & PseudoAttacks[KING][s])
+                        minPawnDist = 1;
+
+                    else while (themPawns)
+                        minPawnDist = std::min(minPawnDist, distance(s, pop_lsb(&themPawns)));
+
+                    score -= make_score(0, minPawnDist * 2);
+                }
+            }
+
             if (Pt == BISHOP)
             {
                 // Penalty according to number of pawns on the same color square as the
