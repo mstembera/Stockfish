@@ -737,8 +737,10 @@ namespace {
   Score Evaluation<T>::initiative(Value eg) const {
 
     int outflanking = rank_of(pos.square<KING>(WHITE)) - rank_of(pos.square<KING>(BLACK));
-    if (outflanking <= 0)
+    if (outflanking <= 1)
         outflanking += distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
+    else
+        outflanking = 8;
 
     bool pawnsOnBothFlanks =   (pos.pieces(PAWN) & QueenSide)
                             && (pos.pieces(PAWN) & KingSide);
