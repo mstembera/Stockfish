@@ -64,8 +64,6 @@ constexpr Bitboard QueenSide   = FileABB | FileBBB | FileCBB | FileDBB;
 constexpr Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
 constexpr Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
 constexpr Bitboard Center      = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
-constexpr Bitboard BigCenter   =  (FileCBB | FileDBB | FileEBB | FileFBB)
-                                & (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
 
 constexpr Bitboard KingFlank[FILE_NB] = {
   QueenSide ^ FileDBB, QueenSide, QueenSide,
@@ -123,10 +121,6 @@ inline Bitboard& operator^=(Bitboard& b, Square s) { return b ^= square_bb(s); }
 
 constexpr bool more_than_one(Bitboard b) {
   return b & (b - 1);
-}
-
-constexpr bool more_than_two(Bitboard b) {
-  return more_than_one(b & (b - 1));
 }
 
 inline bool opposite_colors(Square s1, Square s2) {
