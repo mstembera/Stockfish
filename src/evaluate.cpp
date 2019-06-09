@@ -139,7 +139,7 @@ namespace {
   constexpr Score Hanging            = S( 69, 36);
   constexpr Score KingProtector      = S(  7,  8);
   constexpr Score KnightOnQueen      = S( 16, 12);
-  constexpr Score LongDiagonalBishop = S( 11,  0);
+  constexpr Score LongDiagonalBishop = S( 15,  0);
   constexpr Score MinorBehindPawn    = S( 18,  3);
   constexpr Score Outpost            = S( 36, 12);
   constexpr Score PawnlessFlank      = S( 17, 95);
@@ -332,7 +332,7 @@ namespace {
                     score += LongDiagonalBishop;
 
                     if (more_than_one(bAttacks & Center))
-                        score += LongDiagonalBishop * 3;
+                        score += LongDiagonalBishop * 2;
                 }
             }
 
