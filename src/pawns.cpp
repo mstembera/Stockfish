@@ -158,9 +158,9 @@ Entry* probe(const Position& pos) {
   Cluster* cl = pos.this_thread()->pawnsTable[key];
 
   if (cl->entry[0].key == key)
-      return &cl->entry[0];
+      return cl->latestId = 0, &cl->entry[0];
   if (cl->entry[1].key == key)
-      return &cl->entry[1];
+      return cl->latestId = 1, &cl->entry[1];
 
   Entry* e;
   if (cl->latestId == 0)
