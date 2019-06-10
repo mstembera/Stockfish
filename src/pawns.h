@@ -59,9 +59,14 @@ struct Entry {
   Square kingSquares[COLOR_NB];
   Score kingSafety[COLOR_NB];
   int castlingRights[COLOR_NB];
+  int count;
 };
 
-typedef HashTable<Entry, 16384> Table;
+struct Cluster {
+    Entry entry[2];
+};
+
+typedef HashTable<Cluster, 16384> Table;
 
 Entry* probe(const Position& pos);
 
