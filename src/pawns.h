@@ -59,11 +59,11 @@ struct Entry {
   Square kingSquares[COLOR_NB];
   Score kingSafety[COLOR_NB];
   int castlingRights[COLOR_NB];
-  int count;
 };
 
 struct Cluster {
     Entry entry[2];
+	int latestId;
 };
 
 typedef HashTable<Cluster, 16384> Table;

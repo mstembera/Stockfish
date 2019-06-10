@@ -162,17 +162,15 @@ Entry* probe(const Position& pos) {
   if (cl->entry[1].key == key)
       return &cl->entry[1];
 
-  int maxPawns = pos.this_thread()->rootPos.count<PAWN>();
-
-  Entry* e =    cl->entry[0].count > maxPawns
-             || (   cl->entry[1].count <= maxPawns
-                 && cl->entry[0].count <= cl->entry[1].count)
-      ? &cl->entry[0] : &cl->entry[1];
+  Entry* e;
+  if (cl->latestId == 0)
+      e = &cl->entry[1], cl->latestId = 1;
+  else
+      e = &cl->entry[0], cl->latestId = 0;
 
   e->key = key;
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
-  e->count = pos.count<PAWN>();
 
   return e;
 }
