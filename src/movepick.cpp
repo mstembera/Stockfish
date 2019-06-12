@@ -101,22 +101,25 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the histories.
 template<GenType Type>
-void MovePicker::score() {
+bool MovePicker::score(int sortLimit) {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
+  bool needSort = false;
   for (auto& m : *this)
       if (Type == CAPTURES)
           m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))] / 8;
 
       else if (Type == QUIETS)
+      {
           m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                    + (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    + (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    + (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)] / 2;
-
+          needSort = needSort || m.value >= sortLimit;
+      }
       else // Type == EVASIONS
       {
           if (pos.capture(m))
@@ -127,6 +130,7 @@ void MovePicker::score() {
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                        - (1 << 28);
       }
+  return needSort;
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -200,11 +204,15 @@ top:
       /* fallthrough */
 
   case QUIET_INIT:
-      cur = endBadCaptures;
-      endMoves = generate<QUIETS>(pos, cur);
+      if (!skipQuiets)
+      {
+          cur = endBadCaptures;
+          endMoves = generate<QUIETS>(pos, cur);
 
-      score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+          int sortLimit = -4000 * depth / ONE_PLY;
+          if (score<QUIETS>(sortLimit))
+              partial_insertion_sort(cur, endMoves, sortLimit);
+      }
       ++stage;
       /* fallthrough */
 

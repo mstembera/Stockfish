@@ -131,7 +131,7 @@ public:
 
 private:
   template<PickType T, typename Pred> Move select(Pred);
-  template<GenType> void score();
+  template<GenType> bool score(int sortLimit = INT_MIN);
   ExtMove* begin() { return cur; }
   ExtMove* end() { return endMoves; }
 
