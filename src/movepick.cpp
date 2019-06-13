@@ -25,7 +25,7 @@
 namespace {
 
   enum Stages {
-    MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
+    MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, GOOD_QUIET, BAD_CAPTURE, BAD_QUIET,
     EVASION_TT, EVASION_INIT, EVASION,
     PROBCUT_TT, PROBCUT_INIT, PROBCUT,
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
@@ -33,7 +33,7 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  ExtMove* partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
@@ -44,6 +44,13 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
+        else if (p->value < -30000)
+            std::swap(*p--, *--end);
+
+    //if (sortedEnd->value >= limit)
+      //  ++sortedEnd;
+
+    return end;
   }
 
 } // namespace
@@ -201,14 +208,14 @@ top:
 
   case QUIET_INIT:
       cur = endBadCaptures;
-      endMoves = generate<QUIETS>(pos, cur);
+      endMoves = endBadQuiets = generate<QUIETS>(pos, cur);
 
       score<QUIETS>();
-      partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
+      endMoves = endGoodQuiets = partial_insertion_sort(cur, endMoves, -4000 * depth / ONE_PLY);
       ++stage;
       /* fallthrough */
 
-  case QUIET:
+  case GOOD_QUIET:
       if (   !skipQuiets
           && select<Next>([&](){return   *cur != refutations[0].move
                                       && *cur != refutations[1].move
@@ -223,7 +230,23 @@ top:
       /* fallthrough */
 
   case BAD_CAPTURE:
-      return select<Next>([](){ return true; });
+      if (select<Next>([](){ return true; }))
+          return *(cur - 1);
+
+	  // Prepare the pointers to loop over the bad quiets
+      cur = endGoodQuiets;
+      endMoves = endBadQuiets;
+      ++stage;
+      /* fallthrough */
+
+  case BAD_QUIET:
+      if (   !skipQuiets
+          && select<Next>([&](){return   *cur != refutations[0].move
+                                      && *cur != refutations[1].move
+                                      && *cur != refutations[2].move;}))
+          return *(cur - 1);
+
+  return MOVE_NONE;
 
   case EVASION_INIT:
       cur = moves;
