@@ -223,7 +223,9 @@ top:
       /* fallthrough */
 
   case BAD_CAPTURE:
-      return select<Next>([](){ return true; });
+      if (!skipQuiets)
+          return select<Next>([](){ return true; });
+      return MOVE_NONE;
 
   case EVASION_INIT:
       cur = moves;
