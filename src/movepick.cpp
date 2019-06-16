@@ -165,10 +165,12 @@ top:
   case CAPTURE_INIT:
   case PROBCUT_INIT:
   case QCAPTURE_INIT:
-      cur = endBadCaptures = moves;
+      cur = moves;
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
+      cur = endBadCaptures = std::partition(cur, endMoves, [](const ExtMove& m)
+                                           { return m.value < -PawnValueMg; });
       ++stage;
       goto top;
 
@@ -223,9 +225,7 @@ top:
       /* fallthrough */
 
   case BAD_CAPTURE:
-      if (!skipQuiets)
-          return select<Next>([](){ return true; });
-      return MOVE_NONE;
+      return select<Next>([](){ return true; });
 
   case EVASION_INIT:
       cur = moves;
