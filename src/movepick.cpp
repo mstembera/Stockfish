@@ -237,7 +237,9 @@ top:
       return select<Best>([](){ return true; });
 
   case PROBCUT:
-      return select<Best>([&](){ return pos.see_ge(*cur, threshold); });
+      if (threshold > -1000)
+          return select<Best>([&](){ return pos.see_ge(*cur, threshold); });
+      return MOVE_NONE;
 
   case QCAPTURE:
       if (select<Best>([&](){ return   depth > DEPTH_QS_RECAPTURES
