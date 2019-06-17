@@ -165,18 +165,16 @@ top:
   case CAPTURE_INIT:
   case PROBCUT_INIT:
   case QCAPTURE_INIT:
-      cur = moves;
+      cur = endBadCaptures = moves;
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      cur = endBadCaptures = std::partition(cur, endMoves, [](const ExtMove& m)
-                                           { return m.value < -PawnValueMg; });
       ++stage;
       goto top;
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
+                       return cur->value > -700 && pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
                               // Move losing capture to endBadCaptures to be tried later
                               true : (*endBadCaptures++ = *cur, false); }))
           return *(cur - 1);
