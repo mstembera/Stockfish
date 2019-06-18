@@ -149,7 +149,7 @@ Move MovePicker::select(Pred filter) {
 
 void MovePicker::update_capture(Move move, Depth d)
 {
-    int bonus = 8 * d / ONE_PLY;
+    int bonus = 16 * d / ONE_PLY;
     (*captureHistory)[pos.moved_piece(move)][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << bonus;
 }
 
