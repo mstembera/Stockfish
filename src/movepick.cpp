@@ -57,7 +57,7 @@ namespace {
 
 /// MovePicker constructor for the main search
 MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHistory* mh,
-                       const CapturePieceToHistory* cph, const PieceToHistory** ch, Move cm, Move* killers)
+                       CapturePieceToHistory* cph, const PieceToHistory** ch, Move cm, Move* killers)
            : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch),
              refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}}, depth(d) {
 
@@ -70,7 +70,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 
 /// MovePicker constructor for quiescence search
 MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHistory* mh,
-                       const CapturePieceToHistory* cph, const PieceToHistory** ch, Square rs)
+                       CapturePieceToHistory* cph, const PieceToHistory** ch, Square rs)
            : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch), recaptureSquare(rs), depth(d) {
 
   assert(d <= DEPTH_ZERO);
@@ -84,7 +84,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
 
 /// MovePicker constructor for ProbCut: we generate captures with SEE greater
 /// than or equal to the given threshold.
-MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePieceToHistory* cph)
+MovePicker::MovePicker(const Position& p, Move ttm, Value th, CapturePieceToHistory* cph)
            : pos(p), captureHistory(cph), threshold(th) {
 
   assert(!pos.checkers());
@@ -147,6 +147,12 @@ Move MovePicker::select(Pred filter) {
   return MOVE_NONE;
 }
 
+void MovePicker::update_capture(Move move, Depth d)
+{
+    int bonus = 8 * d / ONE_PLY;
+    (*captureHistory)[pos.moved_piece(move)][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << bonus;
+}
+
 /// MovePicker::next_move() is the most important method of the MovePicker class. It
 /// returns a new pseudo legal move every time it is called until there are no more
 /// moves left, picking the move with the highest score from a list of generated moves.
@@ -174,9 +180,10 @@ top:
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
-                              // Move losing capture to endBadCaptures to be tried later
-                              true : (*endBadCaptures++ = *cur, false); }))
+                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024))
+                           ? (update_capture(*cur,  depth), true)
+                           // Move losing capture to endBadCaptures to be tried later
+                           : (update_capture(*cur, -depth), *endBadCaptures++ = *cur, false); }))
           return *(cur - 1);
 
       // Prepare the pointers to loop over the refutations array
