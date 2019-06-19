@@ -57,13 +57,14 @@ constexpr Piece Pieces[] = { W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING
 
 template<int Pt>
 PieceType min_attacker(const Bitboard* byTypeBB, Square to, Bitboard stmAttackers,
-                       Bitboard& occupied, Bitboard& attackers) {
+                       Bitboard& occupied, Bitboard& attackers, Square& from) {
 
   Bitboard b = stmAttackers & byTypeBB[Pt];
   if (!b)
-      return min_attacker<Pt + 1>(byTypeBB, to, stmAttackers, occupied, attackers);
+      return min_attacker<Pt + 1>(byTypeBB, to, stmAttackers, occupied, attackers, from);
 
-  occupied ^= lsb(b); // Remove the attacker from occupied
+  from = lsb(b);
+  occupied ^= from; // Remove the attacker from occupied
 
   // Add any X-ray attack behind the just removed piece. For instance with
   // rooks in a8 and a7 attacking a1, after removing a7 we add rook in a8.
@@ -81,7 +82,7 @@ PieceType min_attacker(const Bitboard* byTypeBB, Square to, Bitboard stmAttacker
 }
 
 template<>
-PieceType min_attacker<KING>(const Bitboard*, Square, Bitboard, Bitboard&, Bitboard&) {
+PieceType min_attacker<KING>(const Bitboard*, Square, Bitboard, Bitboard&, Bitboard&, Square&) {
   return KING; // No need to update bitboards: it is the last cycle
 }
 
@@ -1049,27 +1050,29 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
+  auto pt_value = [](Piece pc, Square s) {
+      return type_of(pc) != KING ? (Value)abs(mg_value(PSQT::psq[pc][s])) : VALUE_ZERO;
+  };
+
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
       return VALUE_ZERO >= threshold;
 
-  Bitboard stmAttackers;
   Square from = from_sq(m), to = to_sq(m);
-  PieceType nextVictim = type_of(piece_on(from));
   Color us = color_of(piece_on(from));
   Color stm = ~us; // First consider opponent's move
   Value balance;   // Values of the pieces taken by us minus opponent's ones
 
   // The opponent may be able to recapture so this is the best result
   // we can hope for.
-  balance = PieceValue[MG][piece_on(to)] - threshold;
+  balance = pt_value(piece_on(to), to) - threshold;
 
   if (balance < VALUE_ZERO)
       return false;
 
   // Now assume the worst possible result: that the opponent can
   // capture our piece for free.
-  balance -= PieceValue[MG][nextVictim];
+  balance -= pt_value(piece_on(from), from);
 
   // If it is enough (like in PxQ) then return immediately. Note that
   // in case nextVictim == KING we always return here, this is ok
@@ -1084,7 +1087,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   while (true)
   {
-      stmAttackers = attackers & pieces(stm);
+      Bitboard stmAttackers = attackers & pieces(stm);
 
       // Don't allow pinned pieces to attack (except the king) as long as
       // any pinners are on their original square.
@@ -1097,9 +1100,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       // Locate and remove the next least valuable attacker, and add to
       // the bitboard 'attackers' the possibly X-ray attackers behind it.
-      nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers);
-
-      stm = ~stm; // Switch side to move
+      PieceType nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers, from);
 
       // Negamax the balance with alpha = balance, beta = balance+1 and
       // add nextVictim's value.
@@ -1108,7 +1109,9 @@ bool Position::see_ge(Move m, Value threshold) const {
       //
       assert(balance < VALUE_ZERO);
 
-      balance = -balance - 1 - PieceValue[MG][nextVictim];
+      balance = -balance - 1 - pt_value(make_piece(stm, nextVictim), from);
+
+      stm = ~stm; // Switch side to move
 
       // If balance is still non-negative after giving away nextVictim then we
       // win. The only thing to be careful about it is that we should revert
