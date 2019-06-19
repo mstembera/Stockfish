@@ -1045,9 +1045,15 @@ Key Position::key_after(Move m) const {
 /// SEE value of move is greater or equal to the given threshold. We'll use an
 /// algorithm similar to alpha-beta pruning with a null window.
 
+int dxPt[5] = { 0 };
+
 bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
+
+  auto pt_value = [](PieceType pt) {
+      return pt != KING ? PieceValue[MG][pt] + dxPt[pt - 1] : VALUE_ZERO;
+  };
 
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
@@ -1062,14 +1068,14 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   // The opponent may be able to recapture so this is the best result
   // we can hope for.
-  balance = PieceValue[MG][piece_on(to)] - threshold;
+  balance = pt_value(type_of(piece_on(to))) - threshold;
 
   if (balance < VALUE_ZERO)
       return false;
 
   // Now assume the worst possible result: that the opponent can
   // capture our piece for free.
-  balance -= PieceValue[MG][nextVictim];
+  balance -= pt_value(nextVictim);
 
   // If it is enough (like in PxQ) then return immediately. Note that
   // in case nextVictim == KING we always return here, this is ok
@@ -1108,7 +1114,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       //
       assert(balance < VALUE_ZERO);
 
-      balance = -balance - 1 - PieceValue[MG][nextVictim];
+      balance = -balance - 1 - pt_value(nextVictim);
 
       // If balance is still non-negative after giving away nextVictim then we
       // win. The only thing to be careful about it is that we should revert
@@ -1313,3 +1319,5 @@ bool Position::pos_is_ok() const {
 
   return true;
 }
+
+TUNE(SetRange(-100, 100), dxPt);
