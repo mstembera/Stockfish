@@ -1320,4 +1320,4 @@ bool Position::pos_is_ok() const {
   return true;
 }
 
-TUNE(SetRange(-100, 100), dxPt);
+TUNE(SetRange(-250, 250), dxPt);
