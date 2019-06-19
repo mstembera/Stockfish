@@ -1049,20 +1049,24 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
+  auto pt_to_pt = [](PieceType pt) {
+      return pt == KNIGHT ? BISHOP : pt;
+  };
+
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
       return VALUE_ZERO >= threshold;
 
   Bitboard stmAttackers;
   Square from = from_sq(m), to = to_sq(m);
-  PieceType nextVictim = type_of(piece_on(from));
+  PieceType nextVictim = pt_to_pt(type_of(piece_on(from)));
   Color us = color_of(piece_on(from));
   Color stm = ~us; // First consider opponent's move
   Value balance;   // Values of the pieces taken by us minus opponent's ones
 
   // The opponent may be able to recapture so this is the best result
   // we can hope for.
-  balance = PieceValue[MG][piece_on(to)] - threshold;
+  balance = PieceValue[MG][pt_to_pt(type_of(piece_on(to)))] - threshold;
 
   if (balance < VALUE_ZERO)
       return false;
@@ -1097,7 +1101,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       // Locate and remove the next least valuable attacker, and add to
       // the bitboard 'attackers' the possibly X-ray attackers behind it.
-      nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers);
+      nextVictim = pt_to_pt(min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers));
 
       stm = ~stm; // Switch side to move
 
