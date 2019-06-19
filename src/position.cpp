@@ -1050,7 +1050,7 @@ bool Position::see_ge(Move m, Value threshold) const {
   assert(is_ok(m));
 
   auto pt_to_pt = [](PieceType pt) {
-      return pt == KNIGHT ? BISHOP : pt;
+      return pt == BISHOP ? KNIGHT : pt;
   };
 
   // Only deal with normal moves, assume others pass a simple see
