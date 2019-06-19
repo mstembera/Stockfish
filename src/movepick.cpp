@@ -147,10 +147,9 @@ Move MovePicker::select(Pred filter) {
   return MOVE_NONE;
 }
 
-void MovePicker::update_capture(Move move, Depth d)
+void MovePicker::update_capture(Move move, int bonus)
 {
-    int bonus = 16 * d / ONE_PLY;
-    (*captureHistory)[pos.moved_piece(move)][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << bonus;
+  (*captureHistory)[pos.moved_piece(move)][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] += bonus;
 }
 
 /// MovePicker::next_move() is the most important method of the MovePicker class. It
@@ -181,9 +180,9 @@ top:
   case GOOD_CAPTURE:
       if (select<Best>([&](){
                        return pos.see_ge(*cur, Value(-55 * cur->value / 1024))
-                           ? (update_capture(*cur,  depth), true)
+                           ? (update_capture(*cur,  30), true)
                            // Move losing capture to endBadCaptures to be tried later
-                           : (update_capture(*cur, -depth), *endBadCaptures++ = *cur, false); }))
+                           : (update_capture(*cur, -30), *endBadCaptures++ = *cur, false); }))
           return *(cur - 1);
 
       // Prepare the pointers to loop over the refutations array

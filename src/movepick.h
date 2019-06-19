@@ -52,6 +52,10 @@ public:
 
     assert(abs(entry) <= D);
   }
+
+  T& operator+=(int bonus) {
+    return entry = std::max(std::min(entry + bonus, D), -D);
+  }
 };
 
 /// Stats is a generic N-dimensional array used to store various statistics.
@@ -130,7 +134,7 @@ public:
   Move next_move(bool skipQuiets = false);
 
 private:
-  void update_capture(Move move, Depth d);
+  void update_capture(Move move, int bonus);
   template<PickType T, typename Pred> Move select(Pred);
   template<GenType> void score();
   ExtMove* begin() { return cur; }
