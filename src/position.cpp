@@ -68,10 +68,12 @@ PieceType min_attacker(const Bitboard* byTypeBB, Square to, Bitboard stmAttacker
   // Add any X-ray attack behind the just removed piece. For instance with
   // rooks in a8 and a7 attacking a1, after removing a7 we add rook in a8.
   // Note that new added attackers can be of any color.
-  if (Pt == PAWN || Pt == BISHOP || Pt == QUEEN)
+  if (   (Pt == PAWN || Pt == BISHOP || Pt == QUEEN)
+      && ((byTypeBB[BISHOP] | byTypeBB[QUEEN]) & occupied))
       attackers |= attacks_bb<BISHOP>(to, occupied) & (byTypeBB[BISHOP] | byTypeBB[QUEEN]);
 
-  if (Pt == ROOK || Pt == QUEEN)
+  if (   (Pt == ROOK || Pt == QUEEN)
+      && ((byTypeBB[ROOK] | byTypeBB[QUEEN]) & occupied))
       attackers |= attacks_bb<ROOK>(to, occupied) & (byTypeBB[ROOK] | byTypeBB[QUEEN]);
 
   // X-ray may add already processed pieces because byTypeBB[] is constant: in
