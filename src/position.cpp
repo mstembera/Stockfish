@@ -1049,6 +1049,13 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
+  auto pt_value = [](PieceType pt) {
+      constexpr Value Ptv[] =
+          { VALUE_ZERO, PawnValueMg - 12, KnightValueMg + 6, BishopValueMg + 5,
+            RookValueMg - 2, QueenValueMg - 4, VALUE_ZERO };
+      return Ptv[pt];
+  };
+
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
       return VALUE_ZERO >= threshold;
@@ -1062,14 +1069,14 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   // The opponent may be able to recapture so this is the best result
   // we can hope for.
-  balance = PieceValue[MG][piece_on(to)] - threshold;
+  balance = pt_value(type_of(piece_on(to))) - threshold;
 
   if (balance < VALUE_ZERO)
       return false;
 
   // Now assume the worst possible result: that the opponent can
   // capture our piece for free.
-  balance -= PieceValue[MG][nextVictim];
+  balance -= pt_value(nextVictim);
 
   // If it is enough (like in PxQ) then return immediately. Note that
   // in case nextVictim == KING we always return here, this is ok
@@ -1108,7 +1115,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       //
       assert(balance < VALUE_ZERO);
 
-      balance = -balance - 1 - PieceValue[MG][nextVictim];
+      balance = -balance - 1 - pt_value(nextVictim);
 
       // If balance is still non-negative after giving away nextVictim then we
       // win. The only thing to be careful about it is that we should revert
