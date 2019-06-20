@@ -1008,7 +1008,7 @@ moves_loop: // When in check, search starts from here
           &&  moveCount > 1 + 3 * rootNode
           && (  !captureOrPromotion
               || moveCountPruning
-              || ss->staticEval + PieceValue[EG][pos.captured_piece()] <= alpha))
+              || ss->staticEval + abs(eg_value(PSQT::psq[pos.captured_piece()][to_sq(move)])) <= alpha))
       {
           Depth r = reduction(improving, depth, moveCount);
 
@@ -1340,7 +1340,7 @@ moves_loop: // When in check, search starts from here
       {
           assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
 
-          futilityValue = futilityBase + PieceValue[EG][pos.piece_on(to_sq(move))];
+          futilityValue = futilityBase + abs(eg_value(PSQT::psq[pos.piece_on(to_sq(move))][to_sq(move)]));
 
           if (futilityValue <= alpha)
           {
