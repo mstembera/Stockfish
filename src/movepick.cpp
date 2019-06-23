@@ -174,7 +174,7 @@ top:
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
+                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024), &(cur->value)) ?
                               // Move losing capture to endBadCaptures to be tried later
                               true : (*endBadCaptures++ = *cur, false); }))
           return *(cur - 1);
@@ -222,6 +222,7 @@ top:
       // Prepare the pointers to loop over the bad captures
       cur = moves;
       endMoves = endBadCaptures;
+      partial_insertion_sort(cur, endMoves, INT_MIN);
 
       ++stage;
       /* fallthrough */

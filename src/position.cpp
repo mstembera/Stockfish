@@ -1045,13 +1045,17 @@ Key Position::key_after(Move m) const {
 /// SEE value of move is greater or equal to the given threshold. We'll use an
 /// algorithm similar to alpha-beta pruning with a null window.
 
-bool Position::see_ge(Move m, Value threshold) const {
+bool Position::see_ge(Move m, Value threshold, int* result) const {
 
   assert(is_ok(m));
 
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
+  {
+      if (result)
+          *result = -threshold;
       return VALUE_ZERO >= threshold;
+  }
 
   Bitboard stmAttackers;
   Square from = from_sq(m), to = to_sq(m);
@@ -1065,7 +1069,11 @@ bool Position::see_ge(Move m, Value threshold) const {
   balance = PieceValue[MG][piece_on(to)] - threshold;
 
   if (balance < VALUE_ZERO)
+  {
+      if (result)
+          *result = balance;
       return false;
+  }
 
   // Now assume the worst possible result: that the opponent can
   // capture our piece for free.
@@ -1075,7 +1083,11 @@ bool Position::see_ge(Move m, Value threshold) const {
   // in case nextVictim == KING we always return here, this is ok
   // if the given move is legal.
   if (balance >= VALUE_ZERO)
+  {
+      if (result)
+          *result = balance;
       return true;
+  }
 
   // Find all attackers to the destination square, with the moving piece
   // removed, but possibly an X-ray attacker added behind it.
@@ -1121,6 +1133,10 @@ bool Position::see_ge(Move m, Value threshold) const {
       }
       assert(nextVictim != KING);
   }
+
+  if (result)
+      *result = (us != stm ? std::abs(balance) : -std::abs(balance));
+
   return us != stm; // We break the above loop when stm loses
 }
 
