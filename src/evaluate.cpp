@@ -306,8 +306,9 @@ namespace {
             if (bb & s)
             {
                 score += Outpost * (Pt == KNIGHT ? 2 : 1);
-                if (!(pos.pieces(Them, BISHOP) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)))
-                    score += make_score(4, 4);
+                if (   !pos.pieces(Them, KNIGHT)
+					&& !(pos.pieces(Them, BISHOP) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)))
+                    score += make_score(5, 2);
             }
             else
             {
@@ -315,10 +316,13 @@ namespace {
                 if (possible)
                 {
                     score += Outpost / (Pt == KNIGHT ? 1 : 2);
-                    if ((possible &  DarkSquares) && !(pos.pieces(Them, BISHOP) &  DarkSquares))
-                        score += make_score(2, 2);
-                    if ((possible & ~DarkSquares) && !(pos.pieces(Them, BISHOP) & ~DarkSquares))
-                        score += make_score(2, 2);
+					if (!pos.pieces(Them, KNIGHT))
+					{
+						if ((possible &  DarkSquares) && !(pos.pieces(Them, BISHOP) &  DarkSquares))
+							score += make_score(3, 1);
+						if ((possible & ~DarkSquares) && !(pos.pieces(Them, BISHOP) & ~DarkSquares))
+							score += make_score(3, 1);
+					}
                 }
             }
 
