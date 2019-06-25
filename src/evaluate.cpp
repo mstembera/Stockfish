@@ -304,10 +304,23 @@ namespace {
             // Bonus if piece is on an outpost square or can reach one
             bb = OutpostRanks & attackedBy[Us][PAWN] & ~pe->pawn_attacks_span(Them);
             if (bb & s)
+            {
                 score += Outpost * (Pt == KNIGHT ? 2 : 1);
-
-            else if (bb & b & ~pos.pieces(Us))
-                score += Outpost / (Pt == KNIGHT ? 1 : 2);
+                if (!(pos.pieces(Them, BISHOP) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)))
+                    score += make_score(4, 4);
+            }
+            else
+            {
+                Bitboard possible = bb & b & ~pos.pieces(Us);
+                if (possible)
+                {
+                    score += Outpost / (Pt == KNIGHT ? 1 : 2);
+                    if ((possible &  DarkSquares) && !(pos.pieces(Them, BISHOP) &  DarkSquares))
+                        score += make_score(2, 2);
+                    if ((possible & ~DarkSquares) && !(pos.pieces(Them, BISHOP) & ~DarkSquares))
+                        score += make_score(2, 2);
+                }
+            }
 
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)
