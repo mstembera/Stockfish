@@ -1051,7 +1051,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   // Only deal with normal moves, assume others pass a simple see
   if (type_of(m) != NORMAL)
-      return VALUE_ZERO >= threshold || type_of(m) == PROMOTION;
+      return PawnValueMg >= threshold;
 
   Bitboard stmAttackers;
   Square from = from_sq(m), to = to_sq(m);
