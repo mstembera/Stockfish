@@ -107,7 +107,9 @@ void MovePicker::score() {
 
   for (auto& m : *this)
       if (Type == CAPTURES)
-          m.value =  abs(mg_value(PSQT::psq[pos.piece_on(to_sq(m))][to_sq(m)]))
+          m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
+                   + std::abs(mg_value(PSQT::psq[pos.moved_piece(m)][to_sq(m)]))
+                   - std::abs(mg_value(PSQT::psq[pos.moved_piece(m)][from_sq(m)]))
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))] / 8;
 
       else if (Type == QUIETS)
