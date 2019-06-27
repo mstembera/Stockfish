@@ -30,6 +30,10 @@
 #include "pawns.h"
 #include "thread.h"
 
+int kMG[14] = { 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32 };
+int kEG[14] = { 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32 };
+int CMG = 0, CEG = 0;
+
 namespace Trace {
 
   enum Tracing { NO_TRACE, TRACE };
@@ -389,7 +393,9 @@ namespace {
 
     Bitboard weak, b1, b2, safe, unsafeChecks = 0;
     Bitboard rookChecks, queenChecks, bishopChecks, knightChecks;
-    int kingDanger = 0;
+    int kingDangerMG = 0, kingDangerEG = 0;
+    int tId = 0;
+
     const Square ksq = pos.square<KING>(Us);
 
     // Init the score with king shelter and enemy pawns storm
@@ -411,7 +417,7 @@ namespace {
     rookChecks = b1 & safe & attackedBy[Them][ROOK];
 
     if (rookChecks)
-        kingDanger += RookSafeCheck;
+        kingDangerMG += RookSafeCheck * kMG[tId], kingDangerEG += RookSafeCheck * kEG[tId++];
     else
         unsafeChecks |= b1 & attackedBy[Them][ROOK];
 
@@ -424,7 +430,7 @@ namespace {
                  & ~rookChecks;
 
     if (queenChecks)
-        kingDanger += QueenSafeCheck;
+        kingDangerMG += QueenSafeCheck * kMG[tId], kingDangerEG += QueenSafeCheck * kEG[tId++];
 
     // Enemy bishops checks: we count them only if they are from squares from
     // which we can't give a queen check, because queen checks are more valuable.
@@ -434,7 +440,7 @@ namespace {
                   & ~queenChecks;
 
     if (bishopChecks)
-        kingDanger += BishopSafeCheck;
+        kingDangerMG += BishopSafeCheck * kMG[tId], kingDangerEG += BishopSafeCheck * kEG[tId++];
     else
         unsafeChecks |= b2 & attackedBy[Them][BISHOP];
 
@@ -442,7 +448,7 @@ namespace {
     knightChecks = pos.attacks_from<KNIGHT>(ksq) & attackedBy[Them][KNIGHT];
 
     if (knightChecks & safe)
-        kingDanger += KnightSafeCheck;
+        kingDangerMG += KnightSafeCheck * kMG[tId], kingDangerEG += KnightSafeCheck * kEG[tId++];
     else
         unsafeChecks |= knightChecks;
 
@@ -457,21 +463,36 @@ namespace {
 
     int kingFlankAttacks = popcount(b1) + popcount(b2);
 
-    kingDanger +=        kingAttackersCount[Them] * kingAttackersWeight[Them]
-                 +  69 * kingAttacksCount[Them]
-                 + 185 * popcount(kingRing[Us] & weak)
-                 - 100 * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
-                 -  35 * bool(attackedBy[Us][BISHOP] & attackedBy[Us][KING])
-                 + 150 * popcount(pos.blockers_for_king(Us) | unsafeChecks)
-                 - 873 * !pos.count<QUEEN>(Them)
-                 -   6 * mg_value(score) / 8
-                 +       mg_value(mobility[Them] - mobility[Us])
-                 +   5 * kingFlankAttacks * kingFlankAttacks / 16
-                 -   7;
+    kingDangerMG +=      kMG[tId + 0] * kingAttackersCount[Them] * kingAttackersWeight[Them]
+                 +  69 * kMG[tId + 1] * kingAttacksCount[Them]
+                 + 185 * kMG[tId + 2] * popcount(kingRing[Us] & weak)
+                 - 100 * kMG[tId + 3] * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
+                 -  35 * kMG[tId + 4] * bool(attackedBy[Us][BISHOP] & attackedBy[Us][KING])
+                 + 150 * kMG[tId + 5] * popcount(pos.blockers_for_king(Us) | unsafeChecks)
+                 - 873 * kMG[tId + 6] * !pos.count<QUEEN>(Them)
+                 -   6 * kMG[tId + 7] * mg_value(score) / 8
+                 +       kMG[tId + 8] * mg_value(mobility[Them] - mobility[Us])
+                 +   5 * kMG[tId + 9] * kingFlankAttacks * kingFlankAttacks / 16
+                 -   32 * (7 + CMG);
+
+    kingDangerEG +=      kEG[tId + 0] * kingAttackersCount[Them] * kingAttackersWeight[Them]
+                 +  69 * kEG[tId + 1] * kingAttacksCount[Them]
+                 + 185 * kEG[tId + 2] * popcount(kingRing[Us] & weak)
+                 - 100 * kEG[tId + 3] * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
+                 -  35 * kEG[tId + 4] * bool(attackedBy[Us][BISHOP] & attackedBy[Us][KING])
+                 + 150 * kEG[tId + 5] * popcount(pos.blockers_for_king(Us) | unsafeChecks)
+                 - 873 * kEG[tId + 6] * !pos.count<QUEEN>(Them)
+                 -   6 * kEG[tId + 7] * mg_value(score) / 8
+                 +       kEG[tId + 8] * mg_value(mobility[Them] - mobility[Us])
+                 +   5 * kEG[tId + 9] * kingFlankAttacks * kingFlankAttacks / 16
+                 -   32 * (7 + CEG);
+
+    kingDangerMG /= 32;
+    kingDangerEG /= 32;
 
     // Transform the kingDanger units into a Score, and subtract it from the evaluation
-    if (kingDanger > 100)
-        score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
+    if (kingDangerMG + kingDangerEG > 200)
+        score -= make_score(kingDangerMG * kingDangerMG / 4096, kingDangerEG / 16);
 
     // Penalty when our king is on a pawnless flank
     if (!(pos.pieces(PAWN) & KingFlank[file_of(ksq)]))
@@ -896,3 +917,8 @@ std::string Eval::trace(const Position& pos) {
 
   return ss.str();
 }
+
+TUNE(SetRange(0, 150), kMG);
+TUNE(SetRange(0, 150), kEG);
+TUNE(SetRange(-200, 200), CMG);
+TUNE(SetRange(-200, 200), CEG);
