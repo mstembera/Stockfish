@@ -466,16 +466,13 @@ namespace {
                  + 150 * popcount(pos.blockers_for_king(Us) | unsafeChecks)
                  - 873 * !pos.count<QUEEN>(Them)
                  -   6 * mg_value(score) / 8
-                 +       mg_value(mobility[Them] - mobility[Us])
+                 +   5 * mg_value(mobility[Them] - mobility[Us]) / 4
                  +   5 * kingFlankAttacks * kingFlankAttacks / 16
                  -   7;
 
     // Transform the kingDanger units into a Score, and subtract it from the evaluation
     if (kingDanger > 100)
-    {
-        int kdEg = kingDanger - mg_value(mobility[Them] - mobility[Us]) + eg_value(mobility[Them] - mobility[Us]);
-        score -= make_score(kingDanger * kingDanger / 4096, kdEg / 16);
-    }
+        score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
 
     // Penalty when our king is on a pawnless flank
     if (!(pos.pieces(PAWN) & KingFlank[file_of(ksq)]))
