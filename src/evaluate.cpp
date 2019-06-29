@@ -80,13 +80,13 @@ namespace {
   // KingAttackWeights[PieceType] contains king attack weights by piece type
   constexpr int KingAttackWeights[PIECE_TYPE_NB] = { 0, 0, 77, 55, 44, 10 };
 
-  // Penalties for enemy's safe checks
-  constexpr int QueenSafeCheck  = 780;
-  constexpr int RookSafeCheck   = 1080;
-  constexpr int BishopSafeCheck = 635;
-  constexpr int KnightSafeCheck = 790;
-
 #define S(mg, eg) make_score(mg, eg)
+
+  // Penalties for enemy's safe checks
+  constexpr Score QueenSafeCheck  = S( 791,  799);
+  constexpr Score RookSafeCheck   = S(1108, 1126);
+  constexpr Score BishopSafeCheck = S( 701,  615);
+  constexpr Score KnightSafeCheck = S( 912,  765);
 
   // MobilityBonus[PieceType-2][attacked] contains bonuses for middle and end game,
   // indexed by piece type and number of attacked squares in the mobility area.
@@ -390,7 +390,7 @@ namespace {
 
     Bitboard weak, b1, b2, safe, unsafeChecks = 0;
     Bitboard rookChecks, queenChecks, bishopChecks, knightChecks;
-    int kingDanger = 0;
+    Score kingDanger = SCORE_ZERO;
     const Square ksq = pos.square<KING>(Us);
 
     // Init the score with king shelter and enemy pawns storm
@@ -457,22 +457,30 @@ namespace {
     b2 = b1 & attackedBy2[Them];
 
     int kingFlankAttacks = popcount(b1) + popcount(b2);
-
-    kingDanger +=        kingAttackersCount[Them] * kingAttackersWeight[Them]
-                 +  69 * kingAttacksCount[Them]
-                 + 185 * popcount(kingRing[Us] & weak)
-                 - 100 * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
-                 -  35 * bool(attackedBy[Us][BISHOP] & attackedBy[Us][KING])
-                 + 150 * popcount(pos.blockers_for_king(Us) | unsafeChecks)
-                 - 873 * !pos.count<QUEEN>(Them)
-                 -   6 * mg_value(score) / 8
-                 +       mg_value(mobility[Them] - mobility[Us])
-                 +   5 * kingFlankAttacks * kingFlankAttacks / 16
-                 -   7;
+    
+#define S(mg, eg)  make_score(mg, eg)
+    kingDanger  += Score(
+                 + S(30 * kingAttackersCount[Them] * kingAttackersWeight[Them] / 32,
+                     35 * kingAttackersCount[Them] * kingAttackersWeight[Them] / 32)
+                 + S(61, 72)    * kingAttacksCount[Them]
+                 + S(174, 175)  * popcount(kingRing[Us] & weak)
+                 - S(122, 110)  * (int)bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
+                 - S(40, 30)    * (int)bool(attackedBy[Us][BISHOP] & attackedBy[Us][KING])
+                 + S(153, 161)  * popcount(pos.blockers_for_king(Us) | unsafeChecks)
+                 - S(956, 778)  * (int)!pos.count<QUEEN>(Them)
+                 - S(99 * mg_value(score) / 128,
+                     87 * mg_value(score) / 128)
+                 + S(40 * mg_value(mobility[Them] - mobility[Us]) / 32,
+                     27 * mg_value(mobility[Them] - mobility[Us]) / 32)
+                 + S(6 * kingFlankAttacks * kingFlankAttacks / 16,
+                     5 * kingFlankAttacks * kingFlankAttacks / 16)
+                 - S(2, 7));
+#undef S
 
     // Transform the kingDanger units into a Score, and subtract it from the evaluation
-    if (kingDanger > 100)
-        score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
+    int kdMg = mg_value(kingDanger), kdEg = eg_value(kingDanger);
+    if (kdMg + kdEg > 200)
+        score -= make_score(kdMg * kdMg / 4096, kdEg / 16);
 
     // Penalty when our king is on a pawnless flank
     if (!(pos.pieces(PAWN) & KingFlank[file_of(ksq)]))
