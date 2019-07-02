@@ -846,7 +846,7 @@ namespace {
                 probCutCount++;
 
                 ss->currentMove = move;
-                ss->continuationHistory = &thisThread->continuationHistory[pos.moved_piece(move)][to_sq(move)];
+                ss->continuationHistory = &thisThread->continuationHistory[reindex_piece(pos.moved_piece(move))][to_sq(move)];
 
                 assert(depth >= 5 * ONE_PLY);
 
@@ -882,7 +882,7 @@ moves_loop: // When in check, search starts from here
                                           nullptr, (ss-4)->continuationHistory,
                                           nullptr, (ss-6)->continuationHistory };
 
-    Move countermove = thisThread->counterMoves[pos.piece_on(prevSq)][prevSq];
+    Move countermove = thisThread->counterMoves[reindex_piece(pos.piece_on(prevSq))][prevSq];
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory,
                                       &thisThread->captureHistory,
@@ -1023,8 +1023,8 @@ moves_loop: // When in check, search starts from here
 
               // Countermoves based pruning (~20 Elo)
               if (   lmrDepth < 3 + ((ss-1)->statScore > 0 || (ss-1)->moveCount == 1)
-                  && (*contHist[0])[movedPiece][to_sq(move)] < CounterMovePruneThreshold
-                  && (*contHist[1])[movedPiece][to_sq(move)] < CounterMovePruneThreshold)
+                  && (*contHist[0])[reindex_piece(movedPiece)][to_sq(move)] < CounterMovePruneThreshold
+                  && (*contHist[1])[reindex_piece(movedPiece)][to_sq(move)] < CounterMovePruneThreshold)
                   continue;
 
               // Futility pruning: parent node (~2 Elo)
@@ -1054,7 +1054,7 @@ moves_loop: // When in check, search starts from here
 
       // Update the current move (this must be done after singular extension search)
       ss->currentMove = move;
-      ss->continuationHistory = &thisThread->continuationHistory[movedPiece][to_sq(move)];
+      ss->continuationHistory = &thisThread->continuationHistory[reindex_piece(movedPiece)][to_sq(move)];
 
       // Step 15. Make the move
       pos.do_move(move, st, givesCheck);
@@ -1102,9 +1102,9 @@ moves_loop: // When in check, search starts from here
                   r -= 2 * ONE_PLY;
 
               ss->statScore =  thisThread->mainHistory[us][from_to(move)]
-                             + (*contHist[0])[movedPiece][to_sq(move)]
-                             + (*contHist[1])[movedPiece][to_sq(move)]
-                             + (*contHist[3])[movedPiece][to_sq(move)]
+                             + (*contHist[0])[reindex_piece(movedPiece)][to_sq(move)]
+                             + (*contHist[1])[reindex_piece(movedPiece)][to_sq(move)]
+                             + (*contHist[3])[reindex_piece(movedPiece)][to_sq(move)]
                              - 4000;
 
               // Decrease/increase reduction by comparing opponent's stat score (~10 Elo)
@@ -1439,7 +1439,7 @@ moves_loop: // When in check, search starts from here
       }
 
       ss->currentMove = move;
-      ss->continuationHistory = &thisThread->continuationHistory[pos.moved_piece(move)][to_sq(move)];
+      ss->continuationHistory = &thisThread->continuationHistory[reindex_piece(pos.moved_piece(move))][to_sq(move)];
 
       // Make and search the move
       pos.do_move(move, st, givesCheck);
@@ -1526,7 +1526,7 @@ moves_loop: // When in check, search starts from here
 
     for (int i : {1, 2, 4, 6})
         if (is_ok((ss-i)->currentMove))
-            (*(ss-i)->continuationHistory)[pc][to] << bonus;
+            (*(ss-i)->continuationHistory)[reindex_piece(pc)][to] << bonus;
   }
 
 
@@ -1540,14 +1540,14 @@ moves_loop: // When in check, search starts from here
       PieceType captured = type_of(pos.piece_on(to_sq(move)));
 
       if (pos.capture_or_promotion(move))
-          captureHistory[moved_piece][to_sq(move)][captured] << bonus;
+          captureHistory[reindex_piece(moved_piece)][to_sq(move)][captured] << bonus;
 
       // Decrease all the other played capture moves
       for (int i = 0; i < captureCount; ++i)
       {
           moved_piece = pos.moved_piece(captures[i]);
           captured = type_of(pos.piece_on(to_sq(captures[i])));
-          captureHistory[moved_piece][to_sq(captures[i])][captured] << -bonus;
+          captureHistory[reindex_piece(moved_piece)][to_sq(captures[i])][captured] << -bonus;
       }
   }
 
@@ -1571,7 +1571,7 @@ moves_loop: // When in check, search starts from here
     if (is_ok((ss-1)->currentMove))
     {
         Square prevSq = to_sq((ss-1)->currentMove);
-        thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] = move;
+        thisThread->counterMoves[reindex_piece(pos.piece_on(prevSq))][prevSq] = move;
     }
 
     // Decrease all the other played quiet moves

@@ -108,14 +108,14 @@ void MovePicker::score() {
   for (auto& m : *this)
       if (Type == CAPTURES)
           m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                   + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))] / 8;
+                   + (*captureHistory)[reindex_piece(pos.moved_piece(m))][to_sq(m)][type_of(pos.piece_on(to_sq(m)))] / 8;
 
       else if (Type == QUIETS)
           m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
-                   + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-                   + (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
-                   + (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
-                   + (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)] / 2;
+                   + (*continuationHistory[0])[reindex_piece(pos.moved_piece(m))][to_sq(m)]
+                   + (*continuationHistory[1])[reindex_piece(pos.moved_piece(m))][to_sq(m)]
+                   + (*continuationHistory[3])[reindex_piece(pos.moved_piece(m))][to_sq(m)]
+                   + (*continuationHistory[5])[reindex_piece(pos.moved_piece(m))][to_sq(m)] / 2;
 
       else // Type == EVASIONS
       {
@@ -124,7 +124,7 @@ void MovePicker::score() {
                        - Value(type_of(pos.moved_piece(m)));
           else
               m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
-                       + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
+                       + (*continuationHistory[0])[reindex_piece(pos.moved_piece(m))][to_sq(m)]
                        - (1 << 28);
       }
 }
