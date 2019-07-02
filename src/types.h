@@ -384,10 +384,6 @@ constexpr Piece make_piece(Color c, PieceType pt) {
   return Piece((c << 3) + pt);
 }
 
-constexpr int reindex_piece(Piece pc) {
-    return pc - ((pc & 8) >> 2);
-}
-
 constexpr PieceType type_of(Piece pc) {
   return PieceType(pc & 7);
 }
