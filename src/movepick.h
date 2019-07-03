@@ -73,6 +73,39 @@ struct Stats : public std::array<Stats<T, D, Sizes...>, Size>
     entry* p = reinterpret_cast<entry*>(this);
     std::fill(p, p + sizeof(*this) / sizeof(entry), v);
   }
+
+   void init() {
+
+    for(Color c = WHITE; c <= BLACK; ++c)
+        for(Square from = SQ_A1; from <= SQ_H8; ++from)
+            for (Square to = SQ_A1; to <= SQ_H8; ++to)
+            {
+                typedef StatsEntry<T, D> Entry;
+                Entry& e = (*this)[c][make_move(from, to)];
+                e = 0;
+
+                int legalCnt = 0;
+                for (PieceType pt = PAWN; pt <= KING; ++pt)
+                {
+                    bool legal = pt == PAWN ?   (relative_rank(c, from) > RANK_1 && relative_rank(c, from) < RANK_7)
+                                             && (   (PawnAttacks[c][from] & to)
+                                                 || (    file_of(from) == file_of(to)
+                                                      &&  (   (relative_rank(c, from) + 1 == relative_rank(c, to))
+                                                           || (relative_rank(c, from) == RANK_2 && relative_rank(c, to) == RANK_4))))
+                                            : bool(PseudoAttacks[pt][from] & to);
+                    if (legal)
+                    {
+                        e = e + std::abs(mg_value(PSQT::psq[make_piece(c, pt)][to]))
+                              - std::abs(mg_value(PSQT::psq[make_piece(c, pt)][from]));
+                        
+                        ++legalCnt;
+                    }
+                }
+
+                if (legalCnt)
+                    e = e / legalCnt;
+            }
+  }
 };
 
 template <typename T, int D, int Size>
