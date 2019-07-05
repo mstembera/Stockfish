@@ -76,35 +76,41 @@ struct Stats : public std::array<Stats<T, D, Sizes...>, Size>
 
    void init() {
 
-    for(Color c = WHITE; c <= BLACK; ++c)
-        for(Square from = SQ_A1; from <= SQ_H8; ++from)
-            for (Square to = SQ_A1; to <= SQ_H8; ++to)
-            {
-                typedef StatsEntry<T, D> Entry;
-                Entry& e = (*this)[c][make_move(from, to)];
-                e = 0;
+       int Averages[PIECE_TYPE_NB] = { 0 };
+       for (PieceType pt = PAWN; pt <= KING; ++pt)
+       {
+           for (Square s = (pt == PAWN ? SQ_A2 : SQ_A1); s <= (pt == PAWN ? SQ_H7 : SQ_H8); ++s)
+           {
+               Averages[pt] += mg_value(PSQT::psq[make_piece(WHITE, pt)][s]);
+           }
+           Averages[pt] /= (pt == PAWN ? 48 : 64);
+       }
 
-                int legalCnt = 0;
-                for (PieceType pt = PAWN; pt <= KING; ++pt)
-                {
-                    bool legal = pt == PAWN ?   (relative_rank(c, from) > RANK_1 && relative_rank(c, from) < RANK_7)
-                                             && (   (PawnAttacks[c][from] & to)
-                                                 || (    file_of(from) == file_of(to)
-                                                      &&  (   (relative_rank(c, from) + 1 == relative_rank(c, to))
-                                                           || (relative_rank(c, from) == RANK_2 && relative_rank(c, to) == RANK_4))))
-                                            : bool(PseudoAttacks[pt][from] & to);
-                    if (legal)
-                    {
-                        e = e + std::abs(mg_value(PSQT::psq[make_piece(c, pt)][to]))
-                              - std::abs(mg_value(PSQT::psq[make_piece(c, pt)][from]));
-                        
-                        ++legalCnt;
-                    }
-                }
+       constexpr Piece Pieces[] = { W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
+                                    B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING };
+       for (Piece pc : Pieces)
+       {
+           for (Square s = SQ_A1; s <= SQ_H8; ++s)
+           {
+               typedef StatsEntry<T, D> Entry;
+               Entry& e = (*this)[pc][s];
 
-                if (legalCnt)
-                    e = e / legalCnt;
-            }
+               if (type_of(pc) == PAWN && relative_rank(color_of(pc), s) == RANK_1)
+               {
+                   e = 0;
+               }
+               else
+               if (type_of(pc) == PAWN && relative_rank(color_of(pc), s) == RANK_8)
+               {
+                   Square ss = make_square(file_of(s), color_of(pc) == WHITE ? RANK_7 : RANK_2);
+                   e = (std::abs(mg_value(PSQT::psq[pc][ss])) - Averages[type_of(pc)] + 10);
+               }
+               else
+               {   
+                   e = (std::abs(mg_value(PSQT::psq[pc][s])) - Averages[type_of(pc)]);
+               }
+           }
+       }
   }
 };
 

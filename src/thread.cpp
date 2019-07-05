@@ -58,12 +58,12 @@ Thread::~Thread() {
 void Thread::clear() {
 
   counterMoves.fill(MOVE_NONE);
-  mainHistory.init();
+  mainHistory.fill(0);
   captureHistory.fill(0);
 
   for (auto& to : continuationHistory)
       for (auto& h : to)
-          h->fill(0);
+          h->init();
 
   continuationHistory[NO_PIECE][0]->fill(Search::CounterMovePruneThreshold - 1);
 }
