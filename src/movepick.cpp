@@ -174,7 +174,9 @@ top:
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
+                       return    (*captureHistory)[pos.moved_piece(*cur)][to_sq(*cur)][type_of(pos.piece_on(to_sq(*cur)))] > 10000
+                              || (   (*captureHistory)[pos.moved_piece(*cur)][to_sq(*cur)][type_of(pos.piece_on(to_sq(*cur)))] > -6000
+                                  && pos.see_ge(*cur, Value(-55 * cur->value / 1024))) ?
                               // Move losing capture to endBadCaptures to be tried later
                               true : (*endBadCaptures++ = *cur, false); }))
           return *(cur - 1);
