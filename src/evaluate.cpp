@@ -132,6 +132,16 @@ namespace {
     S(-30,-14), S(-9, -8), S( 0,  9), S( -1,  7)
   };
 
+  constexpr int dV = 16;
+  constexpr Score HBonus[PIECE_TYPE_NB] = {
+      SCORE_ZERO,
+      S(PawnValueMg   / dV, PawnValueEg   / dV),
+      S(KnightValueMg / dV, KnightValueEg / dV),
+      S(BishopValueMg / dV, BishopValueEg / dV),
+      S(RookValueMg   / dV, RookValueEg   / dV),
+      S(QueenValueMg  / dV, QueenValueEg  / dV),
+      SCORE_ZERO };
+
   // Assorted bonuses and penalties
   constexpr Score AttacksOnSpaceArea = S(  4,  0);
   constexpr Score BishopPawns        = S(  3,  7);
@@ -584,6 +594,22 @@ namespace {
            | (attackedBy[Us][ROOK  ] & pos.attacks_from<ROOK  >(s));
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
+    }
+
+    Bitboard hanging = pos.pieces(Them) & ~attackedBy[Them][ALL_PIECES] & attackedBy[Us][ALL_PIECES];
+    if (more_than_one(hanging))
+    {
+        PieceType pt1 = NO_PIECE_TYPE, pt2 = NO_PIECE_TYPE;
+        while (hanging)
+        {
+            Square s = pop_lsb(&hanging);
+            PieceType pt = type_of(pos.piece_on(s));
+
+            if (pt >= pt1)
+                pt2 = pt1, pt1 = pt;
+        }
+
+        score += HBonus[pt2];
     }
 
     if (T)
