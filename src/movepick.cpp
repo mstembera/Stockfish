@@ -174,7 +174,9 @@ top:
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return    (type_of(pos.piece_on(to_sq(*cur))) != PAWN && type_of(pos.piece_on(from_sq(*cur))) == PAWN)
+                       return    (      PieceValue[MG][pos.piece_on(to_sq(*cur))]
+                                      - PieceValue[MG][pos.piece_on(from_sq(*cur))]
+                                   >= KnightValueMg - BishopValueMg)
                               || pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
                               // Move losing capture to endBadCaptures to be tried later
                               true : (*endBadCaptures++ = *cur, false); }))
