@@ -132,7 +132,7 @@ namespace {
     S(-30,-14), S(-9, -8), S( 0,  9), S( -1,  7)
   };
 
-  constexpr int dV = 16;
+  constexpr int dV = 24;
   constexpr Score HBonus[PIECE_TYPE_NB] = {
       SCORE_ZERO,
       S(PawnValueMg   / dV, PawnValueEg   / dV),
@@ -596,20 +596,24 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    
     Bitboard hanging = pos.pieces(Them) & ~attackedBy[Them][ALL_PIECES] & attackedBy[Us][ALL_PIECES];
-    if (more_than_one(hanging))
+    if (   more_than_one(hanging)
+        || (hanging && pos.side_to_move() == Us))
     {
         PieceType pt1 = NO_PIECE_TYPE, pt2 = NO_PIECE_TYPE;
-        while (hanging)
+        do
         {
-            Square s = pop_lsb(&hanging);
-            PieceType pt = type_of(pos.piece_on(s));
+            PieceType pt = type_of(pos.piece_on(pop_lsb(&hanging)));
 
             if (pt >= pt1)
                 pt2 = pt1, pt1 = pt;
-        }
+        } while (hanging);
 
-        score += HBonus[pt2];
+        if (pos.side_to_move() == Us)
+            score += HBonus[pt1];
+        else
+            score += HBonus[pt2];
     }
 
     if (T)
