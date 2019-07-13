@@ -83,6 +83,7 @@ namespace {
     e->passedPawns[Us] = e->pawnAttacksSpan[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
     e->pawnAttacks[Us] = pawn_attacks_bb<Us>(ourPawns);
+    e->blocked[Us]     = 0;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -142,6 +143,9 @@ namespace {
 
         if (doubled && !support)
             score -= Doubled;
+
+        // count blocked pawns
+        e->blocked[Us] += !lever && (theirPawns & (s + Up));
     }
 
     // Unsupported friendly pawns attacked twice by the enemy
