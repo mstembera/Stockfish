@@ -589,7 +589,7 @@ namespace {
     // Bonus for attacks on center
     int centerAttacks = popcount(  (attackedBy[Us][ALL_PIECES] & Center)
                                  | ((attackedBy2[Us] & Center) << 16));
-    score += make_score(centerAttacks * 2, 0);
+    score += make_score(centerAttacks * 4, 0);
 
     if (T)
         Trace::add(THREAT, Us, score);
