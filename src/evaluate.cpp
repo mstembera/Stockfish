@@ -586,9 +586,9 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
-    // Bonus for attacks on center squares
-    int centerAttacks = popcount(  (attackedBy[Us][ALL_PIECES] & ~pos.pieces() & Center)
-                                 | ((attackedBy2[Us] & ~pos.pieces() & Center) << 16));
+    // Bonus for attacks on center
+    int centerAttacks = popcount(  (attackedBy[Us][ALL_PIECES] & Center)
+                                 | ((attackedBy2[Us] & Center) << 16));
     score += make_score(centerAttacks * 6, 0);
 
     if (T)
