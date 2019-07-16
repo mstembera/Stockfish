@@ -142,6 +142,9 @@ namespace {
 
         if (doubled && !support)
             score -= Doubled;
+
+        if (more_than_one(neighbours))
+            score += make_score(5, 12);
     }
 
     // Unsupported friendly pawns attacked twice by the enemy
