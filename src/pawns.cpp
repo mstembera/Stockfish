@@ -129,7 +129,7 @@ namespace {
         if (support | phalanx)
         {
             int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
-                   + 17 * popcount(support);
+                   + 20 * bool(support) + 14 * more_than_one(support);
 
             score += make_score(v, v * (r - 2) / 4);
         }
