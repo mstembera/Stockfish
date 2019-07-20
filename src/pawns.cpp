@@ -34,7 +34,7 @@ namespace {
   // Pawn penalties
   constexpr Score Backward      = S( 9, 24);
   constexpr Score Doubled       = S(11, 56);
-  constexpr Score Isolated      = S( 5, 15);
+  constexpr Score Isolated      = S( 1,  3);
   constexpr Score WeakUnopposed = S(13, 27);
   constexpr Score Attacked2Unsupported = S(0, 56);
 
@@ -135,7 +135,7 @@ namespace {
         }
 
         else if (!neighbours)
-            score -= Isolated + WeakUnopposed * int(!opposed);
+            score -= Isolated * (5 + !(ourPawns & adjacent2_files_bb(s))) + WeakUnopposed * int(!opposed);
 
         else if (backward)
             score -= Backward + WeakUnopposed * int(!opposed);
