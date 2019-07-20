@@ -586,6 +586,16 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    // Penalty for pieces interrupting rook connection
+    if (pos.count<ROOK>(Us) > 1)
+    {
+        Square s0 = pos.squares<ROOK>(Us)[0], s1 = pos.squares<ROOK>(Us)[1];
+        Bitboard between = between_bb(s0, s1);
+        int betweenCnt = popcount(between & pos.pieces());
+        score += make_score(4, 0) * (bool(between) * 2 - betweenCnt);
+    }
+
+
     if (T)
         Trace::add(THREAT, Us, score);
 
