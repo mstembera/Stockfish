@@ -34,7 +34,8 @@ namespace {
   // Pawn penalties
   constexpr Score Backward      = S( 9, 24);
   constexpr Score Doubled       = S(11, 56);
-  constexpr Score Isolated      = S( 1,  3);
+  constexpr Score Isolated      = S( 5, 15);
+  constexpr Score Isolated2     = S( 1,  5);
   constexpr Score WeakUnopposed = S(13, 27);
   constexpr Score Attacked2Unsupported = S(0, 56);
 
@@ -135,16 +136,13 @@ namespace {
         }
 
         else if (!neighbours)
-            score -= Isolated * 5 + WeakUnopposed * int(!opposed);
+            score -= Isolated + Isolated2 * int(!(ourPawns & adjacent2_files_bb(s))) + WeakUnopposed * int(!opposed);
 
         else if (backward)
             score -= Backward + WeakUnopposed * int(!opposed);
 
         if (doubled && !support)
             score -= Doubled;
-
-        if (!(ourPawns & adjacent2_files_bb(s)))
-            score -= Isolated;
     }
 
     // Unsupported friendly pawns attacked twice by the enemy
