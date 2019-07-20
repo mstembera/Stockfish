@@ -135,13 +135,16 @@ namespace {
         }
 
         else if (!neighbours)
-            score -= Isolated * (5 + !(ourPawns & adjacent2_files_bb(s))) + WeakUnopposed * int(!opposed);
+            score -= Isolated * 5 + WeakUnopposed * int(!opposed);
 
         else if (backward)
             score -= Backward + WeakUnopposed * int(!opposed);
 
         if (doubled && !support)
             score -= Doubled;
+
+        if (!(ourPawns & adjacent2_files_bb(s)))
+            score -= Isolated;
     }
 
     // Unsupported friendly pawns attacked twice by the enemy
