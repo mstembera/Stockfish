@@ -243,7 +243,7 @@ Score Entry::do_king_safety(const Position& pos) {
       Score shelter2;
       evaluate_shelter<Us>(pos, relative_square(Us, SQ_G1), shelter2);
       int impederCnt = popcount(pos.castling_impeders(Us | KING_SIDE));
-      shelter2 -= make_score(impederCnt * 5 - 5, 0);
+      shelter2 -= make_score(impederCnt * 7, 0);
 
       if (mg_value(shelter2) > mg_value(shelter))
           shelter = shelter2;
@@ -254,7 +254,7 @@ Score Entry::do_king_safety(const Position& pos) {
       Score shelter2;
       evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1), shelter2);
       int impederCnt = popcount(pos.castling_impeders(Us | QUEEN_SIDE));
-      shelter2 -= make_score(impederCnt * 5 - 5, 0);
+      shelter2 -= make_score(impederCnt * 7, 0);
 
       if (mg_value(shelter2) > mg_value(shelter))
           shelter = shelter2;
