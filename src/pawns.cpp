@@ -143,7 +143,15 @@ namespace {
         if (doubled && !support)
             score -= Doubled;
 
-        score += make_score(1, 4) * int(bool(ourPawns & adjacent2_files_bb(s)));
+        if (   file_of(s) < FILE_H
+            && !(ourPawns & adjacent_file_bb<EAST>(s))
+            && !(ourPawns & adjacent_file_bb<EAST+EAST>(s))) 
+                score -= make_score(0, 2);
+        
+        if (   file_of(s) > FILE_A
+            && !(ourPawns & adjacent_file_bb<WEST>(s))
+            && !(ourPawns & adjacent_file_bb<WEST+WEST>(s)))
+                score -= make_score(0, 2);
     }
 
     // Unsupported friendly pawns attacked twice by the enemy

@@ -191,12 +191,14 @@ inline Bitboard adjacent_files_bb(Square s) {
 }
 
 
-/// adjacent2_files_bb() returns a bitboard representing all the squares on the
-/// files two over of the given one.
+/// adjacent_file_bb() returns a bitboard representing all the squares on the
+/// file adjacent in the given direction.
 
-inline Bitboard adjacent2_files_bb(Square s) {
-    return shift<EAST+EAST>(file_bb(s)) | shift<WEST+WEST>(file_bb(s));
+template<Direction D>
+inline Bitboard adjacent_file_bb(Square s) {
+  return shift<D>(file_bb(s));
 }
+
 
 /// between_bb() returns squares that are linearly between the given squares
 /// If the given squares are not on a same file/rank/diagonal, return 0.
