@@ -210,8 +210,7 @@ void Entry::evaluate_shelter(const Position& pos, Square ksq, Score& shelter) {
           bonus -= make_score(UnblockedStorm[d][theirRank], 0);
   }
 
-  if (mg_value(bonus) > mg_value(shelter))
-      shelter = bonus;
+  shelter = bonus;
 }
 
 
@@ -234,15 +233,32 @@ Score Entry::do_king_safety(const Position& pos) {
   else while (pawns)
       minPawnDist = std::min(minPawnDist, distance(ksq, pop_lsb(&pawns)));
 
-  Score shelter = make_score(-VALUE_INFINITE, VALUE_ZERO);
+
+  Score shelter;
   evaluate_shelter<Us>(pos, ksq, shelter);
 
   // If we can castle use the bonus after the castling if it is bigger
   if (pos.can_castle(Us | KING_SIDE))
-      evaluate_shelter<Us>(pos, relative_square(Us, SQ_G1), shelter);
+  {
+      Score shelter2;
+      evaluate_shelter<Us>(pos, relative_square(Us, SQ_G1), shelter2);
+      int impederCnt = popcount(pos.castling_impeders(Us | KING_SIDE));
+      shelter2 -= make_score(5, 0) * impederCnt;
+
+      if (mg_value(shelter2) > mg_value(shelter))
+          shelter = shelter2;
+  }
 
   if (pos.can_castle(Us | QUEEN_SIDE))
-      evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1), shelter);
+  {
+      Score shelter2;
+      evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1), shelter2);
+      int impederCnt = popcount(pos.castling_impeders(Us | QUEEN_SIDE));
+      shelter2 -= make_score(5, 0) * impederCnt;
+
+      if (mg_value(shelter2) > mg_value(shelter))
+          shelter = shelter2;
+  }
 
   return shelter - make_score(VALUE_ZERO, 16 * minPawnDist);
 }
