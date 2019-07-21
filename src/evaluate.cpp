@@ -151,7 +151,7 @@ namespace {
   constexpr Score ThreatByPawnPush   = S( 48, 39);
   constexpr Score ThreatByRank       = S( 13,  0);
   constexpr Score ThreatBySafePawn   = S(173, 94);
-  constexpr Score TrappedRook        = S( 47,  4);
+  constexpr Score TrappedRook        = S( 12,  1);
   constexpr Score WeakQueen          = S( 49, 15);
 
 #undef S
@@ -361,7 +361,23 @@ namespace {
             {
                 File kf = file_of(pos.square<KING>(Us));
                 if ((kf < FILE_E) == (file_of(s) < kf))
-                    score -= TrappedRook * (1 + !pos.castling_rights(Us));
+                {
+                    score -= TrappedRook * 4;
+                    CastlingRight cr = CastlingRight(pos.castling_rights(Us));
+                    if (cr)
+                    { 
+                        CastlingRight crOO  = CastlingRight(cr & (Us == WHITE ? WHITE_OO  : BLACK_OO));
+                        CastlingRight crOOO = CastlingRight(cr & (Us == WHITE ? WHITE_OOO : BLACK_OOO));
+
+                        if (!crOO  || pos.castling_impeded(crOO))
+                            score -= TrappedRook;
+
+                        if (!crOOO || pos.castling_impeded(crOOO))
+                            score -= TrappedRook;
+                    }
+                    else
+                        score -= TrappedRook * 4;
+                }
             }
         }
 
