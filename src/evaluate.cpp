@@ -369,11 +369,15 @@ namespace {
                         CastlingRight crOO  = CastlingRight(cr & (Us == WHITE ? WHITE_OO  : BLACK_OO));
                         CastlingRight crOOO = CastlingRight(cr & (Us == WHITE ? WHITE_OOO : BLACK_OOO));
 
-                        if (!crOO  || pos.castling_impeded(crOO))
+                        if (!crOO)
                             score -= TrappedRook;
+                        else if (pos.castling_impeded(crOO))
+                            score -= make_score(6, 1);
 
-                        if (!crOOO || pos.castling_impeded(crOOO))
+                        if (!crOOO)
                             score -= TrappedRook;
+                        else if (pos.castling_impeded(crOOO))
+                            score -= make_score(6, 1);
                     }
                     else
                         score -= TrappedRook * 4;
