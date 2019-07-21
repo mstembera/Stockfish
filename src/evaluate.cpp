@@ -591,10 +591,10 @@ namespace {
     {
         Square s0 = pos.squares<ROOK>(Us)[0], s1 = pos.squares<ROOK>(Us)[1];
         Bitboard between = between_bb(s0, s1);
-        int betweenCnt = popcount(between & pos.pieces());
-        score += make_score(4, 0) * (bool(between) * 2 - betweenCnt);
+        if (between)
+            score +=   make_score(12, 4)
+                     - make_score( 4, 2) * popcount(between & pos.pieces());
     }
-
 
     if (T)
         Trace::add(THREAT, Us, score);
