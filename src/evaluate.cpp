@@ -349,7 +349,7 @@ namespace {
         if (Pt == ROOK)
         {
             // Bonus for aligning rook with enemy pawns on the same rank or behind them
-            score += RookOnPawn * popcount(pos.pieces(Them, PAWN) & (rank_bb(s) | forward_ranks_bb(Them, s)));
+            score += RookOnPawn * popcount(pos.pieces(Them, PAWN) & (rank_bb(s) | (file_bb(s) & forward_ranks_bb(Them, s))));
 
             // Bonus for rook on an open or semi-open file
             if (pos.is_on_semiopen_file(Us, s))
