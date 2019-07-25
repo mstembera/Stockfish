@@ -138,7 +138,7 @@ namespace {
                 else
                     v +=   (file_of(s) <= FILE_D && (support & shift<WEST>(file_bb(s))))
                         || (file_of(s) >= FILE_E && (support & shift<EAST>(file_bb(s))))
-                        ? 22 : 12;
+                        ? 12 : 22;
             }
 
             score += make_score(v, v * (r - 2) / 4);
