@@ -129,8 +129,17 @@ namespace {
         // Score this pawn
         if (support | phalanx)
         {
-            int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
-                   + 17 * popcount(support);
+            int v = Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1);
+                   
+            if (support)
+            {
+                if (more_than_one(support))
+                    v += 34;
+                else
+                    v +=   (file_of(s) <= FILE_D && (support & shift<WEST>(file_bb(s))))
+                        || (file_of(s) >= FILE_E && (support & shift<EAST>(file_bb(s))))
+                        ? 22 : 12;
+            }
 
             score += make_score(v, v * (r - 2) / 4);
         }
