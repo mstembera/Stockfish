@@ -70,7 +70,7 @@ namespace {
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = (Us == WHITE ? NORTH : SOUTH);
 
-    Bitboard neighbours, stoppers, doubled, support, phalanx;
+    Bitboard neighbours, stoppers, doubled, support, phalanx, wingmen;
     Bitboard lever, leverPush;
     Square s;
     bool opposed, backward, passed;
@@ -104,6 +104,7 @@ namespace {
         neighbours = ourPawns   & adjacent_files_bb(s);
         phalanx    = neighbours & rank_bb(s);
         support    = neighbours & rank_bb(s - Up);
+        wingmen    = ourPawns   & adjacent2_files_bb(s) & (rank_bb(s) | rank_bb(s - Up));
 
         // A pawn is backward when it is behind all pawns of the same color on
         // the adjacent files and cannot safely advance. Phalanx and isolated
@@ -143,6 +144,8 @@ namespace {
 
         if (doubled && !support)
             score -= Doubled;
+
+        score += make_score(2, 8) * popcount(wingmen);
     }
 
     // Penalize our unsupported pawns attacked twice by enemy pawns

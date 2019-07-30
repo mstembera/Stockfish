@@ -155,6 +155,8 @@ constexpr Bitboard shift(Bitboard b) {
   return  D == NORTH      ?  b             << 8 : D == SOUTH      ?  b             >> 8
         : D == NORTH+NORTH?  b             <<16 : D == SOUTH+SOUTH?  b             >>16
         : D == EAST       ? (b & ~FileHBB) << 1 : D == WEST       ? (b & ~FileABB) >> 1
+        : D == EAST+EAST  ? (b & ~(FileGBB | FileHBB)) << 2
+        : D == WEST+WEST  ? (b & ~(FileABB | FileBBB)) >> 2
         : D == NORTH_EAST ? (b & ~FileHBB) << 9 : D == NORTH_WEST ? (b & ~FileABB) << 7
         : D == SOUTH_EAST ? (b & ~FileHBB) >> 7 : D == SOUTH_WEST ? (b & ~FileABB) >> 9
         : 0;
@@ -186,6 +188,14 @@ constexpr Bitboard pawn_double_attacks_bb(Bitboard b) {
 
 inline Bitboard adjacent_files_bb(Square s) {
   return shift<EAST>(file_bb(s)) | shift<WEST>(file_bb(s));
+}
+
+
+/// adjacent2_files_bb() returns a bitboard representing all the squares on the
+/// files two over of the given one.
+
+inline Bitboard adjacent2_files_bb(Square s) {
+  return shift<EAST+EAST>(file_bb(s)) | shift<WEST+WEST>(file_bb(s));
 }
 
 
