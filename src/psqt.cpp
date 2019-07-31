@@ -101,6 +101,14 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
    { S( -7,  0), S(  7,-11), S( -3, 12), S(-13, 21), S(  5, 25), S(-16, 19), S( 10,  4), S( -8,  7) }
   };
 
+constexpr Score EBonus[RANK_NB/2][FILE_NB] =
+  { // Empty square (asymmetric distribution)
+   { S(-1,  1), S( 2,  4), S( 0,  1), S(-1, -5), S( 2,  0), S(-1, -3), S(-7,  0), S(-4,  2) },
+   { S(-1, -4), S(-6,  0), S(-3,  0), S(-4,  0), S( 0, -2), S( 0,  0), S( 0, -5), S(-1,  2) },
+   { S( 2,  0), S(-4, -1), S( 5,  5), S(-1,  1), S(-4, -3), S( 3,  3), S( 1, -3), S( 4, -2) },
+   { S( 3,  1), S( 1, -2), S(-1,  0), S(-2,  0), S(-3,  5), S( 1,  0), S( 1, -1), S( 7, -3) }
+  };
+
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
@@ -109,6 +117,13 @@ Score psq[PIECE_NB][SQUARE_NB];
 // copied from Bonus[] adding the piece value, then the black halves of the
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
+
+  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  {
+      Rank r = rank_of(s);
+      File f = file_of(s);
+      psq[NO_PIECE][s] = r <= RANK_4 ? EBonus[r][f] : -EBonus[RANK_8 - r][f];
+  }
 
   for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
   {
