@@ -27,6 +27,10 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
   { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg }
 };
 
+int EsMg[RANK_NB][FILE_NB] = { 0 };
+int EsEg[RANK_NB][FILE_NB] = { 0 };
+
+
 namespace PSQT {
 
 #define S(mg, eg) make_score(mg, eg)
@@ -101,6 +105,19 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
    { S( -7,  0), S(  7,-11), S( -3, 12), S(-13, 21), S(  5, 25), S(-16, 19), S( 10,  4), S( -8,  7) }
   };
 
+Score OBonus[RANK_NB][FILE_NB] =
+  { // Occupied square (asymmetric distribution)
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) },
+   { S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0) }
+  };
+
+
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
@@ -109,6 +126,24 @@ Score psq[PIECE_NB][SQUARE_NB];
 // copied from Bonus[] adding the piece value, then the black halves of the
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
+
+  for (Rank r = RANK_1; r <= RANK_8; ++r)
+  {
+      for (File f = FILE_A; f <= FILE_H; ++f)
+      {
+          OBonus[r][f] = make_score(EsMg[r][f], EsEg[r][f]);
+      }
+   }
+
+  for (Square s = SQ_A1; s <= SQ_H8; ++s)
+  {
+      Rank r = rank_of(s);
+      File f = file_of(s);
+
+      psq[NO_PIECE][s] = OBonus[r][f];
+      psq[~NO_PIECE][~s] = -psq[NO_PIECE][s];
+  }
+
 
   for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
   {
@@ -128,3 +163,8 @@ void init() {
 }
 
 } // namespace PSQT
+
+
+TUNE(SetRange(-80, 80), EsMg, PSQT::init);
+TUNE(SetRange(-80, 80), EsEg, PSQT::init);
+UPDATE_ON_LAST();

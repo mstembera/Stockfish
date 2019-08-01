@@ -404,7 +404,7 @@ inline void Position::put_piece(Piece pc, Square s) {
   index[s] = pieceCount[pc]++;
   pieceList[pc][index[s]] = s;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
-  psq += PSQT::psq[pc][s];
+  psq += PSQT::psq[pc][s] + PSQT::psq[make_piece(color_of(pc), NO_PIECE_TYPE)][s];
 }
 
 inline void Position::remove_piece(Piece pc, Square s) {
@@ -422,7 +422,7 @@ inline void Position::remove_piece(Piece pc, Square s) {
   pieceList[pc][index[lastSquare]] = lastSquare;
   pieceList[pc][pieceCount[pc]] = SQ_NONE;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
-  psq -= PSQT::psq[pc][s];
+  psq -= PSQT::psq[pc][s] + PSQT::psq[make_piece(color_of(pc), NO_PIECE_TYPE)][s];
 }
 
 inline void Position::move_piece(Piece pc, Square from, Square to) {
@@ -438,6 +438,8 @@ inline void Position::move_piece(Piece pc, Square from, Square to) {
   index[to] = index[from];
   pieceList[pc][index[to]] = to;
   psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+  psq +=  PSQT::psq[make_piece(color_of(pc), NO_PIECE_TYPE)][to]
+        - PSQT::psq[make_piece(color_of(pc), NO_PIECE_TYPE)][from];
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) {
