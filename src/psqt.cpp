@@ -101,6 +101,18 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
    { S( -7,  0), S(  7,-11), S( -3, 12), S(-13, 21), S(  5, 25), S(-16, 19), S( 10,  4), S( -8,  7) }
   };
 
+constexpr Score OBonus[RANK_NB][FILE_NB] =
+  { // Occupied square (asymmetric distribution)
+   { S( 4,  3), S(-2,  0), S( 0,  7), S( 3,  3), S(-1,  0), S( 3, -2), S( 3,  0), S( 1,  2) },
+   { S(-1,  1), S( 0,  2), S( 2, -1), S( 5, -6), S( 7,  0), S( 1,  0), S(-4, -1), S( 4, -2) },
+   { S(-2, -4), S( 0,  1), S(-4, -3), S( 6,  1), S( 1,  3), S( 7,  0), S( 6,  2), S( 3, -2) },
+   { S(-5,  2), S(-5, -7), S(-2,  6), S( 7,  1), S( 2, -5), S(-1,  5), S( 2, -2), S( 0,  4) },
+   { S(-3, -4), S(-2,  1), S( 2, -1), S( 0,  4), S( 6,  4), S( 0,  7), S(-2,  0), S( 1, -4) },
+   { S(-1,  5), S(-6, -1), S( 5, -5), S(-5,  0), S( 0,  0), S( 1, -1), S(-12, 3), S(-3,  0) },
+   { S( 1,-11), S( 2, -3), S(-2,  0), S(-3, -3), S(-3,  2), S( 1,  1), S(-3, -1), S(-4,  2) },
+   { S(-8, -5), S( 0,  1), S( 0, -1), S( 2,-11), S(-7, -5), S(-6,  2), S(-2,  1), S(-4,  0) }
+  };
+
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
@@ -122,6 +134,7 @@ void init() {
           File f = std::min(file_of(s), ~file_of(s));
           psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
                                                       : Bonus[pc][rank_of(s)][f]);
+          psq[ pc][ s] += OBonus[rank_of(s)][file_of(s)];
           psq[~pc][~s] = -psq[pc][s];
       }
   }
