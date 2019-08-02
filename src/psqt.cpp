@@ -103,10 +103,10 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
 
 constexpr Score EBonus[RANK_NB/2][FILE_NB] =
   { // Empty square (asymmetric distribution)
-   { S(-1,  1), S( 2,  4), S( 0,  1), S(-1, -5), S( 2,  0), S(-1, -3), S(-7,  0), S(-4,  2) },
-   { S(-1, -4), S(-6,  0), S(-3,  0), S(-4,  0), S( 0, -2), S( 0,  0), S( 0, -5), S(-1,  2) },
-   { S( 2,  0), S(-4, -1), S( 5,  5), S(-1,  1), S(-4, -3), S( 3,  3), S( 1, -3), S( 4, -2) },
-   { S( 3,  1), S( 1, -2), S(-1,  0), S(-2,  0), S(-3,  5), S( 1,  0), S( 1, -1), S( 7, -3) }
+   { S( 1,  0), S(-1,  6), S(-2,  0), S(-1, -4), S( 1,  0), S(-3, -5), S(-4,  4), S(-2,  2) },
+   { S(-3, -2), S(-5,  0), S( 0,  1), S(-2,  1), S( 0, -3), S( 0,  1), S( 0, -5), S(-2,  4) },
+   { S( 2,  1), S(-2,  0), S( 5,  2), S( 0,  0), S(-4, -1), S( 1,  3), S( 2, -2), S( 5,  0) },
+   { S( 7, -2), S( 1, -2), S(-1,  0), S(-3,  2), S(-5,  1), S( 3,  3), S( 3, -8), S( 7, -2) }
   };
 
 #undef S
@@ -118,13 +118,6 @@ Score psq[PIECE_NB][SQUARE_NB];
 // tables are initialized by flipping and changing the sign of the white scores.
 void init() {
 
-  for (Square s = SQ_A1; s <= SQ_H8; ++s)
-  {
-      Rank r = rank_of(s);
-      File f = file_of(s);
-      psq[NO_PIECE][s] = r <= RANK_4 ? EBonus[r][f] : -EBonus[RANK_8 - r][f];
-  }
-
   for (Piece pc = W_PAWN; pc <= W_KING; ++pc)
   {
       PieceValue[MG][~pc] = PieceValue[MG][pc];
@@ -134,9 +127,13 @@ void init() {
 
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
       {
-          File f = std::min(file_of(s), ~file_of(s));
-          psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
-                                                      : Bonus[pc][rank_of(s)][f]);
+          Rank r  = rank_of(s);
+          File f  = file_of(s);
+          File ff = std::min(f, ~f);
+          psq[ pc][ s] = score + (type_of(pc) == PAWN ? PBonus[r][f]
+                                                      : Bonus[pc][r][ff]);
+          psq[ pc][ s] -= r <= RANK_4 ?  EBonus[r][f]
+                                      : -EBonus[RANK_8 - r][f];
           psq[~pc][~s] = -psq[pc][s];
       }
   }
