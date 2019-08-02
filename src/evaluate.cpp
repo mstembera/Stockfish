@@ -262,6 +262,9 @@ namespace {
     constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
     constexpr Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
                                                    : Rank5BB | Rank4BB | Rank3BB);
+    constexpr Bitboard TheirRanks   = (Us == WHITE ? Rank5BB | Rank6BB | Rank7BB | Rank8BB
+                                                   : Rank1BB | Rank2BB | Rank3BB | Rank4BB);
+
     const Square* pl = pos.squares<Pt>(Us);
 
     Bitboard b, bb;
@@ -323,6 +326,9 @@ namespace {
                 // Bonus for bishop on a long diagonal which can "see" both center squares
                 if (more_than_one(attacks_bb<BISHOP>(s, pos.pieces(PAWN)) & Center))
                     score += LongDiagonalBishop;
+
+                if (b & TheirRanks)
+                    score += make_score(8, 4);
             }
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
