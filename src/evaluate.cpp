@@ -580,6 +580,12 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    // Bonus for attacking castling path
+    if (pos.can_castle(Them | KING_SIDE)  && (pos.castling_path(Them | KING_SIDE)  & attackedBy[Us][ALL_PIECES]))
+        score += make_score(40, 10);
+    if (pos.can_castle(Them | QUEEN_SIDE) && (pos.castling_path(Them | QUEEN_SIDE) & attackedBy[Us][ALL_PIECES]))
+        score += make_score(40, 10);
+
     if (T)
         Trace::add(THREAT, Us, score);
 
