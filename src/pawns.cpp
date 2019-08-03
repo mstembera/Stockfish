@@ -142,7 +142,7 @@ namespace {
             score -= Backward + WeakUnopposed * int(!opposed);
 
         if (doubled)
-            score -= Doubled * (11 - 9 * bool(support));
+            score -= Doubled * (11 - 7 * bool(support));
 
     }
 
