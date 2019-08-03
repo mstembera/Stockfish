@@ -33,7 +33,7 @@ namespace {
 
   // Pawn penalties
   constexpr Score Backward      = S( 9, 24);
-  constexpr Score Doubled       = S(11, 56);
+  constexpr Score Doubled       = S( 1,  5);
   constexpr Score Isolated      = S( 5, 15);
   constexpr Score WeakLever     = S( 0, 56);
   constexpr Score WeakUnopposed = S(13, 27);
@@ -141,8 +141,9 @@ namespace {
         else if (backward)
             score -= Backward + WeakUnopposed * int(!opposed);
 
-        if (doubled && !support)
-            score -= Doubled;
+        if (doubled)
+            score -= Doubled * (11 - 8 * bool(support));
+
     }
 
     // Penalize our unsupported pawns attacked twice by enemy pawns
