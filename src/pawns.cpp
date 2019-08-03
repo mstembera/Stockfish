@@ -130,10 +130,8 @@ namespace {
         if (support | phalanx)
         {
             int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
-                   + 17 * popcount(support);
-
-            if (r > RANK_2)
-                v += 6 * popcount(neighbours & rank_bb(s - Up - Up));
+                   + 17 * popcount(support)
+                   +  6 * popcount(shift<Up>(neighbours) & ~(ourPawns | theirPawns) & rank_bb(s - Up));
 
             score += make_score(v, v * (r - 2) / 4);
         }
