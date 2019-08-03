@@ -132,6 +132,9 @@ namespace {
             int v =  Connected[r] * (phalanx ? 3 : 2) / (opposed ? 2 : 1)
                    + 17 * popcount(support);
 
+            if (r > RANK_2)
+                v += 6 * popcount(neighbours & rank_bb(s - Up - Up));
+
             score += make_score(v, v * (r - 2) / 4);
         }
 
