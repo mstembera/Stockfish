@@ -167,7 +167,7 @@ namespace {
     template<Color Us> Score threats() const;
     template<Color Us> Score passed() const;
     template<Color Us> Score space() const;
-    ScaleFactor scale_factor(Value eg) const;
+    ScaleFactor scale_factor(Value eg, Value inEg) const;
     Score initiative(Value eg) const;
 
     const Position& pos;
@@ -743,7 +743,7 @@ namespace {
   // Evaluation::scale_factor() computes the scale factor for the winning side
 
   template<Tracing T>
-  ScaleFactor Evaluation<T>::scale_factor(Value eg) const {
+  ScaleFactor Evaluation<T>::scale_factor(Value eg, Value inEg) const {
 
     Color strongSide = eg > VALUE_DRAW ? WHITE : BLACK;
     int sf = me->scale_factor(pos, strongSide);
@@ -755,8 +755,8 @@ namespace {
             && pos.non_pawn_material() == 2 * BishopValueMg)
             sf = 16 + 4 * pe->passed_count();
         else
-            sf = std::min(40 + (pos.opposite_bishops() ? 2 : 7) * pos.count<PAWN>(strongSide), sf);
-
+            sf = std::min(  40 + (pos.opposite_bishops() ? 2 : 7) * pos.count<PAWN>(strongSide)
+                          -  4 + std::min(abs(inEg) / 6, 6), sf);
     }
 
     return ScaleFactor(sf);
@@ -812,10 +812,11 @@ namespace {
             + passed< WHITE>() - passed< BLACK>()
             + space<  WHITE>() - space<  BLACK>();
 
-    score += initiative(eg_value(score));
+    Score inScore = initiative(eg_value(score));
+    score += inScore;
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
-    ScaleFactor sf = scale_factor(eg_value(score));
+    ScaleFactor sf = scale_factor(eg_value(score), eg_value(inScore));
     v =  mg_value(score) * int(me->game_phase())
        + eg_value(score) * int(PHASE_MIDGAME - me->game_phase()) * sf / SCALE_FACTOR_NORMAL;
 
