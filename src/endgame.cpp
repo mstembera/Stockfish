@@ -88,6 +88,11 @@ namespace Endgames {
 
   void init() {
 
+    map<eg_type<EVALUATION_FUNCTIONS>>().reserve((SCALING_FUNCTIONS - 1) * 16);
+    map<eg_type<SCALING_FUNCTIONS>>().reserve((ECODE_NB - SCALING_FUNCTIONS - 1) * 16);
+    map<eg_type<EVALUATION_FUNCTIONS>>().rehash((SCALING_FUNCTIONS - 1) * 16);
+    map<eg_type<SCALING_FUNCTIONS>>().rehash((ECODE_NB - SCALING_FUNCTIONS - 1) * 16);
+
     add<KPK>("KPK");
     add<KNNK>("KNNK");
     add<KBNK>("KBNK");

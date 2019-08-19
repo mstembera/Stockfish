@@ -21,7 +21,7 @@
 #ifndef ENDGAME_H_INCLUDED
 #define ENDGAME_H_INCLUDED
 
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -59,7 +59,9 @@ enum EndgameCode {
   KBPKN,   // KBP vs KN
   KNPK,    // KNP vs K
   KNPKB,   // KNP vs KB
-  KPKP     // KP vs KP
+  KPKP,    // KP vs KP
+
+  ECODE_NB
 };
 
 
@@ -98,7 +100,7 @@ struct Endgame : public EndgameBase<T> {
 namespace Endgames {
 
   template<typename T> using Ptr = std::unique_ptr<EndgameBase<T>>;
-  template<typename T> using Map = std::map<Key, Ptr<T>>;
+  template<typename T> using Map = std::unordered_map<Key, Ptr<T>>;
 
   extern std::pair<Map<Value>, Map<ScaleFactor>> maps;
 
@@ -119,7 +121,8 @@ namespace Endgames {
 
   template<typename T>
   const EndgameBase<T>* probe(Key key) {
-    return map<T>().count(key) ? map<T>()[key].get() : nullptr;
+    auto it = map<T>().find(key);
+    return it != map<T>().end() ? it->second.get() : nullptr;
   }
 }
 
