@@ -498,6 +498,29 @@ void Thread::search() {
          lastBestMoveDepth = rootDepth;
       }
 
+      if (!cmhUpdated && rootDepth > 4 * ONE_PLY)
+      {
+          const Thread* thMax =
+              *std::max_element(Threads.begin(), Threads.end(),
+              [](const Thread* t1, const Thread* t2){ return t1->completedDepth < t2->completedDepth; });
+
+          if (thMax != this)
+          {
+              int fullCnt = 0;
+              for (Color c : { WHITE, BLACK })
+                  for (PieceType pt1 = PAWN; pt1 <= KING; ++pt1)
+                      for (Square s = SQ_A1; s <= SQ_H8; ++s)
+                      {
+                          if (counterMoves[make_piece(c, pt1)][s] == MOVE_NONE)
+                              counterMoves[make_piece(c, pt1)][s] = thMax->counterMoves[make_piece(c, pt1)][s];
+
+                          fullCnt += counterMoves[make_piece(c, pt1)][s] != MOVE_NONE;
+                      }
+
+              cmhUpdated = fullCnt > 2 * (KING - PAWN + 1) * SQUARE_NB * 50 / 100;
+          }
+      }
+
       // Have we found a "mate in x"?
       if (   Limits.mate
           && bestValue >= VALUE_MATE_IN_MAX_PLY
