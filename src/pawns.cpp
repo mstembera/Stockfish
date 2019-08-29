@@ -62,8 +62,24 @@ namespace {
     { V(-10), V( -14), V(  90), V(15), V( 2), V( -7), V(-16) }
   };
 
+  Score ABonus[SQUARE_NB] = {
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)
+  };
+
   #undef S
   #undef V
+
+
+  int mgAB[48] = { 0 };
+  int egAB[48] = { 0 };
+
 
   template<Color Us>
   Score evaluate(const Position& pos, Pawns::Entry* e) {
@@ -150,6 +166,11 @@ namespace {
     score -= WeakLever * popcount(  ourPawns
                                   & doubleAttackThem
                                   & ~e->pawnAttacks[Us]);
+
+
+    Bitboard pa = e->pawnAttacks[Us];
+    while (pa)
+        score += ABonus[relative_square(Us, pop_lsb(&pa))];
 
     return score;
   }
@@ -257,3 +278,18 @@ template Score Entry::do_king_safety<WHITE>(const Position& pos);
 template Score Entry::do_king_safety<BLACK>(const Position& pos);
 
 } // namespace Pawns
+
+
+void pa_init()
+{
+    int i = 0;
+    for (Square s = SQ_A3; s <= SQ_H8; ++s)
+    {
+        ABonus[s] = make_score(mgAB[i], egAB[i]);
+        ++i;
+    }
+}
+
+TUNE(SetRange(-70, 70), mgAB, pa_init);
+TUNE(SetRange(-70, 70), mgAB, pa_init);
+UPDATE_ON_LAST();
