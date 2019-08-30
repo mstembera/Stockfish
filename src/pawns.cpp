@@ -62,6 +62,17 @@ namespace {
     { V(-10), V( -14), V(  90), V(15), V( 2), V( -7), V(-16) }
   };
 
+  constexpr Score PASQT[SQUARE_NB] = {
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S( 1, 0), S(-2,-1), S( 1, 1), S( 2, 1), S(-2, 0), S( 0,-4), S( 1, 0), S( 0, 4),
+    S(-1, 2), S( 1, 1), S(-2,-3), S(-2,-3), S( 0,-1), S(-3,-5), S( 2, 1), S( 0, 1),
+    S(-4, 0), S( 0, 0), S(-1, 0), S( 3, 6), S( 0, 1), S( 0, 2), S( 0,-1), S(-3, 2),
+    S( 0,-4), S(-1,-1), S( 0, 1), S( 1, 1), S( 3, 1), S(-1, 5), S( 2,-1), S(-1, 1),
+    S( 0, 0), S( 0,-1), S( 2, 1), S(-2, 1), S( 3, 1), S( 2, 2), S(-1, 1), S( 0, 0),
+    S(-3,-3), S( 3,-3), S(-3,-2), S(-1, 1), S( 2, 1), S(-1,-3), S( 0,-1), S( 0,-4)
+  };
+
   #undef S
   #undef V
 
@@ -150,6 +161,11 @@ namespace {
     score -= WeakLever * popcount(  ourPawns
                                   & doubleAttackThem
                                   & ~e->pawnAttacks[Us]);
+    
+    // Pawn attack square table
+    Bitboard pa = e->pawnAttacks[Us];
+    while (pa)
+        score += PASQT[relative_square(Us, pop_lsb(&pa))];
 
     return score;
   }
