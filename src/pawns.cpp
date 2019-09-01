@@ -62,7 +62,18 @@ namespace {
     { V(-10), V( -14), V(  90), V(15), V( 2), V( -7), V(-16) }
   };
 
-  Score ABonus[SQUARE_NB] = {
+  Score PASQT1[SQUARE_NB] = {
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)
+  };
+
+  Score PASQT2[SQUARE_NB] = {
     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
@@ -77,8 +88,10 @@ namespace {
   #undef V
 
 
-  int mgAB[48] = { 0 };
-  int egAB[48] = { 0 };
+  int mgAB1[48] = { 0 };
+  int egAB1[48] = { 0 };
+  int mgAB2[48] = { 0 };
+  int egAB2[48] = { 0 };
 
 
   template<Color Us>
@@ -168,9 +181,14 @@ namespace {
                                   & ~e->pawnAttacks[Us]);
 
 
-    Bitboard pa = e->pawnAttacks[Us];
-    while (pa)
-        score += ABonus[relative_square(Us, pop_lsb(&pa))];
+    // Pawn attack square tables
+    Bitboard pa2 = pawn_double_attacks_bb<Us>(ourPawns);
+    Bitboard pa1 = e->pawnAttacks[Us] & ~pa2;
+
+    while (pa1)
+        score += PASQT1[relative_square(Us, pop_lsb(&pa1))];
+    while (pa2)
+        score += PASQT2[relative_square(Us, pop_lsb(&pa2))];
 
     return score;
   }
@@ -285,11 +303,15 @@ void pa_init()
     int i = 0;
     for (Square s = SQ_A3; s <= SQ_H8; ++s)
     {
-        ABonus[s] = make_score(mgAB[i], egAB[i]);
+        PASQT1[s] = make_score(mgAB1[i], egAB1[i]);
+        PASQT2[s] = make_score(mgAB2[i], egAB2[i]);
         ++i;
     }
 }
 
-TUNE(SetRange(-70, 70), mgAB, pa_init);
-TUNE(SetRange(-70, 70), mgAB, pa_init);
+TUNE(SetRange(-70, 70), mgAB1, pa_init);
+TUNE(SetRange(-70, 70), egAB1, pa_init);
+TUNE(SetRange(-70, 70), mgAB2, pa_init);
+TUNE(SetRange(-70, 70), egAB2, pa_init);
+
 UPDATE_ON_LAST();
