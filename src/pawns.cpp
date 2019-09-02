@@ -62,15 +62,26 @@ namespace {
     { V(-10), V( -14), V(  90), V(15), V( 2), V( -7), V(-16) }
   };
 
-  constexpr Score PASQT[SQUARE_NB] = {
+  constexpr Score PASQT1[SQUARE_NB] = {
     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
-    S(-2,-1), S( 1,-2), S( 2, 5), S( 0, 1), S(-1,-1), S(-1,-2), S(-3, 2), S( 3, 4),
-    S( 0, 4), S( 0, 2), S( 0,-4), S(-5,-2), S( 1,-6), S(-5,-3), S( 0,-1), S( 1, 1),
-    S(-5, 1), S( 0, 1), S( 0,-2), S( 3, 7), S(-1, 1), S(-1, 0), S(-4, 1), S(-1, 2),
-    S( 0,-5), S( 0,-1), S( 1, 0), S( 0, 4), S( 1, 1), S(-1, 3), S(-2, 1), S(-1,-1),
-    S( 0, 1), S(-1, 1), S( 2, 4), S(-1, 1), S( 2, 3), S( 1, 4), S(-3, 1), S(-3, 1),
-    S(-1, 1), S( 4,-3), S(-6, 0), S(-1, 2), S( 2, 1), S(-2,-3), S( 3,-2), S( 2,-4)
+    S( 0,  0), S( 1,  1), S( 0,  1), S(-5,  4), S( 3,  6), S(-2,  0), S( 3,  2), S(-3,  0),
+    S(-2,  0), S(-3,  4), S(-1, -4), S(-6,  0), S( 0,  1), S( 0,  0), S(-6,  4), S( 3,  1),
+    S(-1, -2), S(-6,  1), S( 1,  4), S( 2,  2), S(-4,  0), S(-5, -1), S(-4,  6), S( 1,  8),
+    S( 5,  0), S( 1, -6), S( 2, -5), S( 0, -8), S( 0,  6), S( 0,  2), S( 0,  1), S(-2, -2),
+    S(-1, -1), S( 0,  0), S( 4, -3), S( 2,  0), S( 0,  0), S(-2,  2), S( 2, -2), S( 0, -1),
+    S(-3,  0), S(-4,  1), S( 0, 10), S( 5, -4), S(-4,  5), S(-1, -2), S( 2,  2), S( 3,  1)
+  };
+
+  constexpr Score PASQT2[SQUARE_NB] = {
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+    S( 0,  2), S(-8,  1), S( 0,  0), S( 1,  1), S( 2,  0), S( 6,  2), S( 2, -1), S(-2,  0),
+    S(-2,  1), S( 7,  8), S( 1, -3), S(-4,  1), S( 1, -5), S( 6, -6), S(-1,  3), S(-1,  6),
+    S( 2,  5), S( 5,  3), S( 4,  0), S(-1,  0), S( 4, -2), S( 0, -1), S( 0, -2), S(-1, -3),
+    S( 7,  1), S(-2,  0), S( 2, -7), S( 0,  0), S( 1,  1), S(-6,  2), S(-5,  1), S(-1, -2),
+    S( 0,  0), S( 3, -7), S( 3, -3), S(-3, -7), S( 0, -2), S(-1,  0), S( 0, -1), S(-2,  1),
+    S(-5,  4), S( 0, -3), S( 6, -9), S(-7,  0), S( 2,  0), S(-3,  0), S( 0, -5), S( 3,  1)
   };
 
   #undef S
@@ -161,11 +172,15 @@ namespace {
     score -= WeakLever * popcount(  ourPawns
                                   & doubleAttackThem
                                   & ~e->pawnAttacks[Us]);
-    
-    // Pawn attack square table
-    Bitboard pa = e->pawnAttacks[Us];
-    while (pa)
-        score += PASQT[relative_square(Us, pop_lsb(&pa))];
+
+    // Pawn attack square tables
+    Bitboard pa2 = pawn_double_attacks_bb<Us>(ourPawns);
+    Bitboard pa1 = e->pawnAttacks[Us] & ~pa2;
+
+    while (pa1)
+        score += PASQT1[relative_square(Us, pop_lsb(&pa1))];
+    while (pa2)
+        score += PASQT2[relative_square(Us, pop_lsb(&pa2))];
 
     return score;
   }
