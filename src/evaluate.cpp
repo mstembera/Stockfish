@@ -714,19 +714,21 @@ namespace {
   template<Tracing T>
   Score Evaluation<T>::initiative(Value eg) const {
 
+    Color strongSide = eg >= 0 ? WHITE : BLACK;
+
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
 
-    int pawnsOnBothFlanks = (   (pos.pieces(PAWN) & QueenSide)
-                             && (pos.pieces(PAWN) & KingSide)) * 2;
+    int pawnsOnBothFlanks =   (pos.pieces(PAWN) & QueenSide)
+                           && (pos.pieces(PAWN) & KingSide);
     if (pawnsOnBothFlanks)
-        pawnsOnBothFlanks += pos.count<BISHOP>(WHITE) != pos.count<BISHOP>(BLACK);
+        pawnsOnBothFlanks += pos.count<BISHOP>(strongSide) > pos.count<BISHOP>(~strongSide);
 
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
                     +  9 * outflanking
-                    +  8 * pawnsOnBothFlanks
+                    + 12 * pawnsOnBothFlanks
                     + 49 * !pos.non_pawn_material()
                     -103 ;
 
