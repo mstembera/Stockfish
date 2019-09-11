@@ -700,6 +700,18 @@ namespace {
     int weight = pos.count<ALL_PIECES>(Us) - 1;
     Score score = make_score(bonus * weight * weight / 16, 0);
 
+    // Adjust by minor count
+    if (pos.count<QUEEN>() == 2 && pos.count<ROOK>() == 4)
+    {
+        int minorCnt = pos.count<BISHOP>() + pos.count<KNIGHT>();
+
+        if (minorCnt > 6)
+            score = score * 17 / 16;
+        else 
+        if (minorCnt <= 4)
+            score = score * 15 / 16;
+    }
+
     if (T)
         Trace::add(SPACE, Us, score);
 
