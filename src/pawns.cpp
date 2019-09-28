@@ -93,8 +93,12 @@ namespace {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
         Rank r = relative_rank(Us, s);
-
-        e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
+        Square farthest = s + Up * 3;
+        
+        if (farthest < SQ_NONE)
+            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s) & ~forward_ranks_bb(Us, farthest);
+        else
+            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
         // Flag the pawn
         opposed    = theirPawns & forward_file_bb(Us, s);
