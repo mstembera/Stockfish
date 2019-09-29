@@ -81,6 +81,7 @@ namespace {
     Bitboard ourPawns   = pos.pieces(  Us, PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
 
+    Bitboard doubleAttackUs   = pawn_double_attacks_bb<Us>(ourPawns);
     Bitboard doubleAttackThem = pawn_double_attacks_bb<Them>(theirPawns);
 
     e->passedPawns[Us] = e->pawnAttacksSpan[Us] = 0;
@@ -93,10 +94,11 @@ namespace {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
         Rank r = relative_rank(Us, s);
-        Square farthest = s + Up * 3;
-        
-        if (farthest < SQ_NONE)
-            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s) & ~forward_ranks_bb(Us, farthest);
+
+        Bitboard stop = file_bb(s) & forward_ranks_bb(Us, s) & (doubleAttackThem & ~doubleAttackUs);
+    
+        if (stop)
+            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s) & ~forward_ranks_bb(Us, lsb(stop));
         else
             e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
