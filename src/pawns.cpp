@@ -233,8 +233,8 @@ Score Entry::do_king_safety(const Position& pos) {
       shelters[2] = evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1));
 
   for (int i : {1, 2})
-     if (  mg_value(shelters[i]) * SHRT_MAX + eg_value(shelters[i])
-         > mg_value(shelters[0]) * SHRT_MAX + eg_value(shelters[0]))
+     if (  mg_value(shelters[i]) * 6 + eg_value(shelters[i])
+         > mg_value(shelters[0]) * 6 + eg_value(shelters[0]))
          shelters[0] = shelters[i];
 
   // In endgame we like to bring our king near our closest pawn
