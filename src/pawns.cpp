@@ -175,6 +175,12 @@ Entry* probe(const Position& pos) {
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
 
+  e->scores[WHITE] +=  make_score(3, 1)
+                     * popcount(  (Rank4BB | Rank5BB | Rank6BB)
+                                & e->pawnAttacks[WHITE] & ~e->pawnAttacksSpan[BLACK]);
+  e->scores[BLACK] +=  make_score(3, 1)
+                     * popcount(  (Rank5BB | Rank4BB | Rank3BB)
+                                & e->pawnAttacks[BLACK] & ~e->pawnAttacksSpan[WHITE]);
   return e;
 }
 
