@@ -85,7 +85,8 @@ namespace {
 
     e->passedPawns[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
-    e->pawnAttacks[Us] = e->pawnAttacksSpan[Us] = pawn_attacks_bb<Us>(ourPawns);
+    e->pawnAttacks[Us] = pawn_attacks_bb<Us>(ourPawns);
+    e->pawnAttacksSpan[Us] = pawn_attacks_bb<Us>(ourPawns) & ~doubleAttackThem;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -175,12 +176,6 @@ Entry* probe(const Position& pos) {
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
 
-  e->scores[WHITE] +=  make_score(6, 2)
-                     * popcount(  (Rank4BB | Rank5BB | Rank6BB)
-                                & e->pawnAttacks[WHITE] & ~e->pawnAttacksSpan[BLACK]);
-  e->scores[BLACK] +=  make_score(6, 2)
-                     * popcount(  (Rank5BB | Rank4BB | Rank3BB)
-                                & e->pawnAttacks[BLACK] & ~e->pawnAttacksSpan[WHITE]);
   return e;
 }
 
