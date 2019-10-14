@@ -70,6 +70,7 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = (Us == WHITE ? NORTH : SOUTH);
+    constexpr Direction Down = (Us == WHITE ? SOUTH : NORTH);
 
     Bitboard neighbours, stoppers, support, phalanx, opposed;
     Bitboard lever, leverPush, blocked;
@@ -81,11 +82,14 @@ namespace {
     Bitboard ourPawns   = pos.pieces(  Us, PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
 
+    Bitboard attackThem       = pawn_attacks_bb<Them>(theirPawns);
     Bitboard doubleAttackThem = pawn_double_attacks_bb<Them>(theirPawns);
+    Bitboard doubleAttackUs   = pawn_double_attacks_bb<Us>(ourPawns);
 
     e->passedPawns[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
-    e->pawnAttacks[Us] = e->pawnAttacksSpan[Us] = pawn_attacks_bb<Us>(ourPawns);
+    e->pawnAttacks[Us] = pawn_attacks_bb<Us>(ourPawns);
+    e->outposts[Us] = 0;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -110,9 +114,49 @@ namespace {
         backward =  !(neighbours & forward_ranks_bb(Them, s + Up))
                   && (stoppers & (leverPush | blocked));
 
-        // Compute additional span if pawn is not backward nor blocked
-        if (!backward && !blocked)
-            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
+        // Compute outposts
+        Bitboard attacked = pos.attacks_from<PAWN>(s, Us) & ~attackThem & ~pos.pieces(Us, PAWN);
+        while (attacked)
+        {
+            Square os = pop_lsb(&attacked);
+
+            if (!(e->outposts[Us] & os))
+            {
+                Rank oRank = relative_rank(Us, os);
+                Bitboard eb = theirPawns & shift<EAST>(file_bb(os)) & forward_ranks_bb(Us, os + Up);
+                Bitboard wb = theirPawns & shift<WEST>(file_bb(os)) & forward_ranks_bb(Us, os + Up);
+
+                for (Bitboard fb : { eb, wb })
+                {
+                    if (fb)
+                    {
+                        Bitboard fs = square_bb(frontmost_sq(Them, fb));
+
+                        do
+                        {
+                            fs = shift<Down>(fs) & ~ourPawns;
+                            fs = (fs & ~e->pawnAttacks[Us]) | (fs & attackThem & ~doubleAttackUs) | (fs & doubleAttackThem); 
+                            
+                            if (!fs)
+                                break;
+
+                            if (pos.attacks_from<PAWN>(lsb(fs), Them) & os)
+                            {
+                                os = SQ_NONE;
+                                break;
+                            }
+                        } while (relative_rank(Us, lsb(fs)) > oRank);
+                    }
+
+                    if (os == SQ_NONE)
+                        break;
+                }
+
+                if (os != SQ_NONE)
+                    e->outposts[Us] |= os;
+            }
+        }
+
 
         // A pawn is passed if one of the three following conditions is true:
         // (a) there is no stoppers except some levers
