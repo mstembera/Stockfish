@@ -105,10 +105,23 @@ namespace {
         phalanx    = neighbours & rank_bb(s);
         support    = neighbours & rank_bb(s - Up);
 
-        // A pawn is backward when it is behind all pawns of the same color on
+        // A pawn is backward if it is behind all pawns of the same color on
         // the adjacent files and cannot safely advance.
-        backward =   neighbours && !(neighbours & forward_ranks_bb(Them, s + Up))
-                  && (stoppers & (leverPush | blocked));
+        backward =  !(neighbours & forward_ranks_bb(Them, s + Up))
+                  && (/*stoppers &*/ (leverPush | blocked));
+                  
+        // Still backward if it is behind all pawns of the same color on
+        // the adjacent files after safely advancing
+        Square ss = s + Up;
+        while (!backward && relative_rank(Us, ss) < RANK_7)
+        {
+            ss += Up;
+            Bitboard blockedU = theirPawns & (ss);
+            Bitboard leverPushU = theirPawns & PawnAttacks[Us][ss];
+            
+            backward =  !(neighbours & forward_ranks_bb(Them, ss))
+                      && (leverPushU | blockedU);
+        }
 
         // Compute additional span if pawn is not backward nor blocked
         if (!backward && !blocked)
