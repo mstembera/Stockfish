@@ -112,7 +112,7 @@ namespace {
                   
         // Still backward if it is behind all pawns of the same color on
         // the adjacent files after safely advancing
-        if (!backward && !(neighbours & forward_ranks_bb(Them, s + Up)))
+        if (!backward && neighbours && !(neighbours & forward_ranks_bb(Them, s + Up)))
         {
             Square ss = s + Up;
             while (!backward && relative_rank(Us, ss) < RANK_7)
