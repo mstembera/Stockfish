@@ -112,15 +112,18 @@ namespace {
                   
         // Still backward if it is behind all pawns of the same color on
         // the adjacent files after safely advancing
-        Square ss = s + Up;
-        while (!backward && relative_rank(Us, ss) < RANK_7)
+        if (!backward && !(neighbours & forward_ranks_bb(Them, s + Up)))
         {
-            ss += Up;
-            Bitboard blockedU = theirPawns & (ss);
-            Bitboard leverPushU = theirPawns & PawnAttacks[Us][ss];
+            Square ss = s + Up;
+            while (!backward && relative_rank(Us, ss) < RANK_7)
+            {
+                ss += Up;
+                Bitboard blockedU = theirPawns & (ss);
+                Bitboard leverPushU = theirPawns & PawnAttacks[Us][ss];
             
-            backward =  !(neighbours & forward_ranks_bb(Them, ss))
-                      && (leverPushU | blockedU);
+                backward =  !(neighbours & forward_ranks_bb(Them, ss))
+                          && (leverPushU | blockedU);
+            }
         }
 
         // Compute additional span if pawn is not backward nor blocked
