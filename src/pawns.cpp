@@ -107,7 +107,7 @@ namespace {
 
         // A pawn is backward when it is behind all pawns of the same color on
         // the adjacent files and cannot safely advance.
-        backward =  !(neighbours & forward_ranks_bb(Them, s + Up))
+        backward =   neighbours && !(neighbours & forward_ranks_bb(Them, s + Up))
                   && (stoppers & (leverPush | blocked));
 
         // Compute additional span if pawn is not backward nor blocked
