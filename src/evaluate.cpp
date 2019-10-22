@@ -135,7 +135,7 @@ namespace {
   constexpr Score KnightOnQueen      = S( 16, 12);
   constexpr Score LongDiagonalBishop = S( 45,  0);
   constexpr Score MinorBehindPawn    = S( 18,  3);
-  constexpr Score Outpost            = S( 32, 10);
+  constexpr Score Outpost            = S( 16,  5);
   constexpr Score PassedFile         = S( 11,  8);
   constexpr Score PawnlessFlank      = S( 17, 95);
   constexpr Score RestrictedPiece    = S(  7,  7);
@@ -252,6 +252,11 @@ namespace {
     kingRing[Us] &= ~dblAttackByPawn;
   }
 
+  inline Bitboard knight_attacks(Bitboard b)
+  {
+    return   shift<NNE>(b) | shift<NNW>(b) | shift<ENE>(b) | shift<WNW>(b)
+           | shift<SSE>(b) | shift<SSW>(b) | shift<ESE>(b) | shift<WSW>(b);
+  }
 
   // Evaluation::pieces() scores pieces of a given color and type
   template<Tracing T> template<Color Us, PieceType Pt>
@@ -298,10 +303,15 @@ namespace {
             // Bonus if piece is on an outpost square or can reach one
             bb = OutpostRanks & attackedBy[Us][PAWN] & ~pe->pawn_attacks_span(Them);
             if (bb & s)
-                score += Outpost * (Pt == KNIGHT ? 2 : 1);
+                score += Outpost * (Pt == KNIGHT ? 4 : 2);
 
-            else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
-                score += Outpost;
+            else if (Pt == KNIGHT)
+            {
+                if (bb & b & ~pos.pieces(Us))
+                    score += Outpost * 2;
+                else if (bb & knight_attacks(b & mobilityArea[Us] & ~pos.pieces(Us)) & ~pos.pieces(Us))
+                    score += Outpost;
+            }
 
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)

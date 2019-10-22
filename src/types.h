@@ -238,7 +238,16 @@ enum Direction : int {
   NORTH_EAST = NORTH + EAST,
   SOUTH_EAST = SOUTH + EAST,
   SOUTH_WEST = SOUTH + WEST,
-  NORTH_WEST = NORTH + WEST
+  NORTH_WEST = NORTH + WEST,
+
+  NNE = NORTH + NORTH + EAST,
+  NNW = NORTH + NORTH + WEST,
+  ENE = NORTH + EAST  + EAST,
+  WNW = NORTH + WEST  + WEST,
+  SSE = SOUTH + SOUTH + EAST,
+  SSW = SOUTH + SOUTH + WEST,
+  ESE = SOUTH + EAST  + EAST,
+  WSW = SOUTH + WEST  + WEST
 };
 
 enum File : int {
