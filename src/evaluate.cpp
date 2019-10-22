@@ -106,6 +106,8 @@ namespace {
       S(106,184), S(109,191), S(113,206), S(116,212) }
   };
 
+  constexpr int MaxMobIdx[] = { 8, 13, 14, 27 };
+
   // RookOnFile[semiopen/open] contains bonuses for each rook when there is
   // no (friendly) pawn on the rook file.
   constexpr Score RookOnFile[] = { S(21, 4), S(47, 25) };
@@ -289,7 +291,8 @@ namespace {
             kingAttacksCount[Us] += popcount(b & attackedBy[Them][KING]);
         }
 
-        int mob = (popcount(b & mobilityArea[Us]) * 3 + popcount(b & mobilityArea[Us] & ~pos.pieces(Us)) + 3) / 4;
+        int mob = (popcount(b & mobilityArea[Us]) * 6 + popcount(b & mobilityArea[Us] & ~pos.pieces(Us)) * 2 + 9) / 8;
+        mob = std::min(mob, MaxMobIdx[Pt - 2]);
 
         mobility[Us] += MobilityBonus[Pt - 2][mob];
 
