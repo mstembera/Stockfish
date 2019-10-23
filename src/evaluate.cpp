@@ -716,6 +716,9 @@ namespace {
                            &&  outflanking < 0
                            && !pawnsOnBothFlanks;
 
+    int engagement = popcount(  (attackedBy[WHITE][ALL_PIECES] & (Rank5BB | Rank6BB | Rank7BB | Rank8BB))
+                              | (attackedBy[BLACK][ALL_PIECES] & (Rank1BB | Rank2BB | Rank3BB | Rank4BB)));
+
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
@@ -723,7 +726,8 @@ namespace {
                     + 18 * pawnsOnBothFlanks
                     + 49 * !pos.non_pawn_material()
                     - 36 * almostUnwinnable
-                    -103 ;
+                    +      engagement
+                    -118;
 
     // Now apply the bonus: note that we find the attacking side by extracting the
     // sign of the midgame or endgame values, and that we carefully cap the bonus
