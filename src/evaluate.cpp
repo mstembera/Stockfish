@@ -135,7 +135,7 @@ namespace {
   constexpr Score KnightOnQueen      = S( 16, 12);
   constexpr Score LongDiagonalBishop = S( 45,  0);
   constexpr Score MinorBehindPawn    = S( 18,  3);
-  constexpr Score Outpost            = S( 11,  3);
+  constexpr Score Outpost            = S( 16,  5);
   constexpr Score PassedFile         = S( 11,  8);
   constexpr Score PawnlessFlank      = S( 17, 95);
   constexpr Score RestrictedPiece    = S(  7,  7);
@@ -291,17 +291,11 @@ namespace {
         {
             // Bonus if piece is on an outpost square or can reach one
             bb = OutpostRanks & ~pe->pawn_attacks_span(Them);
-            if ((bb & attackedBy[Us][PAWN]) & s)
-                score += Outpost * (Pt == KNIGHT ? 6 : 3);
-
-            else if (Pt == KNIGHT && bb & attackedBy[Us][PAWN] & b & ~pos.pieces(Us))
-                score += Outpost * 3;
-
-            else if(bb & s)
-                score += Outpost * (Pt == KNIGHT ? 2 : 1);
+            if (bb & s)
+                score += Outpost * (Pt == KNIGHT ? 2 : 1) * ((bb & attackedBy[Us][PAWN]) & s ? 2 : 1);
 
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
-                score += Outpost;
+                score += Outpost * ((bb & attackedBy[Us][PAWN]) & s ? 2 : 1);
 
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)
