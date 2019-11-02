@@ -253,10 +253,8 @@ namespace {
 
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Down = -pawn_push(Us);
-    constexpr Bitboard OutpostSquares = (Us == WHITE ?   (Rank4BB | Rank5BB | Rank6BB)
-                                                      & ~(Rank6BB & (FileABB | FileHBB))
-                                                     :   (Rank5BB | Rank4BB | Rank3BB)
-                                                      & ~(Rank3BB & (FileABB | FileHBB)));
+    constexpr Bitboard OutpostRanks = (Us == WHITE ? Rank4BB | Rank5BB | Rank6BB
+                                                   : Rank5BB | Rank4BB | Rank3BB);
     const Square* pl = pos.squares<Pt>(Us);
 
     Bitboard b, bb;
@@ -292,10 +290,15 @@ namespace {
         if (Pt == BISHOP || Pt == KNIGHT)
         {
             // Bonus if piece is on an outpost square or can reach one
-            bb = OutpostSquares & attackedBy[Us][PAWN] & ~pe->pawn_attacks_span(Them);
+            bb = OutpostRanks & attackedBy[Us][PAWN] & ~pe->pawn_attacks_span(Them);
             if (bb & s)
+            {
                 score += Outpost * (Pt == KNIGHT ? 2 : 1);
 
+                int d  = (file_of(s) <= FILE_D) ? distance<File>(s, SQ_D1)
+                                                : distance<File>(s, SQ_E1);
+                score += make_score(3, 1) * (2 - d);
+            }
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
                 score += Outpost;
 
