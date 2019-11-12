@@ -334,7 +334,7 @@ inline bool Position::advanced_pawn_push(Move m) const {
 inline int Position::pawns_on_same_color_squares(Color c, Square s) const {
   return popcount(  pieces(c, PAWN)
                   & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)
-                  & (c == WHITE ? ~Rank2BB : ~Rank7BB));
+                  & (c == WHITE ? ~Rank7BB : ~Rank2BB));
 }
 
 inline Key Position::key() const {
