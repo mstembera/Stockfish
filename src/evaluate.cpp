@@ -299,7 +299,7 @@ namespace {
                 score += OutpostRank[relative_rank(Us, s)] * (Pt == KNIGHT ? 2 : 1);
 
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
-                score += OutpostRank[relative_rank(Us, frontmost_sq(Us, bb & b & ~pos.pieces(Us)))];
+                score += OutpostRank[relative_rank(Us, frontmost_sq(~Us, bb & b & ~pos.pieces(Us)))];
 
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)
