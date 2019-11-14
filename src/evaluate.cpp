@@ -322,11 +322,10 @@ namespace {
                 if (more_than_one(attacks_bb<BISHOP>(s, pos.pieces(PAWN)) & Center))
                     score += LongDiagonalBishop;
 
-                // Bonus for proximity to a castled king
-                if (   (s & attackedBy[Us][KING])
-                    && relative_rank(Us, pos.square<KING>(Us)) == RANK_1
-                    && (file_of(pos.square<KING>(Us)) <= FILE_C || file_of(pos.square<KING>(Us)) >= FILE_F))
-                    score += make_score(8, 0);
+                // Bonus for fianchetto on kings castling side
+                if (   (s & (relative_square(Us, SQ_B2) | relative_square(Us, SQ_G2)))
+                    && (s & kingRing[Us]))
+                    score += make_score(10, 0);
             }
 
             // An important Chess960 pattern: A cornered bishop blocked by a friendly
