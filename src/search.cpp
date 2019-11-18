@@ -277,7 +277,7 @@ void MainThread::search() {
       && !(Skill(Options["Skill Level"]).enabled() || Options["UCI_LimitStrength"])
       &&  rootMoves[0].pv[0] != MOVE_NONE)
   {
-      std::map<Move, int64_t> votes;
+      std::unordered_map<Move, int64_t> votes(Threads.size());
       Value minScore = this->rootMoves[0].score;
 
       // Find out minimum score
@@ -289,7 +289,18 @@ void MainThread::search() {
       {
           votes[th->rootMoves[0].pv[0]] +=
               (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth);
+      }
 
+      for (Thread* th : Threads)
+      {
+          if (   th->rootMoves[0].pv.size() >= 3
+              && votes.find(th->rootMoves[0].pv[2]) != votes.end())
+              votes[th->rootMoves[0].pv[2]] +=
+                  ((th->rootMoves[0].score - minScore + 14) * int(th->completedDepth)) / 8;
+      }
+
+      for (Thread* th : Threads)
+      {
           if (bestThread->rootMoves[0].score >= VALUE_MATE_IN_MAX_PLY)
           {
               // Make sure we pick the shortest mate
