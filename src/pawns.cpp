@@ -245,7 +245,9 @@ Score Entry::do_king_safety(const Position& pos) {
   else while (pawns)
       minPawnDist = std::min(minPawnDist, distance(ksq, pop_lsb(&pawns)));
 
-  return shelter - make_score(0, 16 * minPawnDist);
+  int minPasserDist = passedPawns[~Us] ? distance(frontmost_sq(~Us, passedPawns[~Us]), ksq) : 0;
+
+  return shelter - make_score(0, 16 * (minPawnDist + minPasserDist));
 }
 
 // Explicit template instantiation
