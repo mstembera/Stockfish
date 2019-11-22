@@ -71,6 +71,10 @@ namespace {
 
 } // namespace
 
+template<typename T1, typename T2>
+T2 interpolate(T1 x, T1 x0, T1 x1, T2 y0, T2 y1) {
+  return T2(y0 + (y1 - y0) * (x - x0) / (x1 - x0));
+}
 
 /// init() is called at the beginning of the search and calculates the allowed
 /// thinking time out of the time control and current game ply. We support four
@@ -88,6 +92,13 @@ void TimeManagement::init(Search::LimitsType& limits, Color us, int ply) {
   TimePoint slowMover       = Options["Slow Mover"];
   TimePoint npmsec          = Options["nodestime"];
   TimePoint hypMyTime;
+
+  // Decrease average time spent if remaining time is small relative to increment.
+  if (limits.inc[us])
+  {
+      double tiRatio = std::min(std::max((double)limits.time[us] / (double)limits.inc[us], 2.0), 5.0);
+      slowMover = TimePoint(slowMover * interpolate(tiRatio, 2.0, 5.0, 0.7, 1.0));
+  }
 
   // If we have to play in 'nodes as time' mode, then convert from time
   // to nodes, and use resulting values in time management formulas.
