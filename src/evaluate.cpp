@@ -703,7 +703,21 @@ namespace {
     Value mg = mg_value(score);
     Value eg = eg_value(score);
 
-    if (abs(mg) < 13 && abs(eg) < 13)
+    if (mg > 10)
+        mg -= 10;
+    else if (mg < -10)
+        mg += 10;
+    else
+        mg = 0;
+
+    if (eg > 10)
+        eg -= 10;
+    else if (eg < -10)
+        eg += 10;
+    else 
+        eg = 0;
+
+    if (!mg && !eg)
         return SCORE_ZERO;
 
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
