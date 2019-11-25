@@ -277,7 +277,7 @@ void MainThread::search() {
       && !(Skill(Options["Skill Level"]).enabled() || Options["UCI_LimitStrength"])
       &&  rootMoves[0].pv[0] != MOVE_NONE)
   {
-      std::unordered_map<Move, int64_t> votes(Threads.size());
+      std::unordered_map<Move, int64_t> votes(this->rootMoves.size());
       Value minScore = this->rootMoves[0].score;
 
       // Find out minimum score
@@ -291,12 +291,17 @@ void MainThread::search() {
               (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth);
       }
 
+      // Up vote moves that can be transposed
       for (Thread* th : Threads)
       {
-          if (   th->rootMoves[0].pv.size() >= 3
-              && votes.find(th->rootMoves[0].pv[2]) != votes.end())
-              votes[th->rootMoves[0].pv[2]] +=
+          size_t mIdx = 2;
+          while (   th->rootMoves[0].pv.size() > mIdx
+                 && votes.find(th->rootMoves[0].pv[mIdx]) != votes.end())
+          {
+              votes[th->rootMoves[0].pv[mIdx]] +=
                   ((th->rootMoves[0].score - minScore + 14) * int(th->completedDepth)) / 8;
+              mIdx += 2;
+          }
       }
 
       for (Thread* th : Threads)
