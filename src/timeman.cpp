@@ -72,7 +72,7 @@ namespace {
 } // namespace
 
 template<typename T1, typename T2>
-T2 interpolate(T1 x, T1 x0, T1 x1, T2 y0, T2 y1) {
+inline T2 interpolate(T1 x, T1 x0, T1 x1, T2 y0, T2 y1) {
   return T2(y0 + (y1 - y0) * (x - x0) / (x1 - x0));
 }
 
@@ -96,8 +96,9 @@ void TimeManagement::init(Search::LimitsType& limits, Color us, int ply) {
   // Decrease average time spent if remaining time is small relative to increment.
   if (limits.inc[us])
   {
-      double tiRatio = std::min(std::max((double)limits.time[us] / (double)limits.inc[us], 2.0), 5.0);
-      slowMover = TimePoint(slowMover * interpolate(tiRatio, 2.0, 5.0, 0.7, 1.0));
+      constexpr double minR = 4.0, maxR = 12.0;  
+      double tiRatio = std::min(std::max((double)limits.time[us] / (double)limits.inc[us], minR), maxR);
+      slowMover = TimePoint(slowMover * interpolate(tiRatio, minR, maxR, 0.7, 1.0));
   }
 
   // If we have to play in 'nodes as time' mode, then convert from time
