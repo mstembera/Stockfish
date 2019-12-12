@@ -701,7 +701,6 @@ namespace {
 
     Value mg = mg_value(score);
     Value eg = eg_value(score);
-    Color strongSide = eg > 0 ? WHITE : BLACK;
 
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
@@ -716,7 +715,7 @@ namespace {
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
-                    + 32 * (bool)pos.count<PAWN>(strongSide)
+                    + 32 * (bool)pos.count<PAWN>()
                     +  9 * outflanking
                     + 21 * pawnsOnBothFlanks
                     + 51 * !pos.non_pawn_material()
