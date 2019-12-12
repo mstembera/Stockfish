@@ -295,7 +295,7 @@ namespace {
             if (bb & s)
                 score += Outpost * (Pt == KNIGHT ? 2 : 1);
 
-            else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us, PAWN))
+            else if (Pt == KNIGHT && bb & b)
                 score += ReachableOutpost * (1 + bool(bb & b & ~pos.pieces(Us)));
 
             // Knight and Bishop bonus for being right behind a pawn
