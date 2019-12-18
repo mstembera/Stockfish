@@ -298,7 +298,8 @@ namespace {
                         + OutpostFlank * (bool(s & KingFlank[file_of(pos.square<KING>(Them))]) * 2 - 1);
 
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
-                score += ReachableOutpost;
+                score +=  ReachableOutpost
+                        + OutpostFlank * (bool(bb & b & ~pos.pieces(Us) & KingFlank[file_of(pos.square<KING>(Them))]) * 2 - 1);
 
             // Knight and Bishop bonus for being right behind a pawn
             if (shift<Down>(pos.pieces(PAWN)) & s)
