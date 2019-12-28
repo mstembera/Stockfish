@@ -75,6 +75,7 @@ namespace {
     Bitboard lever, leverPush, blocked;
     Square s;
     bool backward, passed, doubled;
+    File minPFile = FILE_H, maxPFile = FILE_A;
     Score score = SCORE_ZERO;
     const Square* pl = pos.squares<PAWN>(Us);
 
@@ -127,7 +128,11 @@ namespace {
         // Passed pawns will be properly scored later in evaluation when we have
         // full attack info.
         if (passed)
+        {
             e->passedPawns[Us] |= s;
+            minPFile = std::min(minPFile, file_of(s));
+            maxPFile = std::max(maxPFile, file_of(s));
+        }
 
         // Score this pawn
         if (support | phalanx)
@@ -150,6 +155,10 @@ namespace {
             score -=   Doubled * doubled
                      + WeakLever * more_than_one(lever);
     }
+
+    int passerSpan = maxPFile - minPFile;
+    if (passerSpan > 1)
+        score += make_score(1, 2) * (passerSpan - 1);
 
     return score;
   }
