@@ -97,6 +97,11 @@ public:
   /// Output values only have 1/8th of their bits set on average.
   template<typename T> T sparse_rand()
   { return T(rand64() & rand64() & rand64()); }
+
+  // Randomize/hash any 64-bit number(except 0) using a fast congruential
+  // pseudo random number generator using a constant by Donald Knuth.
+  // https://en.wikipedia.org/wiki/Linear_congruential_generator
+  static uint64_t randomize64(uint64_t v) { return v * 6364136223846793005ULL; }
 };
 
 
