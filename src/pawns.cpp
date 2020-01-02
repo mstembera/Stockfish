@@ -36,6 +36,7 @@ namespace {
   constexpr Score BlockedStorm  = S(82, 82);
   constexpr Score Doubled       = S(11, 56);
   constexpr Score Isolated      = S( 5, 15);
+  constexpr Score Supporting    = S( 3,  9);
   constexpr Score WeakLever     = S( 0, 56);
   constexpr Score WeakUnopposed = S(13, 27);
 
@@ -71,7 +72,7 @@ namespace {
     constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
     constexpr Direction Up   = pawn_push(Us);
 
-    Bitboard neighbours, stoppers, support, phalanx, opposed;
+    Bitboard neighbours, stoppers, support, supporting, phalanx, opposed;
     Bitboard lever, leverPush, blocked;
     Square s;
     bool backward, passed, doubled;
@@ -104,6 +105,7 @@ namespace {
         neighbours = ourPawns   & adjacent_files_bb(s);
         phalanx    = neighbours & rank_bb(s);
         support    = neighbours & rank_bb(s - Up);
+        supporting = neighbours & rank_bb(s + Up);
 
         // A pawn is backward when it is behind all pawns of the same color on
         // the adjacent files and cannot safely advance.
@@ -130,21 +132,30 @@ namespace {
             e->passedPawns[Us] |= s;
 
         // Score this pawn
-        if (support | phalanx)
+        if (!neighbours)
         {
-            int v =  Connected[r] * (2 + bool(phalanx) - bool(opposed))
-                   + 21 * popcount(support);
-
-            score += make_score(v, v * (r - 2) / 4);
+            score -=  Isolated
+                    + WeakUnopposed * !opposed;
         }
+        else
+        {
+            if (support | phalanx)
+            {
+                int v =  Connected[r] * (2 + bool(phalanx) - bool(opposed))
+                       + 21 * popcount(support);
 
-        else if (!neighbours)
-            score -=   Isolated
-                     + WeakUnopposed * !opposed;
+                score += make_score(v, v * (r - 2) / 4);
+            }
+            else
+            {
+                if (backward)
+                    score -=  Backward
+                            + WeakUnopposed * !opposed;
 
-        else if (backward)
-            score -=   Backward
-                     + WeakUnopposed * !opposed;
+                if (supporting)
+                    score += Supporting;
+            }
+        }
 
         if (!support)
             score -=   Doubled * doubled
