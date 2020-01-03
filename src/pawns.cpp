@@ -146,11 +146,12 @@ namespace {
 
                 score += make_score(v, v * (r - 2) / 4);
             }
+
             else if (backward)
                 score -=  Backward
                         + WeakUnopposed * !opposed;
             
-            if (supporting)
+            else if (supporting)
                 score += Supporting;
         }
 
