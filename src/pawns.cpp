@@ -36,7 +36,7 @@ namespace {
   constexpr Score BlockedStorm  = S(82, 82);
   constexpr Score Doubled       = S(11, 56);
   constexpr Score Isolated      = S( 5, 15);
-  constexpr Score Supporting    = S( 3,  9);
+  constexpr Score Supporting    = S( 3,  5);
   constexpr Score WeakLever     = S( 0, 56);
   constexpr Score WeakUnopposed = S(13, 27);
 
@@ -146,12 +146,11 @@ namespace {
 
                 score += make_score(v, v * (r - 2) / 4);
             }
-
             else if (backward)
                 score -=  Backward
                         + WeakUnopposed * !opposed;
             
-            else if (supporting)
+            if (supporting)
                 score += Supporting;
         }
 
