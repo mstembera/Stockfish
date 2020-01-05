@@ -130,21 +130,37 @@ namespace {
             e->passedPawns[Us] |= s;
 
         // Score this pawn
-        if (support | phalanx)
+        if (!neighbours)
         {
-            int v =  Connected[r] * (2 + bool(phalanx) - bool(opposed))
-                   + 21 * popcount(support);
-
-            score += make_score(v, v * (r - 2) / 4);
+            score -=  Isolated
+                    + WeakUnopposed * !opposed;
         }
+        else
+        {
+            if (support | phalanx)
+            {
+                int v =  Connected[r] * (2 + bool(phalanx) - bool(opposed))
+                       + 21 * popcount(support);
 
-        else if (!neighbours)
-            score -=   Isolated
-                     + WeakUnopposed * !opposed;
+                score += make_score(v, v * (r - 2) / 4);
+            }
+            else
+            {
+                if (backward)
+                    score -=  Backward
+                            + WeakUnopposed * !opposed;
+                
+                do
+                {
+                    Square ns = pop_lsb(&neighbours);
 
-        else if (backward)
-            score -=   Backward
-                     + WeakUnopposed * !opposed;
+                    int dBonus = 4 - distance<Rank>(s, ns);
+
+                    score += make_score(dBonus, dBonus * 2);
+
+                } while (neighbours);   
+            }
+        }
 
         if (!support)
             score -=   Doubled * doubled
