@@ -25,7 +25,7 @@
 namespace {
 
   enum Stages {
-    MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
+    MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET_BEST, QUIET, BAD_CAPTURE,
     EVASION_TT, EVASION_INIT, EVASION,
     PROBCUT_TT, PROBCUT_INIT, PROBCUT,
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
@@ -105,18 +105,26 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  for (auto& m : *this)
+  ExtMove* best = cur;
+  for (ExtMove* mp = cur; mp < endMoves; ++mp)
+  {
+      ExtMove& m = *mp;
+
       if (Type == CAPTURES)
           m.value =  int(PieceValue[MG][pos.piece_on(to_sq(m))]) * 6
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
       else if (Type == QUIETS)
+      {
           m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                    + 2 * (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    + 2 * (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)];
 
+          if (m.value > best->value)
+              best = mp;
+      }
       else // Type == EVASIONS
       {
           if (pos.capture(m))
@@ -127,6 +135,10 @@ void MovePicker::score() {
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                        - (1 << 28);
       }
+  }
+
+  if (Type == QUIETS && cur != best)
+      std::swap(*cur, *best); 
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -206,9 +218,20 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
-      }
 
+          ++stage;
+
+          if (select<Next>([&]() {return   *cur != refutations[0].move
+                                        && *cur != refutations[1].move
+                                        && *cur != refutations[2].move;}))
+              return *(cur - 1);
+      }
+      ++stage;
+      /* fallthrough */
+
+  case QUIET_BEST:
+      if (!skipQuiets)
+          partial_insertion_sort(cur, endMoves, -3000 * depth);
       ++stage;
       /* fallthrough */
 
