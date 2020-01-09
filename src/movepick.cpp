@@ -105,24 +105,29 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  ExtMove* next_best = cur;
-  for (auto& m : *this)
+  for (ExtMove* mp = cur; mp < endMoves; ++mp)
+  {
+      ExtMove& m = *mp;
+
       if (Type == CAPTURES)
           m.value =  int(PieceValue[MG][pos.piece_on(to_sq(m))]) * 6
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
       else if (Type == QUIETS)
       {
-          m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
-                   + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-                   + 2 * (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
-                   + 2 * (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
-                   +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)];
-
-          if (m.value > cur->value)
+          if (   m == refutations[0].move
+              || m == refutations[1].move
+              || m == refutations[2].move)
           {
-              std::swap(*cur, *next_best++);
-              std::swap(*cur, m);
+              *mp-- = *--endMoves;
+          }
+          else
+          {
+              m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
+                       + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
+                       + 2 * (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
+                       + 2 * (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
+                       +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)];
           }
       }
       else // Type == EVASIONS
@@ -135,6 +140,7 @@ void MovePicker::score() {
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                        - (1 << 28);
       }
+  }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -222,9 +228,7 @@ top:
 
   case QUIET:
       if (   !skipQuiets
-          && select<Next>([&](){return   *cur != refutations[0].move
-                                      && *cur != refutations[1].move
-                                      && *cur != refutations[2].move;}))
+          && select<Next>([&](){ return true; }))
           return *(cur - 1);
 
       // Prepare the pointers to loop over the bad captures
