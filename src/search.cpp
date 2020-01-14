@@ -393,8 +393,6 @@ void Thread::search() {
   contempt = (us == WHITE ?  make_score(ct, ct / 2)
                           : -make_score(ct, ct / 2));
 
-  int searchAgainCounter = 0;
-
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
          && !Threads.stop
@@ -411,9 +409,6 @@ void Thread::search() {
 
       size_t pvFirst = 0;
       pvLast = 0;
-
-      if (!Threads.increaseDepth)
-         searchAgainCounter++;
 
       // MultiPV loop. We perform a full root search for each PV line
       for (pvIdx = 0; pvIdx < multiPV && !Threads.stop; ++pvIdx)
@@ -450,7 +445,7 @@ void Thread::search() {
           int failedHighCnt = 0;
           while (true)
           {
-              Depth adjustedDepth = std::max(1, rootDepth - failedHighCnt - searchAgainCounter);
+              Depth adjustedDepth = std::max(1, rootDepth - failedHighCnt - !Threads.increaseDepth);
               bestValue = ::search<PV>(rootPos, ss, alpha, beta, adjustedDepth, false);
 
               // Bring the best move to the front. It is critical that sorting
@@ -554,7 +549,8 @@ void Thread::search() {
 
           // Stop the search if we have only one legal move, or if available time elapsed
           if (   rootMoves.size() == 1
-              || Time.elapsed() > Time.optimum() * fallingEval * reduction * bestMoveInstability)
+              || Time.elapsed() > Time.optimum() * fallingEval * reduction * bestMoveInstability
+              || Threads.increaseDepth == false)
           {
               // If we are allowed to ponder do not stop the search now but
               // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -563,12 +559,9 @@ void Thread::search() {
               else
                   Threads.stop = true;
           }
-          else if (   Threads.increaseDepth
-                   && !mainThread->ponder
-                   && Time.elapsed() > Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.6)
-                   Threads.increaseDepth = false;
-          else
-                   Threads.increaseDepth = true;
+          else if (   !mainThread->ponder
+                   && Time.elapsed() > Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.75)
+              Threads.increaseDepth = false;
       }
 
       mainThread->iterValue[iterIdx] = bestValue;
