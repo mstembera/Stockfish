@@ -151,6 +151,10 @@ namespace {
                      + WeakLever * more_than_one(lever);
     }
 
+    if (   (e->passedPawns[Us] & QueenSide)
+        && (e->passedPawns[Us] & KingSide))
+        score += make_score(5, 15);
+
     return score;
   }
 
