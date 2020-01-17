@@ -69,6 +69,7 @@ public:
   Position rootPos;
   Search::RootMoves rootMoves;
   Depth rootDepth, completedDepth;
+  int searchAgainCounter;
   CounterMoveHistory counterMoves;
   ButterflyHistory mainHistory;
   CapturePieceToHistory captureHistory;

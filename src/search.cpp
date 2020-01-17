@@ -393,7 +393,7 @@ void Thread::search() {
   contempt = (us == WHITE ?  make_score(ct, ct / 2)
                           : -make_score(ct, ct / 2));
 
-  int searchAgainCounter = 0;
+  searchAgainCounter = 0;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
@@ -412,7 +412,8 @@ void Thread::search() {
       size_t pvFirst = 0;
       pvLast = 0;
 
-      if (!Threads.increaseDepth && rootDepth >= Threads.main()->rootDepth)
+      if (   !Threads.increaseDepth
+          && rootDepth - searchAgainCounter >= Threads.main()->rootDepth - Threads.main()->searchAgainCounter)
          searchAgainCounter++;
 
       // MultiPV loop. We perform a full root search for each PV line
