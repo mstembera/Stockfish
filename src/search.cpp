@@ -110,6 +110,8 @@ namespace {
   };
   std::array<Breadcrumb, 1024> breadcrumbs;
 
+  std::atomic<Depth> maxNonResearchedDepth;
+
   // ThreadHolding structure keeps track of which thread left breadcrumbs at the given
   // node for potential reductions. A free node will be marked upon entering the moves
   // loop by the constructor, and unmarked upon leaving that loop by the destructor.
@@ -348,6 +350,8 @@ void Thread::search() {
 
   if (mainThread)
   {
+      maxNonResearchedDepth = 0;
+
       if (mainThread->previousScore == VALUE_INFINITE)
           for (int i=0; i<4; ++i)
               mainThread->iterValue[i] = VALUE_ZERO;
@@ -393,7 +397,7 @@ void Thread::search() {
   contempt = (us == WHITE ?  make_score(ct, ct / 2)
                           : -make_score(ct, ct / 2));
 
-  searchAgainCounter = 0;
+  int searchAgainCounter = 0;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
@@ -412,8 +416,9 @@ void Thread::search() {
       size_t pvFirst = 0;
       pvLast = 0;
 
+      // Research the same depth if not too far behind
       if (   !Threads.increaseDepth
-          && rootDepth - searchAgainCounter >= Threads.main()->rootDepth - Threads.main()->searchAgainCounter)
+          && rootDepth - searchAgainCounter >= maxNonResearchedDepth)
          searchAgainCounter++;
 
       // MultiPV loop. We perform a full root search for each PV line
@@ -512,7 +517,11 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
+      {
           completedDepth = rootDepth;
+          if (completedDepth - searchAgainCounter > maxNonResearchedDepth)
+              maxNonResearchedDepth = completedDepth - searchAgainCounter;
+      }
 
       if (rootMoves[0].pv[0] != lastBestMove) {
          lastBestMove = rootMoves[0].pv[0];
