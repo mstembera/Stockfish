@@ -570,7 +570,7 @@ void Thread::search() {
           {
               double projectedT = Time.elapsed() * Time.elapsed() / (double)mainThread->previousT;
               Threads.increaseDepth =    Time.elapsed() < Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.25
-                                      ||     projectedT < Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.9;
+                                      ||     projectedT < Time.optimum() * fallingEval * reduction * bestMoveInstability * 1.1;
               mainThread->previousT = Time.elapsed();
           }
       }
