@@ -87,6 +87,7 @@ struct MainThread : public Thread {
   void check_time();
 
   double previousTimeReduction;
+  TimePoint previousT;
   Value previousScore;
   Value iterValue[4];
   int callsCnt;

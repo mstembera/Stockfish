@@ -225,6 +225,8 @@ void MainThread::search() {
 
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
+  previousT = Time.elapsed();
+  Threads.increaseDepth = true;
   TT.new_search();
 
   if (rootMoves.empty())
@@ -564,11 +566,13 @@ void Thread::search() {
                   Threads.stop = true;
           }
           else if (   Threads.increaseDepth
-                   && !mainThread->ponder
-                   && Time.elapsed() > Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.6)
-                   Threads.increaseDepth = false;
-          else
-                   Threads.increaseDepth = true;
+                   && !mainThread->ponder)
+          {
+              double projectedT = Time.elapsed() * Time.elapsed() / (double)mainThread->previousT;
+              Threads.increaseDepth =    Time.elapsed() < Time.optimum() * fallingEval * reduction * bestMoveInstability * 0.25
+                                      ||     projectedT < Time.optimum() * fallingEval * reduction * bestMoveInstability;
+              mainThread->previousT = Time.elapsed();
+          }
       }
 
       mainThread->iterValue[iterIdx] = bestValue;
