@@ -714,6 +714,16 @@ namespace {
                            &&  outflanking < 0
                            && !pawnsOnBothFlanks;
 
+    int cntDelta =  (pos.count<KNIGHT>(WHITE) != pos.count<KNIGHT>(BLACK))
+                  + (pos.count<BISHOP>(WHITE) != pos.count<BISHOP>(BLACK))
+                  + (pos.count<ROOK>(WHITE)   != pos.count<ROOK>(BLACK))
+                  + (pos.count<QUEEN>(WHITE)  != pos.count<QUEEN>(BLACK));
+
+    int valDelta =  pos.count<KNIGHT>(WHITE) * 6 + pos.count<BISHOP>(WHITE) * 6
+                  + pos.count<ROOK>(WHITE) * 9   + pos.count<QUEEN>(WHITE) * 18
+                  - pos.count<KNIGHT>(BLACK) * 6 - pos.count<BISHOP>(BLACK) * 6
+                  - pos.count<ROOK>(BLACK) * 9   - pos.count<QUEEN>(BLACK) * 18;
+
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
@@ -722,7 +732,8 @@ namespace {
                     + 21 * pawnsOnBothFlanks
                     + 51 * !pos.non_pawn_material()
                     - 43 * almostUnwinnable
-                    - 100 ;
+                    +  4 * cntDelta * (valDelta != 0)
+                    - 104;
 
     // Now apply the bonus: note that we find the attacking side by extracting the
     // sign of the midgame or endgame values, and that we carefully cap the bonus
