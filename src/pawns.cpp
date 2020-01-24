@@ -149,6 +149,10 @@ namespace {
         if (!support)
             score -=   Doubled * doubled
                      + WeakLever * more_than_one(lever);
+
+        // Count pawn asymmetry
+        e->asymetry += !(relative_square(BLACK, s) & theirPawns);
+        e->asymetry += !(file_of(s) & theirPawns);
     }
 
     return score;
@@ -172,6 +176,7 @@ Entry* probe(const Position& pos) {
       return e;
 
   e->key = key;
+  e->asymetry = 0;
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
 
