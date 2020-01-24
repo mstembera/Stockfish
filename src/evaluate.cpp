@@ -714,8 +714,8 @@ namespace {
                            &&  outflanking < 0
                            && !pawnsOnBothFlanks;
 
-    bool asymCastle =    (pos.can_castle(WHITE_OO)  != pos.can_castle(BLACK_OO))
-                      && (pos.can_castle(WHITE_OOO) != pos.can_castle(BLACK_OOO));
+    int asymCastle =     (pos.can_castle(WHITE_OO)  != pos.can_castle(BLACK_OO))
+                     +   (pos.can_castle(WHITE_OOO) != pos.can_castle(BLACK_OOO));
                       
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
@@ -725,8 +725,8 @@ namespace {
                     + 21 * pawnsOnBothFlanks
                     + 51 * !pos.non_pawn_material()
                     - 43 * almostUnwinnable
-                    + 40 * asymCastle
-                    - 100 ;
+                    + 24 * asymCastle
+                    - 102 ;
 
     // Now apply the bonus: note that we find the attacking side by extracting the
     // sign of the midgame or endgame values, and that we carefully cap the bonus
