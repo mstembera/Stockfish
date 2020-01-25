@@ -151,7 +151,6 @@ namespace {
                      + WeakLever * more_than_one(lever);
 
         // Count pawn asymmetry
-        e->asymmetry += !(relative_square(BLACK, s) & theirPawns);
         e->asymmetry += !(file_bb(s) & theirPawns);
     }
 
