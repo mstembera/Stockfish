@@ -169,15 +169,40 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
+      needsSorting = false;
+      isSorted = false;
+
       ++stage;
       goto top;
 
   case GOOD_CAPTURE:
-      if (select<Best>([&](){
-                       return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
-                              // Move losing capture to endBadCaptures to be tried later
-                              true : (*endBadCaptures++ = *cur, false); }))
-          return *(cur - 1);
+      if (needsSorting)
+      {
+          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          isSorted = true;
+          needsSorting = false;
+      }
+
+      if (isSorted)
+      {
+          if (select<Next>([&](){
+                           return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
+                                  // Move losing capture to endBadCaptures to be tried later
+                                  true : (*endBadCaptures++ = *cur, false); }))
+              return *(cur - 1);
+      }
+      else
+      {
+          if (select<Best>([&](){
+                           return pos.see_ge(*cur, Value(-55 * cur->value / 1024)) ?
+                                  // Move losing capture to endBadCaptures to be tried later
+                                  true : (*endBadCaptures++ = *cur, false); }))
+          {
+
+              needsSorting = (cur - 1)->value < -2000;
+              return *(cur - 1);
+          }
+      }
 
       // Prepare the pointers to loop over the refutations array
       cur = std::begin(refutations);
