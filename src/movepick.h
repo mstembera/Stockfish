@@ -146,7 +146,7 @@ private:
   Value threshold;
   Depth depth;
   ExtMove moves[MAX_MOVES];
-  bool needsSorting, isSorted;
+  bool needSort, isSorted;
 };
 
 #endif // #ifndef MOVEPICK_H_INCLUDED
