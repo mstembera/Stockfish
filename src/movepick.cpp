@@ -229,7 +229,8 @@ top:
                                            && *cur != refutations[1].move
                                            && *cur != refutations[2].move;}))
               {
-                  needSort = (cur - 1)->value < 5000;
+                  isSorted = (cur - 1)->value < -3000 * depth;
+                  needSort = !isSorted && (cur - 1)->value < 4000;
                   return *(cur - 1);
               }
           }
