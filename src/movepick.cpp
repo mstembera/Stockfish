@@ -178,7 +178,7 @@ top:
   case GOOD_CAPTURE:
       if (needsSorting)
       {
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          partial_insertion_sort(cur, endMoves, -10000 * depth);
           isSorted = true;
           needsSorting = false;
       }
@@ -199,7 +199,7 @@ top:
                                   true : (*endBadCaptures++ = *cur, false); }))
           {
 
-              needsSorting = (cur - 1)->value < -2000;
+              needsSorting = (cur - 1)->value < -3000;
               return *(cur - 1);
           }
       }
