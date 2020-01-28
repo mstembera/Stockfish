@@ -206,18 +206,41 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          //partial_insertion_sort(cur, endMoves, -3000 * depth);
+          needSort = isSorted = false;
       }
 
       ++stage;
       /* fallthrough */
 
   case QUIET:
-      if (   !skipQuiets
-          && select<Next>([&](){return   *cur != refutations[0].move
-                                      && *cur != refutations[1].move
-                                      && *cur != refutations[2].move;}))
-          return *(cur - 1);
+      if (!skipQuiets)
+      {
+          if (needSort)
+          {
+              partial_insertion_sort(cur, endMoves, -3000 * depth);
+              needSort = false;
+              isSorted = true;
+          }
+
+          if (!isSorted)
+          {
+              if (select<Best>([&](){return   *cur != refutations[0].move
+                                           && *cur != refutations[1].move
+                                           && *cur != refutations[2].move;}))
+              {
+                  needSort = (cur - 1)->value < 5000;
+                  return *(cur - 1);
+              }
+          }
+          else
+          {
+              if (select<Next>([&](){return   *cur != refutations[0].move
+                                           && *cur != refutations[1].move
+                                           && *cur != refutations[2].move;}))
+                  return *(cur - 1);
+          }
+      }
 
       // Prepare the pointers to loop over the bad captures
       cur = moves;
@@ -234,25 +257,11 @@ top:
       endMoves = generate<EVASIONS>(pos, cur);
 
       score<EVASIONS>();
-      needSort = isSorted = false;
       ++stage;
       /* fallthrough */
 
   case EVASION:
-      if (needSort)
-      {
-          partial_insertion_sort(cur, endMoves, INT_MIN);
-          needSort = false;
-          isSorted = true;
-      }
-      if (!isSorted)
-      {
-          Move m = select<Best>([](){ return true; });
-          needSort = (cur - 1)->value < -100000;
-          return m;
-      }
-      else
-          return select<Next>([](){ return true; });
+      return select<Best>([](){ return true; });
 
   case PROBCUT:
       return select<Best>([&](){ return pos.see_ge(*cur, threshold); });
