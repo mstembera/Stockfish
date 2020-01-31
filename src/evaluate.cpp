@@ -561,6 +561,11 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    if (    pos.count<KNIGHT>(Us) > 1
+        && (  pos.attacks_from<KNIGHT>(lsb(pos.pieces(Us, KNIGHT)))
+            & pos.attacks_from<KNIGHT>(msb(pos.pieces(Us, KNIGHT)))))
+            score += make_score(10, 8);
+
     if (T)
         Trace::add(THREAT, Us, score);
 
