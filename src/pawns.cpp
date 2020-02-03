@@ -151,7 +151,7 @@ namespace {
                      + WeakLever * more_than_one(lever);
 
         // Count pawn advancement
-        e->advance += r - RANK_2;
+        e->advance += (r - RANK_2) * (r - RANK_2);
     }
 
     return score;
