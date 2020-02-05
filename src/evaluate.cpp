@@ -561,6 +561,10 @@ namespace {
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
 
+    // Penalty for undefended pieces
+    b = (pos.pieces(Us) ^ pos.pieces(Us, PAWN)) & ~attackedBy[Us][ALL_PIECES];
+    score -= make_score(6, 3) * popcount(b);
+
     if (T)
         Trace::add(THREAT, Us, score);
 
