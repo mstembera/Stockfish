@@ -1017,7 +1017,7 @@ moves_loop: // When in check, search starts from here
               if (   lmrDepth < 6
                   && !inCheck
                   && ss->staticEval + 235 + 172 * lmrDepth <= alpha
-                  &&  thisThread->mainHistory[us][type_of(movedPiece)==PAWN][from_to(move)]
+                  &&  thisThread->mainHistory[us][pos.pawn_move(move)][from_to(move)]
                     + (*contHist[0])[movedPiece][to_sq(move)]
                     + (*contHist[1])[movedPiece][to_sq(move)]
                     + (*contHist[3])[movedPiece][to_sq(move)] < 25000)
@@ -1162,7 +1162,7 @@ moves_loop: // When in check, search starts from here
                        && !pos.see_ge(reverse_move(move)))
                   r -= 2 + ttPv;
 
-              ss->statScore =  thisThread->mainHistory[us][type_of(movedPiece)==PAWN][from_to(move)]
+              ss->statScore =  thisThread->mainHistory[us][pos.pawn_move(move)][from_to(move)]
                              + (*contHist[0])[movedPiece][to_sq(move)]
                              + (*contHist[1])[movedPiece][to_sq(move)]
                              + (*contHist[3])[movedPiece][to_sq(move)]
@@ -1172,7 +1172,7 @@ moves_loop: // When in check, search starts from here
               if (    ss->statScore < 0
                   && (*contHist[0])[movedPiece][to_sq(move)] >= 0
                   && (*contHist[1])[movedPiece][to_sq(move)] >= 0
-                  && thisThread->mainHistory[us][type_of(movedPiece)==PAWN][from_to(move)] >= 0)
+                  && thisThread->mainHistory[us][pos.pawn_move(move)][from_to(move)] >= 0)
                   ss->statScore = 0;
 
               // Decrease/increase reduction by comparing opponent's stat score (~10 Elo)
