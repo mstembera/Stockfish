@@ -151,7 +151,7 @@ namespace {
                      + WeakLever * more_than_one(lever);
 
         if (theirPawns & adjacent_files_bb(s) & rank_bb(s))
-            score -= make_score(4, 12);
+            score += make_score(4, 12);
     }
 
     return score;
