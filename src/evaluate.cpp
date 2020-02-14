@@ -710,6 +710,9 @@ namespace {
     bool infiltration = rank_of(pos.square<KING>(WHITE)) > RANK_4
                      || rank_of(pos.square<KING>(BLACK)) < RANK_5;
 
+    int aggression =  popcount((attackedBy[WHITE][ALL_PIECES] & pos.pieces(BLACK)) | (attackedBy[BLACK][ALL_PIECES] & pos.pieces(WHITE))) * 4
+                    - popcount((attackedBy[WHITE][ALL_PIECES] & pos.pieces(WHITE)) | (attackedBy[BLACK][ALL_PIECES] & pos.pieces(BLACK)));
+    
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
                     + 11 * pos.count<PAWN>()
@@ -718,6 +721,7 @@ namespace {
                     + 24 * infiltration
                     + 51 * !pos.non_pawn_material()
                     - 43 * almostUnwinnable
+                    +  2 * aggression
                     -110 ;
 
     Value mg = mg_value(score);
