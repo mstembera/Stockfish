@@ -718,7 +718,7 @@ namespace {
                     + 24 * infiltration
                     + 51 * !pos.non_pawn_material()
                     - 43 * almostUnwinnable
-                    -      pos.rule50_count() / 2
+                    -      std::max(0, pos.rule50_count() - 60)
                     -100 ;
 
     Value mg = mg_value(score);
