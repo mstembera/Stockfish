@@ -106,16 +106,18 @@ namespace {
         support    = neighbours & rank_bb(s - Up);
 
         // A pawn is backward when it is behind all pawns of the same color on
-        // the adjacent files and cannot safely advance or if advancing would
-        // still leave it behind.
-        backward =    (   !(neighbours & forward_ranks_bb(Them, s + Up))
-                       && (leverPush | blocked))
-                   || (   relative_rank(Us, s) < RANK_6
-                       && !(neighbours & forward_ranks_bb(Them, s + Up + Up + Up)));
+        // the adjacent files and cannot safely advance.
+        backward =  !(neighbours & forward_ranks_bb(Them, s + Up))
+                  && (leverPush | blocked);
 
         // Compute additional span if pawn is not backward nor blocked
         if (!backward && !blocked)
-            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
+        {
+            if (!opposed)
+                e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
+            else
+                e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s) & ~forward_ranks_bb(Us, frontmost_sq(Them, opposed));
+        }
 
         // A pawn is passed if one of the three following conditions is true:
         // (a) there is no stoppers except some levers
