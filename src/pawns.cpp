@@ -106,9 +106,12 @@ namespace {
         support    = neighbours & rank_bb(s - Up);
 
         // A pawn is backward when it is behind all pawns of the same color on
-        // the adjacent files and cannot safely advance.
-        backward =  !(neighbours & forward_ranks_bb(Them, s + Up))
-                  && (leverPush | blocked);
+        // the adjacent files and cannot safely advance or if advancing would
+        // still leave it behind.
+        backward =    (   !(neighbours & forward_ranks_bb(Them, s + Up))
+                       && (leverPush | blocked))
+                   || (   relative_rank(Us, s) < RANK_6
+                       && !(neighbours & forward_ranks_bb(Them, s + Up + Up + Up)));
 
         // Compute additional span if pawn is not backward nor blocked
         if (!backward && !blocked)
