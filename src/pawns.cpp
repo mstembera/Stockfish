@@ -111,7 +111,7 @@ namespace {
                   && (leverPush | blocked);
 
         // Compute additional span if pawn is not backward nor blocked
-        if (!backward && !blocked)
+        if (!leverPush && !blocked)
             e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
         // A pawn is passed if one of the three following conditions is true:
