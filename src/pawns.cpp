@@ -111,13 +111,8 @@ namespace {
                   && (leverPush | blocked);
 
         // Compute additional span if pawn is not backward nor blocked
-        if (!backward && !blocked)
-        {
-            if (!leverPush)
-                e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
-            else
-                e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s) & ~forward_ranks_bb(Us, frontmost_sq(Them, leverPush));
-        }
+        if (!blocked && !more_than_one(leverPush))    
+            e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
         // A pawn is passed if one of the three following conditions is true:
         // (a) there is no stoppers except some levers
