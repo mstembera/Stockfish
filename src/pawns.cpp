@@ -96,7 +96,7 @@ namespace {
 
         // Flag the pawn
         opposed    = theirPawns & forward_file_bb(Us, s);
-        blocked    = theirPawns & (s + Up);
+        blocked    = theirPawns & (s + Up) & ~e->pawnAttacks[Us];
         stoppers   = theirPawns & passed_pawn_span(Us, s);
         lever      = theirPawns & PawnAttacks[Us][s];
         leverPush  = theirPawns & PawnAttacks[Us][s + Up];
@@ -111,7 +111,7 @@ namespace {
                   && (leverPush | blocked);
 
         // Compute additional span if pawn is not backward nor blocked
-        if (!blocked && !more_than_one(leverPush))    
+        if (!backward && !blocked)
             e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
 
         // A pawn is passed if one of the three following conditions is true:
