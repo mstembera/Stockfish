@@ -81,7 +81,7 @@ namespace {
     Bitboard ourPawns   = pos.pieces(  Us, PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
 
-    Bitboard doubleAttackUs   = pawn_double_attacks_bb<Them>(ourPawns);
+    Bitboard doubleAttackUs   = pawn_double_attacks_bb<Us>(ourPawns);
     Bitboard doubleAttackThem = pawn_double_attacks_bb<Them>(theirPawns);
 
     e->passedPawns[Us] = 0;
