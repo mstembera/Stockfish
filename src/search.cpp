@@ -511,11 +511,11 @@ void Thread::search() {
       }
 
       if (!Threads.stop)
-          completedDepth = rootDepth;
+          completedDepth = rootDepth - searchAgainCounter;
 
       if (rootMoves[0].pv[0] != lastBestMove) {
          lastBestMove = rootMoves[0].pv[0];
-         lastBestMoveDepth = rootDepth;
+         lastBestMoveDepth = rootDepth - searchAgainCounter;
       }
 
       // Have we found a "mate in x"?
