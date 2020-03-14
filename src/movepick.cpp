@@ -117,7 +117,7 @@ void MovePicker::score() {
                    + 2 * (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    + (ply < MAX_LPH ?  4 * (*lowPlyHistory)[ply][from_to(m)] : 0)
-                   - 32768 * (promotion_type(m) != QUEEN && type_of(m) == PROMOTION);
+                   - 32768 * (type_of(m) == PROMOTION && promotion_type(m) != QUEEN);
 
       else // Type == EVASIONS
       {
