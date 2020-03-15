@@ -318,6 +318,10 @@ namespace {
                 if (more_than_one(attacks_bb<BISHOP>(s, pos.pieces(PAWN)) & Center))
                     score += LongDiagonalBishop;
 
+                // Penalty if a bishop is obstructed by a pawn
+                if (b & forward_ranks_bb(Us, s) & pos.pieces(Us, PAWN))
+                    score -= make_score(15, 7);
+
                 // An important Chess960 pattern: a cornered bishop blocked by a friendly
                 // pawn diagonally in front of it is a very serious problem, especially
                 // when that pawn is also blocked.
