@@ -635,11 +635,13 @@ namespace {
                     k += 5;
 
                 bonus += make_score(k * w, k * w);
-
-                if (    pos.count<BISHOP>(Us) == 1
-                    && !opposite_colors(pos.square<BISHOP>(Us), make_square(file_of(s), relative_rank(Us, RANK_8))))
-                    bonus += make_score(0, 12);
             }
+
+            if (   r > RANK_5
+                && pos.count<BISHOP>(Us) == 1
+                && !opposite_colors(pos.square<BISHOP>(Us), make_square(file_of(s), relative_rank(Us, RANK_8))))
+                bonus += make_score(0, 12);
+
         } // r > RANK_3
 
         // Scale down bonus for candidate passers which need more than one
