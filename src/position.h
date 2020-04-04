@@ -362,7 +362,7 @@ inline Value Position::non_pawn_material() const {
 
 inline Value Position::tempo() const
 {
-  return distance<File>(square<KING>(WHITE), square<KING>(BLACK)) > 3 ? Value(38) : Value(26);
+  return distance<File>(square<KING>(WHITE), square<KING>(BLACK)) > 2 ? Value(36) : Value(26);
 }
 
 inline int Position::game_ply() const {
