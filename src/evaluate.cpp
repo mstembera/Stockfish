@@ -331,6 +331,9 @@ namespace {
                                 : pos.piece_on(s + d + d) == make_piece(Us, PAWN) ? CorneredBishop * 2
                                                                                   : CorneredBishop;
                 }
+
+                if (shift<pawn_push(Us)>(pos.pieces(Us, KING)) & s)
+                    score += make_score(50, 0);
             }
         }
 
