@@ -331,6 +331,10 @@ namespace {
                                 : pos.piece_on(s + d + d) == make_piece(Us, PAWN) ? CorneredBishop * 2
                                                                                   : CorneredBishop;
                 }
+
+                if (   (s == relative_square(Us, SQ_A1) && (pos.pieces(Us) & relative_square(Us, SQ_B2))) 
+                    || (s == relative_square(Us, SQ_H1) && (pos.pieces(Us) & relative_square(Us, SQ_G2))))
+                    score -= make_score(40, 60);
             }
         }
 
