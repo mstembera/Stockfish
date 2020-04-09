@@ -126,14 +126,7 @@ namespace {
     S(0, 0), S(10, 28), S(17, 33), S(15, 41), S(62, 72), S(168, 177), S(276, 260)
   };
 
-#define B(s) (1ULL << s)
-  Bitboard DominatedKnight[SQUARE_NB] = {
-      0,        0,        0,        B(SQ_A1),            0, 0, 0, 0,
-      0,        0,        0,        B(SQ_A2),            0, 0, 0, 0,
-      0,        0,        0,        B(SQ_A3),            0, 0, 0, 0,
-      B(SQ_A1), B(SQ_B1), B(SQ_C1), B(SQ_D1) | B(SQ_A4), 0, 0, 0, 0
-  };
-#undef B
+  Bitboard DominatedKnight[SQUARE_NB];
 
   // Assorted bonuses and penalties
   constexpr Score BishopPawns         = S(  3,  7);
@@ -867,33 +860,15 @@ namespace {
 
 
 void Eval::init() {
-    
-    // Initialize remaining board quadrants by symmetry
-    for (File f = FILE_A; f <= FILE_D; ++f)
+
+    for (Square sb = SQ_A1; sb < SQUARE_NB; ++sb)
     {
-        for (Rank r = RANK_1; r <= RANK_4; ++r)
+        DominatedKnight[sb] = 0;
+
+        for (Square sk = SQ_A1; sk < SQUARE_NB; ++sk)
         {
-            Square s1 = make_square(f, r);
-            Square s2 = flip_file(s1);
-
-            DominatedKnight[s2] = 0;
-            Bitboard b = DominatedKnight[s1];
-            while (b)
-                DominatedKnight[s2] |= flip_file(pop_lsb(&b));
-        }
-    }
-
-    for (File f = FILE_A; f <= FILE_H; ++f)
-    {
-        for (Rank r = RANK_5; r <= RANK_8; ++r)
-        {
-            Square s1 = make_square(f, r);
-            Square s2 = flip_rank(s1);
-
-            DominatedKnight[s2] = 0;
-            Bitboard b = DominatedKnight[s1];
-            while (b)
-                DominatedKnight[s2] |= flip_rank(pop_lsb(&b));
+            if ((PseudoAttacks[BISHOP][sb] & PseudoAttacks[KNIGHT][sk]) == PseudoAttacks[KNIGHT][sk])
+                DominatedKnight[sb] |= sk;
         }
     }
 }
