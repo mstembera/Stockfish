@@ -33,6 +33,10 @@ namespace PSQT {
   void init();
 }
 
+namespace Eval {
+  void init();
+}
+
 int main(int argc, char* argv[]) {
 
   std::cout << engine_info() << std::endl;
@@ -43,6 +47,7 @@ int main(int argc, char* argv[]) {
   Position::init();
   Bitbases::init();
   Endgames::init();
+  Eval::init();
   Threads.set(Options["Threads"]);
   Search::clear(); // After threads are up
 
