@@ -405,7 +405,11 @@ inline void Position::put_piece(Piece pc, Square s) {
   index[s] = pieceCount[pc]++;
   pieceList[pc][index[s]] = s;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
-  psq += PSQT::psq[pc][s];
+
+  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
+      psq += PSQT::psq[pc][flip_file(s)];
+  else
+      psq += PSQT::psq[pc][s];
 }
 
 inline void Position::remove_piece(Square s) {
@@ -424,7 +428,11 @@ inline void Position::remove_piece(Square s) {
   pieceList[pc][index[lastSquare]] = lastSquare;
   pieceList[pc][pieceCount[pc]] = SQ_NONE;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
-  psq -= PSQT::psq[pc][s];
+
+  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
+      psq -= PSQT::psq[pc][flip_file(s)];
+  else
+      psq -= PSQT::psq[pc][s];
 }
 
 inline void Position::move_piece(Square from, Square to) {
@@ -440,7 +448,34 @@ inline void Position::move_piece(Square from, Square to) {
   board[to] = pc;
   index[to] = index[from];
   pieceList[pc][index[to]] = to;
-  psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+
+  if (type_of(pc) == KING)
+  {
+      Piece ppc = make_piece(color_of(pc), PAWN);
+      if (file_of(from) <= FILE_D && file_of(to) > FILE_D)
+      {
+          const Square* pawns = squares<PAWN>(color_of(pc));
+          while (*pawns != SQ_NONE)
+          {
+              psq += PSQT::psq[ppc][*pawns] - PSQT::psq[ppc][flip_file(*pawns)];
+              ++pawns;
+          }
+      }else
+      if (file_of(from) > FILE_D && file_of(to) <= FILE_D)
+      {
+          const Square* pawns = squares<PAWN>(color_of(pc));
+          while (*pawns != SQ_NONE)
+          {
+              psq += PSQT::psq[ppc][flip_file(*pawns)] - PSQT::psq[ppc][*pawns];
+              ++pawns;
+          }
+      }  
+  }
+
+  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
+      psq += PSQT::psq[pc][flip_file(to)] - PSQT::psq[pc][flip_file(from)];
+  else
+      psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) {
