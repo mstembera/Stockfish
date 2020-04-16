@@ -190,7 +190,7 @@ private:
   Bitboard castlingPath[CASTLING_RIGHT_NB];
   int gamePly;
   Color sideToMove;
-  Score psq;
+  Score psq, psqPawnFlip[COLOR_NB];
   Thread* thisThread;
   StateInfo* st;
   bool chess960;
@@ -406,8 +406,18 @@ inline void Position::put_piece(Piece pc, Square s) {
   pieceList[pc][index[s]] = s;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
 
-  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
-      psq += PSQT::psq[pc][flip_file(s)];
+  if (type_of(pc) == KING && file_of(s) <= FILE_D)
+      psq += psqPawnFlip[color_of(pc)];
+
+  if (type_of(pc) == PAWN)
+  {
+      if (count<KING>(color_of(pc)) && file_of(square<KING>(color_of(pc))) <= FILE_D)
+          psq += PSQT::psq[pc][flip_file(s)];
+      else
+          psq += PSQT::psq[pc][s];
+
+      psqPawnFlip[color_of(pc)] += PSQT::psq[pc][flip_file(s)] - PSQT::psq[pc][s];
+  }
   else
       psq += PSQT::psq[pc][s];
 }
@@ -429,8 +439,18 @@ inline void Position::remove_piece(Square s) {
   pieceList[pc][pieceCount[pc]] = SQ_NONE;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
 
-  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
-      psq -= PSQT::psq[pc][flip_file(s)];
+  if (type_of(pc) == KING && file_of(s) <= FILE_D)
+      psq -= psqPawnFlip[color_of(pc)];
+  
+  if (type_of(pc) == PAWN)
+  {
+      if (count<KING>(color_of(pc)) && file_of(square<KING>(color_of(pc))) <= FILE_D)
+          psq -= PSQT::psq[pc][flip_file(s)];
+      else
+          psq -= PSQT::psq[pc][s];
+
+      psqPawnFlip[color_of(pc)] -= PSQT::psq[pc][flip_file(s)] - PSQT::psq[pc][s];
+  }
   else
       psq -= PSQT::psq[pc][s];
 }
@@ -451,29 +471,22 @@ inline void Position::move_piece(Square from, Square to) {
 
   if (type_of(pc) == KING)
   {
-      Piece ppc = make_piece(color_of(pc), PAWN);
-      if (file_of(from) <= FILE_D && file_of(to) > FILE_D)
-      {
-          const Square* pawns = squares<PAWN>(color_of(pc));
-          while (*pawns != SQ_NONE)
-          {
-              psq += PSQT::psq[ppc][*pawns] - PSQT::psq[ppc][flip_file(*pawns)];
-              ++pawns;
-          }
-      }else
       if (file_of(from) > FILE_D && file_of(to) <= FILE_D)
-      {
-          const Square* pawns = squares<PAWN>(color_of(pc));
-          while (*pawns != SQ_NONE)
-          {
-              psq += PSQT::psq[ppc][flip_file(*pawns)] - PSQT::psq[ppc][*pawns];
-              ++pawns;
-          }
-      }  
+          psq += psqPawnFlip[color_of(pc)];
+      else if (file_of(from) <= FILE_D && file_of(to) > FILE_D)
+          psq -= psqPawnFlip[color_of(pc)];
   }
 
-  if (type_of(pc) == PAWN && file_of(square<KING>(color_of(pc))) <= FILE_D)
-      psq += PSQT::psq[pc][flip_file(to)] - PSQT::psq[pc][flip_file(from)];
+  if (type_of(pc) == PAWN)
+  {
+      if (count<KING>(color_of(pc)) && file_of(square<KING>(color_of(pc))) <= FILE_D)
+          psq += PSQT::psq[pc][flip_file(to)] - PSQT::psq[pc][flip_file(from)];
+      else
+          psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+
+      psqPawnFlip[color_of(pc)] +=  PSQT::psq[pc][flip_file(to)]   - PSQT::psq[pc][to]
+                                  - PSQT::psq[pc][flip_file(from)] + PSQT::psq[pc][from];
+  }
   else
       psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
 }
