@@ -87,6 +87,7 @@ namespace {
     e->kingSquares[Us] = SQ_NONE;
     e->pawnAttacks[Us] = e->pawnAttacksSpan[Us] = pawn_attacks_bb<Us>(ourPawns);
     e->blockedCount[Us] = 0;
+    e->pawnFiles[Us] = 0;
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -94,6 +95,7 @@ namespace {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
         Rank r = relative_rank(Us, s);
+        e->pawnFiles[Us] |= 1 << file_of(s);
 
         // Flag the pawn
         opposed    = theirPawns & forward_file_bb(Us, s);
@@ -180,6 +182,9 @@ Entry* probe(const Position& pos) {
   e->key = key;
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
   e->scores[BLACK] = evaluate<BLACK>(pos, e);
+
+  Bitboard b = e->pawnFiles[WHITE] | e->pawnFiles[BLACK];
+  e->pawnSpan = b ? msb(b) - lsb(b) + 1 : 0;
 
   return e;
 }
