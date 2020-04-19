@@ -772,7 +772,7 @@ namespace {
         else
             sf = std::min(sf, 36 + 7 * pos.count<PAWN>(strongSide));
 
-        sf = std::max(0, sf + (pe->pawn_span() - pos.rule50_count() + 7) / 4);
+        sf = std::max(0, sf + (pe->pawn_span() * 2 - pos.rule50_count() + 4) / 4);
     }
 
     return ScaleFactor(sf);
