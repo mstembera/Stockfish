@@ -867,7 +867,8 @@ void Eval::init() {
 
         for (Square sk = SQ_A1; sk < SQUARE_NB; ++sk)
         {
-            if (popcount(PseudoAttacks[BISHOP][sb] & PseudoAttacks[KNIGHT][sk]) >= 3)
+            if (  popcount( PseudoAttacks[BISHOP][sb] & PseudoAttacks[KNIGHT][sk]) >= 3
+               && popcount(~PseudoAttacks[BISHOP][sb] & PseudoAttacks[KNIGHT][sk]) <= 1)
                 DominatedKnight[sb] |= sk;
         }
     }
