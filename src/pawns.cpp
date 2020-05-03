@@ -154,6 +154,11 @@ namespace {
         if (!support)
             score -=   Doubled * doubled
                      + WeakLever * more_than_one(lever);
+
+        // Bonus for keeping tension
+        if (   !(PawnAttacks[Us][s] & ourPawns)
+            &&  (pawn_attacks_bb<Them>(lever) & theirPawns))
+            score += make_score(12, 0);
     }
 
     return score;
