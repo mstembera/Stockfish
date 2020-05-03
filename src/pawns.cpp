@@ -157,8 +157,9 @@ namespace {
 
         // Bonus for keeping tension
         if (   !(PawnAttacks[Us][s] & ourPawns)
-            &&  (pawn_attacks_bb<Them>(lever) & theirPawns))
-            score += make_score(12, 0);
+            &&  (pawn_attacks_bb<Them>(lever) & theirPawns)
+            &&  (pawn_attacks_bb<Them>(theirPawns) & lever))
+            score += make_score(15, 0);
     }
 
     return score;
