@@ -126,7 +126,8 @@ Entry* probe(const Position& pos) {
   if ((e + 1)->key == key)
       return e + 1;
   
-  std::swap(*e, *(e + 1));
+  if (e->key)
+      *(e + 1) = *e;
 
   std::memset(e, 0, sizeof(Entry));
   e->key = key;

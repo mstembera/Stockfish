@@ -179,8 +179,9 @@ Entry* probe(const Position& pos) {
   if ((e + 1)->key == key)
       return e + 1;
 
-  std::swap(*e, *(e + 1));
-
+  if (e->key)
+      *(e + 1) = *e;
+  
   e->key = key;
   e->blockedCount = 0;
   e->scores[WHITE] = evaluate<WHITE>(pos, e);
