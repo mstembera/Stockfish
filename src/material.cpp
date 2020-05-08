@@ -123,6 +123,11 @@ Entry* probe(const Position& pos) {
   if (e->key == key)
       return e;
 
+  if ((e + 1)->key == key)
+      return e + 1;
+  
+  std::swap(*e, *(e + 1));
+
   std::memset(e, 0, sizeof(Entry));
   e->key = key;
   e->factor[WHITE] = e->factor[BLACK] = (uint8_t)SCALE_FACTOR_NORMAL;

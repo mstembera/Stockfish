@@ -175,6 +175,11 @@ Entry* probe(const Position& pos) {
 
   if (e->key == key)
       return e;
+  
+  if ((e + 1)->key == key)
+      return e + 1;
+
+  std::swap(*e, *(e + 1));
 
   e->key = key;
   e->blockedCount = 0;
