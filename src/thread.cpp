@@ -66,6 +66,8 @@ int Thread::best_move_count(Move move) const {
 
 void Thread::clear() {
 
+  pawnsTable.clear();
+  materialTable.clear();
   counterMoves.fill(MOVE_NONE);
   mainHistory.fill(0);
   lowPlyHistory.fill(0);

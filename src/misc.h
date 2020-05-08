@@ -23,6 +23,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstring>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -52,6 +53,7 @@ inline TimePoint now() {
 template<class Entry, int Size>
 struct HashTable {
   Entry* operator[](Key key) { return &table[(uint32_t)key & (Size - 2)]; }
+  void clear() { std::memset(&table[0], 0, table.size() * sizeof(Entry)); }
 
 private:
   std::vector<Entry> table = std::vector<Entry>(Size); // Allocate on the heap
