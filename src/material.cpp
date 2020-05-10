@@ -124,7 +124,10 @@ Entry* probe(const Position& pos) {
       return e;
 
   if ((e + 1)->key == key)
-      return e + 1;
+  {
+      std::swap(*e, *(e + 1));
+      return e;
+  }
   
   if (e->key)
       *(e + 1) = *e;
