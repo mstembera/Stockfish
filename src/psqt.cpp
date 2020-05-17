@@ -100,7 +100,7 @@ constexpr Score PBonus[RANK_NB][FILE_NB] =
 #undef S
 
 Score psq[PIECE_NB][SQUARE_NB];
-int psqDelta[PIECE_NB][SQUARE_NB * SQUARE_NB];
+int psqDelta[PIECE_NB][SQUARE_NB];
 
 // init() initializes piece-square tables: the white halves of the tables are
 // copied from Bonus[] adding the piece value, then the black halves of the
@@ -124,14 +124,12 @@ void init() {
   {
       Piece pcW = make_piece(WHITE, pt);
       Piece pcB = make_piece(BLACK, pt);
-
-      for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
-          for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
-          {
-              int fromTo = from_to(make_move(s1, s2));
-              psqDelta[pcW][fromTo] =  (std::abs(mg_value(psq[pcW][s2])) - std::abs(mg_value(psq[pcW][s1]))) / 2;
-              psqDelta[pcB][fromTo] =  (std::abs(mg_value(psq[pcB][s2])) - std::abs(mg_value(psq[pcB][s1]))) / 2;
-          }
+  
+      for (Square to = SQ_A1; to <= SQ_H8; ++to)
+      {
+          psqDelta[pcW][to] = (std::abs(mg_value(psq[pcW][to])) - PieceValue[MG][pt]) / 2;
+          psqDelta[pcB][to] = (std::abs(mg_value(psq[pcB][to])) - PieceValue[MG][pt]) / 2;
+      }
   }
 }
 
