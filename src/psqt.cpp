@@ -120,16 +120,17 @@ void init() {
       }
   }
 
-  for (Piece pcW = W_PAWN; pcW <= W_KING; ++pcW)
+  for (PieceType pt = PAWN; pt <= KING; ++pt)
   {
-      Piece pcB = Piece(pcW + B_PAWN - W_PAWN);
+      Piece pcW = make_piece(WHITE, pt);
+      Piece pcB = make_piece(BLACK, pt);
 
       for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
           for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
           {
               int fromTo = from_to(make_move(s1, s2));
-              psqDelta[pcW][fromTo] = (std::abs(mg_value(psq[pcW][s2])) - std::abs(mg_value(psq[pcW][s1])));
-              psqDelta[pcB][fromTo] = (std::abs(mg_value(psq[pcB][s2])) - std::abs(mg_value(psq[pcB][s1])));
+              psqDelta[pcW][fromTo] =  (std::abs(mg_value(psq[pcW][s2])) - std::abs(mg_value(psq[pcW][s1]))) / 2;
+              psqDelta[pcB][fromTo] =  (std::abs(mg_value(psq[pcB][s2])) - std::abs(mg_value(psq[pcB][s1]))) / 2;
           }
   }
 }
