@@ -256,11 +256,7 @@ Score Entry::do_king_safety(const Position& pos) {
           minPawnDist = std::min(minPawnDist, distance(ksq, pop_lsb(&ourPawns)));
   }
   else if (pos.count<PAWN>(Them) == 1)
-  {
-      Square queeningSq = make_square(file_of(pos.square<PAWN>(Them)),
-                                      relative_rank(Them, RANK_7));
-      minPawnDist = distance(ksq, queeningSq);
-  }
+      minPawnDist = distance(ksq, pos.square<PAWN>(Them));
 
   return shelter - make_score(0, 16 * minPawnDist);
 }
