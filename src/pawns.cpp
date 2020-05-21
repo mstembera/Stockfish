@@ -227,6 +227,7 @@ Score Entry::evaluate_shelter(const Position& pos, Square ksq) {
 template<Color Us>
 Score Entry::do_king_safety(const Position& pos) {
 
+  constexpr Color Them = ~Us;
   Square ksq = pos.square<KING>(Us);
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.castling_rights(Us);
@@ -243,13 +244,23 @@ Score Entry::do_king_safety(const Position& pos) {
       shelter = std::max(shelter, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)), compare);
 
   // In endgame we like to bring our king near our closest pawn
-  Bitboard pawns = pos.pieces(Us, PAWN);
   int minPawnDist = 6;
 
-  if (pawns & PseudoAttacks[KING][ksq])
-      minPawnDist = 1;
-  else while (pawns)
-      minPawnDist = std::min(minPawnDist, distance(ksq, pop_lsb(&pawns)));
+  Bitboard ourPawns = pos.pieces(Us, PAWN);
+
+  if (ourPawns)
+  {
+      if (ourPawns & PseudoAttacks[KING][ksq])
+          minPawnDist = 1;
+      else while (ourPawns)
+          minPawnDist = std::min(minPawnDist, distance(ksq, pop_lsb(&ourPawns)));
+  }
+  else if (pos.count<PAWN>(Them) == 1)
+  {
+      Square queeningSq = make_square(file_of(pos.square<PAWN>(Them)),
+                                      relative_rank(Them, RANK_7));
+      minPawnDist = distance(ksq, queeningSq);
+  }
 
   return shelter - make_score(0, 16 * minPawnDist);
 }
