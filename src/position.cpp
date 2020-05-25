@@ -1059,65 +1059,48 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          from = lsb(bb);
-          if (    more_than_one(bb)
-              &&  std::abs(mg_value(PSQT::psq[piece_on(msb(bb))][msb(bb)]))
-                < std::abs(mg_value(PSQT::psq[piece_on(from)][from])))
-              from = msb(bb);
-
-          if ((swap = std::abs(mg_value(PSQT::psq[piece_on(from)][from])) - swap) < res)
+          if ((swap = PawnValueMg - swap) < res)
               break;
 
-          occupied ^= from;
+          occupied ^= lsb(bb);
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
-      else if ((bb = stmAttackers & pieces(KNIGHT)))
+      else if ((bb = stmAttackers & pieces(KNIGHT, BISHOP)))
       {
-          from = lsb(bb);
-          if (    more_than_one(bb)
-              &&  std::abs(mg_value(PSQT::psq[piece_on(msb(bb))][msb(bb)]))
-                < std::abs(mg_value(PSQT::psq[piece_on(from)][from])))
-              from = msb(bb);
+          from = pop_lsb(&bb);
+          while (bb)
+          {
+              Square s = pop_lsb(&bb);
+              if (  std::abs(mg_value(PSQT::psq[piece_on(s)][s]))
+                  < std::abs(mg_value(PSQT::psq[piece_on(from)][from])))
+                  from = s;
+          }
 
           if ((swap = std::abs(mg_value(PSQT::psq[piece_on(from)][from])) - swap) < res)
               break;
 
           occupied ^= from;
-      }
 
-      else if ((bb = stmAttackers & pieces(BISHOP)))
-      {
-          from = lsb(bb);
-          if ((swap = std::abs(mg_value(PSQT::psq[piece_on(from)][from])) - swap) < res)
-              break;
-
-          occupied ^= from;
-          attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
+          if (type_of(piece_on(from)) == BISHOP)
+              attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
-          from = lsb(bb);
-          if (    more_than_one(bb)
-              &&  std::abs(mg_value(PSQT::psq[piece_on(msb(bb))][msb(bb)]))
-                < std::abs(mg_value(PSQT::psq[piece_on(from)][from])))
-              from = msb(bb);
-
-          if ((swap = std::abs(mg_value(PSQT::psq[piece_on(from)][from])) - swap) < res)
+          if ((swap = RookValueMg - swap) < res)
               break;
 
-          occupied ^= from;
+          occupied ^= lsb(bb);
           attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
       }
 
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
-          from = lsb(bb);
-          if ((swap = std::abs(mg_value(PSQT::psq[piece_on(from)][from])) - swap) < res)
+          if ((swap = QueenValueMg - swap) < res)
               break;
 
-          occupied ^= from;
+          occupied ^= lsb(bb);
           attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
                       | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK  , QUEEN));
       }
