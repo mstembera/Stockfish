@@ -1066,21 +1066,15 @@ bool Position::see_ge(Move m, Value threshold) const {
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
-      else if ((bb = stmAttackers & pieces(KNIGHT)))
+      else if ((bb = stmAttackers & pieces(KNIGHT, BISHOP)))
       {
-          if ((swap = KnightValueMg - swap) < res)
+          if ((swap = (KnightValueMg + BishopValueMg) / 2 - swap) < res)
               break;
 
           occupied ^= lsb(bb);
-      }
 
-      else if ((bb = stmAttackers & pieces(BISHOP)))
-      {
-          if ((swap = BishopValueMg - swap) < res)
-              break;
-
-          occupied ^= lsb(bb);
-          attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
+          if (type_of(piece_on(lsb(bb))) == BISHOP)
+              attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
       else if ((bb = stmAttackers & pieces(ROOK)))
