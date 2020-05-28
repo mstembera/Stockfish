@@ -306,7 +306,7 @@ namespace {
                 // Extra bonus if opponent has no minors to attack with
                 if (   !pos.pieces(Them, KNIGHT)
                     && !(pos.pieces(Them, BISHOP) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)))
-                    score += make_score(15, 10);
+                    score += make_score(24, 16);
             }
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
                 score += ReachableOutpost;
