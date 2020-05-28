@@ -300,7 +300,14 @@ namespace {
             // Bonus if piece is on an outpost square or can reach one
             bb = OutpostRanks & attackedBy[Us][PAWN] & ~pe->pawn_attacks_span(Them);
             if (bb & s)
+            {
                 score += (Pt == KNIGHT) ? KnightOutpost : BishopOutpost;
+
+                // Extra bonus if opponent has no minors to attack with
+                if (   !pos.pieces(Them, KNIGHT)
+                    && !(pos.pieces(Them, BISHOP) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares)))
+                    score += make_score(15, 10);
+            }
             else if (Pt == KNIGHT && bb & b & ~pos.pieces(Us))
                 score += ReachableOutpost;
 
