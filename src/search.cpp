@@ -842,7 +842,7 @@ namespace {
 
     // Step 8. Futility pruning: child node (~50 Elo)
     if (   !PvNode
-        &&  depth < 6
+        &&  depth < 7
         &&  eval - futility_margin(depth, improving) >= beta
         &&  eval < VALUE_KNOWN_WIN) // Do not return unproven wins
         return eval;
@@ -1054,7 +1054,7 @@ moves_loop: // When in check, search starts from here
 
               // Futility pruning for captures
               if (   !givesCheck
-                  && lmrDepth < 6
+                  && lmrDepth < 7
                   && !(PvNode && abs(bestValue) < 2)
                   && !ss->inCheck
                   && ss->staticEval + 270 + 384 * lmrDepth + PieceValue[MG][type_of(pos.piece_on(to_sq(move)))] <= alpha)
