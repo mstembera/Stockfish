@@ -95,14 +95,10 @@ class PRNG {
 
   uint64_t rand64() {
 
-    s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
-    return randomize64(s * 2685821657736338717LL);
+    for (int i = 0; i < 7; ++i)
+        s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
+    return s * 2685821657736338717LL;
   }
-
-  // Randomize/hash any 64-bit number using a fast congruential
-  // pseudo random number generator using constants by Donald Knuth.
-  // https://en.wikipedia.org/wiki/Linear_congruential_generator
-  static uint64_t randomize64(uint64_t v) { return v * 6364136223846793005ULL + 1442695040888963407ULL; }
 
 public:
   PRNG(uint64_t seed) : s(seed) { assert(seed); }
