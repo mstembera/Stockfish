@@ -350,8 +350,8 @@ inline Score operator*(Score s, int i) {
 }
 
 /// Multiplication of a Score by a boolean
-inline Score operator*(Score s, bool b) {
-  return b ? s : SCORE_ZERO;
+constexpr Score operator*(Score s, bool b) {
+  return Score(int(s) * b);
 }
 
 constexpr Color operator~(Color c) {
