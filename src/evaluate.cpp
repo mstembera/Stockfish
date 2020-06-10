@@ -482,6 +482,11 @@ namespace {
     // Penalty if king flank is under attack, potentially moving toward the king
     score -= FlankAttacks * kingFlankAttack;
 
+    // Penalty if our king is splitting our rooks
+    if (   pos.count<ROOK>(Us) > 1
+        && between_bb(pos.squares<ROOK>(Us)[0], pos.squares<ROOK>(Us)[1]) & pos.pieces(Us, KING))
+        score -= make_score(30, 0);
+
     if (T)
         Trace::add(KING, Us, score);
 
@@ -577,11 +582,6 @@ namespace {
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
-
-    // Penalty if our king is splitting our rooks
-    if (   pos.count<ROOK>(Us) == 2
-        && between_bb(pos.squares<ROOK>(Us)[0], pos.squares<ROOK>(Us)[1]) & pos.square<KING>(Us))
-            score -= make_score(20, 0);
 
     if (T)
         Trace::add(THREAT, Us, score);
