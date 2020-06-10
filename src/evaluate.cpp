@@ -483,9 +483,12 @@ namespace {
     score -= FlankAttacks * kingFlankAttack;
 
     // Penalty if our king is splitting our rooks
-    if (   pos.count<ROOK>(Us) > 1
-        && between_bb(pos.squares<ROOK>(Us)[0], pos.squares<ROOK>(Us)[1]) & pos.pieces(Us, KING))
-        score -= make_score(30, 0);
+    if (   pos.castling_rights(Us) == NO_CASTLING
+        && pos.count<ROOK>(Us) > 1
+        && rank_of(pos.squares<ROOK>(Us)[0]) == rank_of(pos.square<KING>(Us))
+        && rank_of(pos.squares<ROOK>(Us)[1]) == rank_of(pos.square<KING>(Us))
+        && between_bb(pos.squares<ROOK>(Us)[0], pos.squares<ROOK>(Us)[1]) & pos.square<KING>(Us))
+        score -= make_score(20, 0);
 
     if (T)
         Trace::add(KING, Us, score);
