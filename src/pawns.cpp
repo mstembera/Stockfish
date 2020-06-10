@@ -258,7 +258,7 @@ Score Entry::do_king_safety(const Position& pos) {
   else while (pawns)
   {
       Square s = pop_lsb(&pawns);
-      minPawnDist = std::min(minPawnDist, distance(ksq, s) - bool(passedPawns[Us] & s));
+      minPawnDist = std::min(minPawnDist, distance(ksq, s) - 2 * bool(passedPawns[Us] & s) + 1);
   }
 
   return shelter - make_score(0, 16 * minPawnDist);
