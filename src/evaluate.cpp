@@ -133,7 +133,7 @@ namespace {
   constexpr Score CorneredBishop      = S( 50, 50);
   constexpr Score FlankAttacks        = S(  8,  0);
   constexpr Score Hanging             = S( 69, 36);
-  constexpr Score BishopKingProtector = S(  6,  9);
+  constexpr Score BishopKingProtector = S(  8, 12);
   constexpr Score KnightKingProtector = S(  8,  9);
   constexpr Score KnightOnQueen       = S( 16, 11);
   constexpr Score LongDiagonalBishop  = S( 45,  0);
@@ -314,7 +314,7 @@ namespace {
 
             // Penalty if the piece is far from the king
             score -= Pt == KNIGHT ? KnightKingProtector * distance(pos.square<KING>(Us), s)
-                                  : BishopKingProtector * std::min(distance(pos.square<KING>(Us), s) + 3, 7);
+                                  : BishopKingProtector * std::min(distance(pos.square<KING>(Us), s), 4);
 
             if (Pt == BISHOP)
             {
