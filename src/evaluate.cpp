@@ -366,7 +366,7 @@ namespace {
                     score -= TrappedRook * (1 + !pos.castling_rights(Us));
             }
 
-            score += make_score(6, 3) * std::min(pe->semiopen_count(Us), 4);
+            score += make_score(6, 3) * std::min(pe->open_file_count(), 4);
         }
 
         if (Pt == QUEEN)
