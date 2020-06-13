@@ -81,8 +81,8 @@ namespace {
 
     Bitboard ourPawns   = pos.pieces(  Us, PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
-
     Bitboard doubleAttackThem = pawn_double_attacks_bb<Them>(theirPawns);
+    int usedFiles = 0;
 
     e->passedPawns[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
@@ -95,6 +95,7 @@ namespace {
         assert(pos.piece_on(s) == make_piece(Us, PAWN));
 
         Rank r = relative_rank(Us, s);
+        usedFiles |= 1 << file_of(s);
 
         // Flag the pawn
         opposed    = theirPawns & forward_file_bb(Us, s);
@@ -162,6 +163,8 @@ namespace {
             score -=   Doubled * doubled
                      + WeakLever * more_than_one(lever);
     }
+
+    e->semiOpenCnt[Us] = popcount(~usedFiles & 0xFF);
 
     return score;
   }

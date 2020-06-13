@@ -365,6 +365,8 @@ namespace {
                 if ((kf < FILE_E) == (file_of(s) < kf))
                     score -= TrappedRook * (1 + !pos.castling_rights(Us));
             }
+
+            score += make_score(5, 5) * pe->semiopen_count(Us);
         }
 
         if (Pt == QUEEN)
