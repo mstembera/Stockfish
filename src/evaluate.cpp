@@ -365,9 +365,6 @@ namespace {
                 if ((kf < FILE_E) == (file_of(s) < kf))
                     score -= TrappedRook * (1 + !pos.castling_rights(Us));
             }
-
-            if (!pe->semiopen_count(Us))
-                score -= make_score(15, 15);
         }
 
         if (Pt == QUEEN)
@@ -580,6 +577,10 @@ namespace {
 
         score += SliderOnQueen * popcount(b & safe & attackedBy2[Us]);
     }
+
+    // Penalty for fewer semi open files than rooks
+    if (pos.count<ROOK>(Us))
+        score -= make_score(0, 10) * std::max(pos.count<ROOK>(Us) - pe->semiopen_count(Us), 0);
 
     if (T)
         Trace::add(THREAT, Us, score);
