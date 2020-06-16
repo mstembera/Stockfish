@@ -345,6 +345,10 @@ namespace {
                                 : pos.piece_on(s + d + d) == make_piece(Us, PAWN) ? CorneredBishop * 2
                                                                                   : CorneredBishop;
                 }
+
+                // Bonus for bishop on the same diagonal as enemy queen
+                if (attacks_bb<BISHOP>(s) & pos.pieces(Them, QUEEN))
+                    score += make_score(3, 5);
             }
         }
 
