@@ -345,6 +345,11 @@ namespace {
                                 : pos.piece_on(s + d + d) == make_piece(Us, PAWN) ? CorneredBishop * 2
                                                                                   : CorneredBishop;
                 }
+
+                // Bonus for bishop on the same long diagonal as our queen
+                if (   pos.count<QUEEN>(Us) == 1
+                    && popcount(line_bb(s, pos.square<QUEEN>(Us))) > 6)
+                    score += make_score(15, 0);
             }
         }
 
@@ -373,10 +378,6 @@ namespace {
             Bitboard queenPinners;
             if (pos.slider_blockers(pos.pieces(Them, ROOK, BISHOP), s, queenPinners))
                 score -= WeakQueen;
-
-            // Penalty for queen on the same diagonal as enemy bishop
-            if (attacks_bb<BISHOP>(s) & pos.pieces(Them, BISHOP))
-                score -= make_score(5, 9);
         }
     }
     if (T)
