@@ -90,7 +90,7 @@ namespace {
   // Add a small random component to draw evaluations to avoid 3fold-blindness
   Value value_draw(const Position& pos) {
 
-      int psq = pos.side_to_move() == WHITE ? mg_value(pos.psq_score()) : -mg_value(pos.psq_score());
+      int psq = pos.side_to_move() == WHITE ? eg_value(pos.psq_score()) : -eg_value(pos.psq_score());
       psq /= PawnValueMg;
       psq = std::max(std::min(psq, 10), -10);
 
