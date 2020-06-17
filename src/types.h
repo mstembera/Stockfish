@@ -334,7 +334,8 @@ Score operator*(Score, Score) = delete;
 
 /// Division of a Score must be handled separately for each term
 inline Score operator/(Score s, int i) {
-  return make_score(mg_value(s) / i, eg_value(s) / i);
+  int i_inv = (1 << 16) / i;
+  return make_score((mg_value(s) * i_inv) >> 16, (eg_value(s) * i_inv) >> 16);
 }
 
 /// Multiplication of a Score by an integer. We check for overflow in debug mode.
