@@ -349,7 +349,7 @@ namespace {
                 // Bonus for bishop on the same long diagonal as our queen
                 if (   pos.count<QUEEN>(Us) == 1
                     && popcount(line_bb(s, pos.square<QUEEN>(Us))) > 6)
-                    score += make_score(15, 0);
+                    score += make_score(15, 5);
             }
         }
 
