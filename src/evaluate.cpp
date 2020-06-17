@@ -376,7 +376,7 @@ namespace {
 
             // Penalty for queen on the same diagonal as enemy bishop
             if (attacks_bb<BISHOP>(s) & pos.pieces(Them, BISHOP))
-                score -= make_score(3, 5);
+                score -= make_score(5, 9);
         }
     }
     if (T)
