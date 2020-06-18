@@ -91,8 +91,8 @@ namespace {
   Value value_draw(const Position& pos) {
 
       int psq = pos.side_to_move() == WHITE ? eg_value(pos.psq_score()) : -eg_value(pos.psq_score());
-      psq /= PawnValueMg;
-      psq = std::max(std::min(psq, 10), -10);
+      psq /= PawnValueEg;
+      psq = std::max(std::min(psq, 5), -5);
 
       return VALUE_DRAW + psq + Value(2 * (pos.this_thread()->nodes & 1) - 1);
   }
