@@ -482,6 +482,11 @@ namespace {
     // Penalty if king flank is under attack, potentially moving toward the king
     score -= FlankAttacks * kingFlankAttack;
 
+    // Penalty for immobile king
+    if (!(attacks_bb<KING>(ksq) & ~(pos.pieces(Us) | attackedBy[Them][ALL_PIECES])))
+        score -= make_score(2, 10);
+
+
     if (T)
         Trace::add(KING, Us, score);
 
