@@ -781,8 +781,10 @@ namespace {
             else
                 sf = 22 + 3 * pos.count<ALL_PIECES>(strongSide);
         }
-        else if (  pos.non_pawn_material(WHITE) == RookValueMg
-                && pos.non_pawn_material(BLACK) == RookValueMg
+        else if ((   (   pos.non_pawn_material(WHITE) == RookValueMg
+                      && pos.non_pawn_material(BLACK) == RookValueMg)
+                  || (   pos.non_pawn_material(WHITE) == RookValueMg * 2
+                      && pos.non_pawn_material(BLACK) == RookValueMg * 2))  
                 && !pe->passed_pawns(strongSide)
                 && pos.count<PAWN>(strongSide) - pos.count<PAWN>(~strongSide) <= 1
                 && bool(KingSide & pos.pieces(strongSide, PAWN)) != bool(QueenSide & pos.pieces(strongSide, PAWN))
