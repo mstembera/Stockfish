@@ -360,8 +360,8 @@ void Thread::search() {
           : ct;
 
   // Evaluation score is from the white point of view
-  contempt = (us == WHITE ?  make_score(ct, ct / 2)
-                          : -make_score(ct, ct / 2));
+  contempt = (us == WHITE ?  make_score(ct, -ct)
+                          : -make_score(ct, -ct));
 
   int searchAgainCounter = 0;
 
