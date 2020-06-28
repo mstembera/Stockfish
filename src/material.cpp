@@ -105,6 +105,12 @@ namespace {
         bonus += pieceCount[Us][pt1] * v;
     }
 
+    int pcDelta = 0;
+    for (int pt = KNIGHT; pt <= QUEEN; ++pt)
+        pcDelta += pieceCount[Us][pt] - pieceCount[Them][pt];
+
+    bonus += (pcDelta > 1) * 16;
+
     return bonus;
   }
 
