@@ -26,12 +26,12 @@
 namespace {
 
   template<GenType Type, Direction D>
-  ExtMove* make_promotions(ExtMove* moveList, Square to, Square ksq) {
+  ExtMove* make_promotions(ExtMove* moveList, Square to, Bitboard kqsq) {
 
     if (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
     {
         *moveList++ = make<PROMOTION>(to - D, to, QUEEN);
-        if (attacks_bb<KNIGHT>(to) & ksq)
+        if (attacks_bb<KNIGHT>(to) & kqsq)
             *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
     }
 
@@ -39,7 +39,7 @@ namespace {
     {
         *moveList++ = make<PROMOTION>(to - D, to, ROOK);
         *moveList++ = make<PROMOTION>(to - D, to, BISHOP);
-        if (!(attacks_bb<KNIGHT>(to) & ksq))
+        if (!(attacks_bb<KNIGHT>(to) & kqsq))
             *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
     }
 
@@ -125,15 +125,16 @@ namespace {
         Bitboard b1 = shift<UpRight>(pawnsOn7) & enemies;
         Bitboard b2 = shift<UpLeft >(pawnsOn7) & enemies;
         Bitboard b3 = shift<Up     >(pawnsOn7) & emptySquares;
+        Bitboard kqsq = pos.pieces(Them, QUEEN, KING);
 
         while (b1)
-            moveList = make_promotions<Type, UpRight>(moveList, pop_lsb(&b1), ksq);
+            moveList = make_promotions<Type, UpRight>(moveList, pop_lsb(&b1), kqsq);
 
         while (b2)
-            moveList = make_promotions<Type, UpLeft >(moveList, pop_lsb(&b2), ksq);
+            moveList = make_promotions<Type, UpLeft >(moveList, pop_lsb(&b2), kqsq);
 
         while (b3)
-            moveList = make_promotions<Type, Up     >(moveList, pop_lsb(&b3), ksq);
+            moveList = make_promotions<Type, Up     >(moveList, pop_lsb(&b3), kqsq);
     }
 
     // Standard and en-passant captures
