@@ -28,7 +28,7 @@ using namespace std;
 
 namespace {
 
-#define S(o, mg, eg) make_score(mg, eg)
+#define S(o, mg, eg) make_score((3 * o + mg) / 4, (3 * o + eg) / 4)
 
   // Polynomial material imbalance parameters
 
