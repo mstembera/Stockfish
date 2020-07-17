@@ -74,8 +74,7 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1  = Value(1400);
-  constexpr Value LazyThreshold2  = Value(1300);
+  constexpr Value LazyThreshold  = Value(1400);
   constexpr Value SpaceThreshold = Value(12222);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
@@ -842,7 +841,7 @@ namespace {
         return abs(mg_value(score) + eg_value(score)) / 2 > lazyThreshold + pos.non_pawn_material() / 64;
     };
 
-    if (lazy_skip(LazyThreshold1))
+    if (lazy_skip(LazyThreshold))
         goto make_v;
 
     // Main evaluation begins here
@@ -857,12 +856,16 @@ namespace {
             + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
 
     score += mobility[WHITE] - mobility[BLACK];
+    if (lazy_skip(LazyThreshold))
+        goto make_v;
 
     // More complex interactions that require fully populated attack bitboards
-    score +=  king<   WHITE>() - king<   BLACK>()
-            + passed< WHITE>() - passed< BLACK>();
+    score += passed<WHITE>() - passed<BLACK>();
+    if (lazy_skip(LazyThreshold))
+        goto make_v;
 
-    if (lazy_skip(LazyThreshold2))
+    score += king<WHITE>() - king<BLACK>();
+    if (lazy_skip(LazyThreshold))
         goto make_v;
 
     score +=  threats<WHITE>() - threats<BLACK>()
