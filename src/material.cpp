@@ -28,11 +28,11 @@ using namespace std;
 
 namespace {
 
-#define S(o, mg, eg) make_score((3 * o + mg) / 4, (3 * o + eg) / 4)
+#define S(o, mg, eg) int((6 * o + mg + eg) / 8)
 
   // Polynomial material imbalance parameters
 
-  constexpr Score QuadraticOurs[][PIECE_TYPE_NB] = {
+  constexpr int QuadraticOurs[][PIECE_TYPE_NB] = {
     //            OUR PIECES
     // pair pawn knight bishop rook queen
     {S(1438, 1434, 1477)                                                                                            }, // Bishop pair
@@ -43,7 +43,7 @@ namespace {
     {S(-189, -213, -212), S( 24,  36,  14), S(117, 154, 143), S(133, 158,  98), S(-134, -155, -170), S(-6, -8, -30) }  // Queen
   };
 
-  constexpr Score QuadraticTheirs[][PIECE_TYPE_NB] = {
+  constexpr int QuadraticTheirs[][PIECE_TYPE_NB] = {
     //           THEIR PIECES
     // pair pawn knight bishop rook queen
     {                                                                                                               }, // Bishop pair
@@ -88,11 +88,11 @@ namespace {
   /// piece type for both colors.
 
   template<Color Us>
-  Score imbalance(const int pieceCount[][PIECE_TYPE_NB]) {
+  int imbalance(const int pieceCount[][PIECE_TYPE_NB]) {
 
     constexpr Color Them = ~Us;
 
-    Score bonus = SCORE_ZERO;
+    int bonus = 0;
 
     // Second-degree polynomial material imbalance, by Tord Romstad
     for (int pt1 = NO_PIECE_TYPE; pt1 <= QUEEN; ++pt1)
@@ -100,7 +100,7 @@ namespace {
         if (!pieceCount[Us][pt1])
             continue;
 
-        Score v = QuadraticOurs[pt1][pt1] * pieceCount[Us][pt1];
+        int v = QuadraticOurs[pt1][pt1] * pieceCount[Us][pt1];
 
         for (int pt2 = NO_PIECE_TYPE; pt2 < pt1; ++pt2)
             v +=  QuadraticOurs[pt1][pt2] * pieceCount[Us][pt2]
@@ -219,7 +219,7 @@ Entry* probe(const Position& pos) {
   { pos.count<BISHOP>(BLACK) > 1, pos.count<PAWN>(BLACK), pos.count<KNIGHT>(BLACK),
     pos.count<BISHOP>(BLACK)    , pos.count<ROOK>(BLACK), pos.count<QUEEN >(BLACK) } };
 
-  e->score = (imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16;
+  e->value = int16_t((imbalance<WHITE>(pieceCount) - imbalance<BLACK>(pieceCount)) / 16);
   return e;
 }
 
