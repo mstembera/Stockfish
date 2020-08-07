@@ -107,8 +107,7 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1 =  Value(1400);
-  constexpr Value LazyThreshold2 =  Value(1300);
+  constexpr Value LazyThreshold  =  Value(1400);
   constexpr Value SpaceThreshold = Value(12222);
   constexpr Value NNUEThreshold  =   Value(500);
 
@@ -860,6 +859,22 @@ namespace {
 
     assert(!pos.checkers());
 
+    Value v;
+
+    // Initialize score by reading the incrementally updated scores included in
+    // the position object (material + piece square tables).
+    // Score is computed internally from the white point of view.
+    Score score = pos.psq_score();
+
+    // Early exit if score is high
+    auto lazy_skip = [&](Value lazyThreshold) {
+        v = (mg_value(score) + eg_value(score)) / 2;
+        return abs(v) > lazyThreshold + pos.non_pawn_material() / 64;
+    };
+
+    if (lazy_skip(LazyThreshold))
+        goto skip2;
+
     // Probe the material hash table
     me = Material::probe(pos);
 
@@ -868,22 +883,14 @@ namespace {
     if (me->specialized_eval_exists())
         return me->evaluate(pos);
 
-    // Initialize score by reading the incrementally updated scores included in
-    // the position object (material + piece square tables) and the material
-    // imbalance. Score is computed internally from the white point of view.
-    Score score = pos.psq_score() + me->imbalance() + pos.this_thread()->contempt;
+    score += me->imbalance() + pos.this_thread()->contempt;
 
     // Probe the pawn hash table
     pe = Pawns::probe(pos);
     score += pe->pawn_score(WHITE) - pe->pawn_score(BLACK);
 
-    // Early exit if score is high
-    auto lazy_skip = [&](Value lazyThreshold) {
-        return abs(mg_value(score) + eg_value(score)) / 2 > lazyThreshold + pos.non_pawn_material() / 64;
-    };
-
-    if (lazy_skip(LazyThreshold1))
-        goto make_v;
+    if (lazy_skip(LazyThreshold))
+        goto skip1;
 
     // Main evaluation begins here
     initialize<WHITE>();
@@ -902,15 +909,15 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + passed< WHITE>() - passed< BLACK>();
 
-    if (lazy_skip(LazyThreshold2))
-        goto make_v;
+    if (lazy_skip(LazyThreshold))
+        goto skip1;
 
     score +=  threats<WHITE>() - threats<BLACK>()
             + space<  WHITE>() - space<  BLACK>();
 
-make_v:
+skip1:
     // Derive single value from mg and eg parts of score
-    Value v = winnable(score);
+    v = winnable(score);
 
     // In case of tracing add all remaining individual evaluation terms
     if (T)
@@ -921,6 +928,7 @@ make_v:
         Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
     }
 
+skip2:
     // Evaluation grain
     v = (v / 16) * 16;
 
