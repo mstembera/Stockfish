@@ -939,7 +939,13 @@ Value Eval::evaluate(const Position& pos) {
 
   if (Eval::useNNUE)
   {
-      Value v = eg_value(pos.psq_score());
+      // If we have a specialized evaluation function for the current material
+      // configuration, call it and return.
+      Material::Entry* me = Material::probe(pos);
+      if (me->specialized_eval_exists())
+          return me->evaluate(pos);
+
+      Value v = eg_value(pos.psq_score() + me->imbalance());
       // Take NNUE eval only on balanced positions
       if (abs(v) < NNUEThreshold)
          return NNUE::evaluate(pos) + Tempo;
