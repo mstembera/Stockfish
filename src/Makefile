@@ -139,16 +139,7 @@ ifeq ($(ARCH),x86-64-ssse3)
 	ssse3 = yes
 endif
 
-ifeq ($(ARCH),x86-64-modern)
-	arch = x86_64
-	prefetch = yes
-	popcnt = yes
-	sse = yes
-	ssse3 = yes
-	sse41 = yes
-endif
-
-ifeq ($(ARCH),x86-64-sse41-popcnt)
+ifeq ($(ARCH),$(filter $(ARCH),x86-64-sse41-popcnt x86-64-modern))
 	arch = x86_64
 	prefetch = yes
 	popcnt = yes
