@@ -946,7 +946,7 @@ Value Eval::evaluate(const Position& pos) {
       Value v = eg_value(pos.psq_score());
       // Take NNUE eval only on balanced positions
       if (abs(v) < NNUEThreshold)
-         return NNUE::evaluate(pos) + Tempo;
+         return NNUE::evaluate(pos) * 7 / 8 + Tempo;
   }
   return Evaluation<NO_TRACE>(pos).value();
 }
