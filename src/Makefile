@@ -189,7 +189,7 @@ ifeq ($(ARCH),x86-64-avx512)
 	sse41 = yes
 	avx2 = yes
 	pext = yes
-	avx512 = yes
+	avx512 = no
 endif
 
 ifeq ($(ARCH),x86-64-vnni)
