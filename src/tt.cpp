@@ -132,7 +132,7 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   // lowest three bits from affecting the result) to calculate the entry
   // age correctly even after generation8 overflows into the next cycle.
   auto replace_value = [&](const TTEntry* e) {
-      return (e->depth8 - ((263 + generation8 - e->genBound8) & 0xF8)) * 2 + (abs(e->eval16) > 575) * 3;
+      return (e->depth8 - ((263 + generation8 - e->genBound8) & 0xF8)) * 2 + (abs(e->eval16) < 575) * 3;
   };
 
   // Find an entry to be replaced according to the replacement strategy
