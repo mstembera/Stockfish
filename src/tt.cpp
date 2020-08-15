@@ -126,17 +126,27 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
           return found = (bool)tte[i].key16, &tte[i];
       }
 
+
+  // Due to our packed storage format for generation and its cyclic
+  // nature we add 263 (256 is the modulus plus 7 to keep the unrelated
+  // lowest three bits from affecting the result) to calculate the entry
+  // age correctly even after generation8 overflows into the next cycle.
+  auto replace_value = [&](const TTEntry* e) {
+      return (e->depth8 - ((263 + generation8 - e->genBound8) & 0xF8)) * 2 + (abs(e->eval16) > 575) * 3;
+  };
+
   // Find an entry to be replaced according to the replacement strategy
   TTEntry* replace = tte;
+  int replaceValue = replace_value(replace);
   for (int i = 1; i < ClusterSize; ++i)
-      // Due to our packed storage format for generation and its cyclic
-      // nature we add 263 (256 is the modulus plus 7 to keep the unrelated
-      // lowest three bits from affecting the result) to calculate the entry
-      // age correctly even after generation8 overflows into the next cycle.
-      if (  (replace->depth8 - ((263 + generation8 - replace->genBound8) & 0xF8)) * 2
-          > (  tte[i].depth8 - ((263 + generation8 -   tte[i].genBound8) & 0xF8)) * 2
-            - (abs(replace->eval16) < abs(tte[i].eval16)))
+  {
+      int vi = replace_value(&tte[i]);
+      if (replaceValue > vi)
+      {
           replace = &tte[i];
+          replaceValue = vi;
+      }
+  }
 
   return found = false, replace;
 }
