@@ -935,10 +935,10 @@ make_v:
 
 Value missing_features(const Position& pos)
 {
+    Value v = VALUE_ZERO;
+
     if (pos.non_pawn_material() > (MidgameLimit + EndgameLimit) / 2)
     {
-        Value v = VALUE_ZERO;
-
         // Adjust for castling rights
         if (pos.square<KING>(WHITE) == SQ_E1)
         {
@@ -954,11 +954,10 @@ Value missing_features(const Position& pos)
             if (pos.piece_on(SQ_A8) == B_ROOK)
                 v -= pos.can_castle(BLACK_OOO) ? 2 : -12;
         }
-
-        // Bonus for en passant option
-        return (pos.side_to_move() == WHITE ? v : -v) + (pos.ep_square() != SQ_NONE) * 8;
     }
-    return VALUE_ZERO;
+
+    // Bonus for en passant option
+    return (pos.side_to_move() == WHITE ? v : -v) + (pos.ep_square() != SQ_NONE) * 8;
 }
 
 /// evaluate() is the evaluator for the outer world. It returns a static
