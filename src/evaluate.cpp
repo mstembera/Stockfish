@@ -933,6 +933,34 @@ make_v:
 } // namespace
 
 
+Value missing_features(const Position& pos)
+{
+    if (pos.non_pawn_material() > EndgameLimit)
+    {
+        Value v = VALUE_ZERO;
+
+        // Penalty for lack of castling rights
+        if (pos.square<KING>(WHITE) == SQ_E1)
+        {
+            if (!pos.can_castle(WHITE_OO)  && (pos.pieces(WHITE, ROOK) & SQ_H1))
+                v -= 10;
+            if (!pos.can_castle(WHITE_OOO) && (pos.pieces(WHITE, ROOK) & SQ_A1))
+                v -= 10;
+        }
+        if (pos.square<KING>(BLACK) == SQ_E8)
+        {
+            if (!pos.can_castle(BLACK_OO)  && (pos.pieces(BLACK, ROOK) & SQ_H8))
+                v += 10;
+            if (!pos.can_castle(BLACK_OOO) && (pos.pieces(BLACK, ROOK) & SQ_A8))
+                v += 10;
+        }
+
+        // Bonus for en passant option
+        return (pos.side_to_move() == WHITE ? v : -v) + (pos.ep_square() != SQ_NONE) * 8;
+    }
+    return VALUE_ZERO;
+}
+
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
@@ -941,7 +969,7 @@ Value Eval::evaluate(const Position& pos) {
   bool classical = !Eval::useNNUE
                 ||  abs(eg_value(pos.psq_score())) >= NNUEThreshold;
   Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+                      : NNUE::evaluate(pos) * 5 / 4 + missing_features(pos) + Tempo;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
