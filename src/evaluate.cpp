@@ -935,24 +935,24 @@ make_v:
 
 Value missing_features(const Position& pos)
 {
-    if (pos.non_pawn_material() > EndgameLimit)
+    if (pos.non_pawn_material() > (MidgameLimit + EndgameLimit) / 2)
     {
         Value v = VALUE_ZERO;
 
-        // Penalty for lack of castling rights
+        // Adjust for castling rights
         if (pos.square<KING>(WHITE) == SQ_E1)
         {
-            if (!pos.can_castle(WHITE_OO)  && (pos.pieces(WHITE, ROOK) & SQ_H1))
-                v -= 10;
-            if (!pos.can_castle(WHITE_OOO) && (pos.pieces(WHITE, ROOK) & SQ_A1))
-                v -= 10;
+            if (pos.piece_on(SQ_H1) == W_ROOK)
+                v += pos.can_castle(WHITE_OO)  ? 2 : -12;
+            if (pos.piece_on(SQ_A1) == W_ROOK)
+                v += pos.can_castle(WHITE_OOO) ? 2 : -12;
         }
         if (pos.square<KING>(BLACK) == SQ_E8)
         {
-            if (!pos.can_castle(BLACK_OO)  && (pos.pieces(BLACK, ROOK) & SQ_H8))
-                v += 10;
-            if (!pos.can_castle(BLACK_OOO) && (pos.pieces(BLACK, ROOK) & SQ_A8))
-                v += 10;
+            if (pos.piece_on(SQ_H8) == B_ROOK)
+                v -= pos.can_castle(BLACK_OO)  ? 2 : -12;
+            if (pos.piece_on(SQ_A8) == B_ROOK)
+                v -= pos.can_castle(BLACK_OOO) ? 2 : -12;
         }
 
         // Bonus for en passant option
