@@ -940,8 +940,8 @@ Value Eval::evaluate(const Position& pos) {
 
   bool classical = !Eval::useNNUE
                 ||  abs(eg_value(pos.psq_score())) >= NNUEThreshold * (16 + pos.rule50_count()) / 16;
-  Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+  Value v = classical ? Evaluation<NO_TRACE>(pos).value() * 13 / 16
+                      : NNUE::evaluate(pos) + Tempo;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
