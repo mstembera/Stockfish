@@ -206,9 +206,10 @@ namespace {
 
   public:
     Evaluation() = delete;
-    explicit Evaluation(const Position& p) : pos(p) {}
+    explicit Evaluation(const Position& p) : pos(p), me(nullptr), pe(nullptr) {}
     Evaluation& operator=(const Evaluation&) = delete;
     Value value();
+    Value winnable(Score score);
 
   private:
     template<Color Us> void initialize();
@@ -217,7 +218,6 @@ namespace {
     template<Color Us> Score threats() const;
     template<Color Us> Score passed() const;
     template<Color Us> Score space() const;
-    Value winnable(Score score) const;
 
     const Position& pos;
     Material::Entry* me;
@@ -772,7 +772,13 @@ namespace {
   // by interpolation from the midgame and endgame values.
 
   template<Tracing T>
-  Value Evaluation<T>::winnable(Score score) const {
+  Value Evaluation<T>::winnable(Score score) {
+
+    if (!me)
+        me = Material::probe(pos);
+
+    if (!pe)
+        pe = Pawns::probe(pos);
 
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
@@ -940,8 +946,21 @@ Value Eval::evaluate(const Position& pos) {
 
   bool classical = !Eval::useNNUE
                 ||  abs(eg_value(pos.psq_score())) >= NNUEThreshold;
-  Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+
+  Value v;
+  if (classical)
+  {
+      v = Evaluation<NO_TRACE>(pos).value();
+  }
+  else
+  {
+      v = NNUE::evaluate(pos) * 5 / 4;
+      //Score s = pos.side_to_move() == WHITE ? make_score(v / 2, v) : -make_score(v / 2, v);
+      //Value wv = Evaluation<NO_TRACE>(pos).winnable(s + pos.this_thread()->contempt);
+      Value wv = Evaluation<NO_TRACE>(pos).winnable(pos.this_thread()->contempt);
+      v += pos.side_to_move() == WHITE ? wv : -wv;
+      v += Tempo;
+  }
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
