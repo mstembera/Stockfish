@@ -114,7 +114,7 @@ namespace {
   constexpr Value LazyThreshold1 =  Value(1400);
   constexpr Value LazyThreshold2 =  Value(1300);
   constexpr Value SpaceThreshold = Value(12222);
-  constexpr Value NNUEThreshold  =   Value(575);
+  constexpr Value NNUEThreshold  =   Value(550);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
   constexpr int KingAttackWeights[PIECE_TYPE_NB] = { 0, 0, 81, 52, 44, 10 };
@@ -938,8 +938,24 @@ make_v:
 
 Value Eval::evaluate(const Position& pos) {
 
+  Score score = pos.psq_score();
   bool classical = !Eval::useNNUE
-                ||  abs(eg_value(pos.psq_score())) >= NNUEThreshold * (16 + pos.rule50_count()) / 16;
+                ||  abs(eg_value(score)) > NNUEThreshold * (16 + pos.rule50_count()) / 16;
+
+  if (classical && Eval::useNNUE)
+  {
+      Material::Entry* me = Material::probe(pos);
+      if (me->specialized_eval_exists())
+          return me->evaluate(pos);
+      else
+          score += me->imbalance();
+
+      Pawns::Entry* pe = Pawns::probe(pos);
+      score += pe->pawn_score(WHITE) - pe->pawn_score(BLACK);
+
+      classical = abs(eg_value(score)) > NNUEThreshold * (16 + pos.rule50_count()) / 16;
+  }
+
   Value v = classical ? Evaluation<NO_TRACE>(pos).value()
                       : NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
