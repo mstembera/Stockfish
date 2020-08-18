@@ -940,11 +940,11 @@ make_v:
 Value Eval::evaluate(const Position& pos) {
 
   bool classical = !Eval::useNNUE
-                ||  abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count());
+                ||  abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + std::max(pos.rule50_count() - 10, 0));
   Value v = classical ? Evaluation<NO_TRACE>(pos).value()
                       : NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
-  if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
+  if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + std::max(pos.rule50_count() - 10, 0)))
       v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
   // Damp down the evaluation linearly when shuffling
