@@ -189,7 +189,7 @@ ifeq ($(findstring -avx512,$(ARCH)),-avx512)
 	sse41 = yes
 	avx2 = yes
 	pext = yes
-	avx512 = yes
+	avx512 = no
 endif
 
 ifeq ($(findstring -vnni,$(ARCH)),-vnni)
@@ -200,8 +200,8 @@ ifeq ($(findstring -vnni,$(ARCH)),-vnni)
 	sse41 = yes
 	avx2 = yes
 	pext = yes
-	avx512 = yes
-	vnni = yes
+	avx512 = no
+	vnni = no
 endif
 
 ifeq ($(sse),yes)
