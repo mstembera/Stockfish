@@ -144,8 +144,15 @@ namespace Eval::NNUE::Layers {
   #elif defined(USE_AVX2)
         __m256i sum = _mm256_setzero_si256();
         const auto row = reinterpret_cast<const __m256i*>(&weights_[offset]);
-        for (IndexType j = 0; j < kNumChunks; ++j) {
-          __m256i product = _mm256_maddubs_epi16(_mm256_loadA_si256(&input_vector[j]), _mm256_load_si256(&row[j]));
+        for (int j = 0; j < (int)kNumChunks - 1; j += 2) {
+          __m256i product0 = _mm256_maddubs_epi16(_mm256_loadA_si256(&input_vector[j]), _mm256_load_si256(&row[j]));
+          __m256i product1 = _mm256_maddubs_epi16(_mm256_loadA_si256(&input_vector[j+1]), _mm256_load_si256(&row[j+1]));
+          product0 = _mm256_adds_epi16(product0, product1);
+          product0 = _mm256_madd_epi16(product0, kOnes);
+          sum = _mm256_add_epi32(sum, product0);
+        }
+        if (kNumChunks & 0x1) {
+          __m256i product = _mm256_maddubs_epi16(_mm256_loadA_si256(&input_vector[kNumChunks-1]), _mm256_load_si256(&row[kNumChunks-1]));
           product = _mm256_madd_epi16(product, kOnes);
           sum = _mm256_add_epi32(sum, product);
         }
