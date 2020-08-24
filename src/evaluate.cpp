@@ -946,7 +946,7 @@ Value Eval::evaluate(const Position& pos) {
                       : NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
   if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
-      v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      v = (v + (NNUE::evaluate(pos) * 5 / 4 + Tempo) * 15) / 16;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
