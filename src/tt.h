@@ -44,11 +44,11 @@ struct TTEntry {
   void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev);
   void init() {
       key16     = 0;
+      depth8    = 0;
+      genBound8 = BOUND_NONE;
       move16    = MOVE_NONE;
       value16   = VALUE_NONE;
-      eval16    = VALUE_NONE;
-      genBound8 = BOUND_NONE;
-      depth8    = DEPTH_NONE;
+      eval16    = VALUE_NONE;      
   }
 
 private:
