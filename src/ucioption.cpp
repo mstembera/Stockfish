@@ -81,7 +81,7 @@ void init(OptionsMap& o) {
   o["Use NNUE"]              << Option(true, on_use_NNUE);
   // The default must follow the format nn-[SHA256 first 12 digits].nnue
   // for the build process (profile-build and fishtest) to work.
-  o["EvalFile"]              << Option("nn-82215d0fd0df.nnue", on_eval_file);
+  o["EvalFile"]              << Option("nn-72c56a08554e.nnue", on_eval_file);
 }
 
 
