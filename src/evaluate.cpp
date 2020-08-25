@@ -1015,13 +1015,25 @@ make_v:
 
 Value Eval::evaluate(const Position& pos) {
 
-  bool classical = !Eval::useNNUE
-                ||  abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count());
-  Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+  Value v;
+  if (Eval::useNNUE)
+  {
+      Phase phase = Material::probe(pos)->game_phase();
+      Value contempt = pos.this_thread()->staticContempt * int(phase) / PHASE_MIDGAME;
+      contempt = (pos.side_to_move() == WHITE ? contempt : -contempt);
 
-  if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
-      v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      if (abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count()))
+      {
+          v = Evaluation<NO_TRACE>(pos).value();
+
+          if (abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
+              v = NNUE::evaluate(pos) * 5 / 4 + Tempo + contempt;
+      }
+      else
+          v = NNUE::evaluate(pos) * 5 / 4 + Tempo + contempt;
+  }
+  else
+      v = Evaluation<NO_TRACE>(pos).value();
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
