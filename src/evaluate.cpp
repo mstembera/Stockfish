@@ -1015,22 +1015,21 @@ make_v:
 
 Value Eval::evaluate(const Position& pos) {
 
-  Value v;
+  Value v = Value(0);
   if (Eval::useNNUE)
   {
-      Phase phase = Material::probe(pos)->game_phase();
-      Value contempt = pos.this_thread()->staticContempt * int(phase) / PHASE_MIDGAME;
-      contempt = (pos.side_to_move() == WHITE ? contempt : -contempt);
-
       if (abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count()))
-      {
           v = Evaluation<NO_TRACE>(pos).value();
 
-          if (abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
-              v = NNUE::evaluate(pos) * 5 / 4 + Tempo + contempt;
-      }
-      else
+      if (abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
+      {
+          int npm = std::clamp(pos.non_pawn_material(), EndgameLimit, MidgameLimit);
+          int phase = ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
+          Value contempt = pos.this_thread()->staticContempt * phase / PHASE_MIDGAME;
+          contempt = (pos.side_to_move() == WHITE ? contempt : -contempt);
+
           v = NNUE::evaluate(pos) * 5 / 4 + Tempo + contempt;
+      }
   }
   else
       v = Evaluation<NO_TRACE>(pos).value();
