@@ -934,6 +934,31 @@ make_v:
 
 } // namespace
 
+Value eval_cr(const Position& pos)
+{
+    Value v = VALUE_ZERO;
+
+    if (pos.non_pawn_material() > 13000)
+    {
+        // Adjust for castling rights
+        if (pos.square<KING>(WHITE) == SQ_E1)
+        {
+            if (pos.piece_on(SQ_H1) == W_ROOK && !pos.can_castle(WHITE_OO))
+                v -= 25;
+            if (pos.piece_on(SQ_A1) == W_ROOK && !pos.can_castle(WHITE_OOO))
+                v -= 3;
+        }
+        if (pos.square<KING>(BLACK) == SQ_E8)
+        {
+            if (pos.piece_on(SQ_H8) == B_ROOK && !pos.can_castle(BLACK_OO))
+                v += 25;
+            if (pos.piece_on(SQ_A8) == B_ROOK && !pos.can_castle(BLACK_OOO))
+                v += 3;
+        }
+    }
+
+    return pos.side_to_move() == WHITE ? v : -v;
+}
 
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
@@ -943,10 +968,10 @@ Value Eval::evaluate(const Position& pos) {
   bool classical = !Eval::useNNUE
                 ||  abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count());
   Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+                      : NNUE::evaluate(pos) * 5 / 4 + eval_cr(pos) + Tempo;
 
   if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
-      v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      v = NNUE::evaluate(pos) * 5 / 4 + eval_cr(pos) + Tempo;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
