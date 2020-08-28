@@ -936,25 +936,24 @@ make_v:
 
 Value eval_cr(const Position& pos)
 {
-    Value v = VALUE_ZERO;
+    if (pos.non_pawn_material() < 12000)
+        return VALUE_ZERO;
 
-    if (pos.non_pawn_material() > 13000)
+    // Adjust for castling rights
+    Value v = VALUE_ZERO;
+    if (pos.square<KING>(WHITE) == SQ_E1)
     {
-        // Adjust for castling rights
-        if (pos.square<KING>(WHITE) == SQ_E1)
-        {
-            if (pos.piece_on(SQ_H1) == W_ROOK && !pos.can_castle(WHITE_OO))
-                v -= 25;
-            if (pos.piece_on(SQ_A1) == W_ROOK && !pos.can_castle(WHITE_OOO))
-                v -= 3;
-        }
-        if (pos.square<KING>(BLACK) == SQ_E8)
-        {
-            if (pos.piece_on(SQ_H8) == B_ROOK && !pos.can_castle(BLACK_OO))
-                v += 25;
-            if (pos.piece_on(SQ_A8) == B_ROOK && !pos.can_castle(BLACK_OOO))
-                v += 3;
-        }
+        if (pos.piece_on(SQ_H1) == W_ROOK && !pos.can_castle(WHITE_OO))
+            v -= 25 + 16 * !pos.can_castle(WHITE_OOO);
+        if (pos.piece_on(SQ_A1) == W_ROOK && !pos.can_castle(WHITE_OOO))
+            v -= 3 + 8 * !pos.can_castle(WHITE_OO);
+    }
+    if (pos.square<KING>(BLACK) == SQ_E8)
+    {
+        if (pos.piece_on(SQ_H8) == B_ROOK && !pos.can_castle(BLACK_OO))
+            v += 25 + 16 * !pos.can_castle(BLACK_OOO);
+        if (pos.piece_on(SQ_A8) == B_ROOK && !pos.can_castle(BLACK_OOO))
+            v += 3 + 8 * !pos.can_castle(BLACK_OO);
     }
 
     return pos.side_to_move() == WHITE ? v : -v;
