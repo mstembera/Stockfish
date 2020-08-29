@@ -1023,12 +1023,14 @@ Value Eval::evaluate(const Position& pos) {
 
       if (abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
       {
-          int npm = std::clamp(pos.non_pawn_material(), EndgameLimit, MidgameLimit);
-          int phase = ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
-          Value contempt = pos.this_thread()->staticContempt * phase / PHASE_MIDGAME;
-          contempt = (pos.side_to_move() == WHITE ? contempt : -contempt);
+          v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
-          v = NNUE::evaluate(pos) * 5 / 4 + Tempo + contempt;
+          if (pos.this_thread()->staticContempt)
+          {
+              int npm = std::clamp(pos.non_pawn_material(), EndgameLimit, MidgameLimit);
+              Value contempt = pos.this_thread()->staticContempt * (npm - EndgameLimit) / (MidgameLimit - EndgameLimit);
+              v += pos.side_to_move() == WHITE ? contempt : -contempt;
+          }
       }
   }
   else
