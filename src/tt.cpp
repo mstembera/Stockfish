@@ -118,8 +118,10 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
   TTEntry* const tte = first_entry(key);
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
-
+  TTEntry* replace;
+  int minV = INT_MAX;
   for (int i = 0; i < ClusterSize; ++i)
+  {
       if (tte[i].key16 == key16 || !tte[i].depth8)
       {
           tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & 0x7)); // Refresh
@@ -127,15 +129,11 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
           return found = (bool)tte[i].depth8, &tte[i];
       }
 
-  // Find an entry to be replaced according to the replacement strategy.
-  // Due to our packed storage format for generation and its cyclic
-  // nature we add 263 (256 is the modulus plus 7 to keep the unrelated
-  // lowest three bits from affecting the result) to calculate the entry
-  // age correctly even after generation8 overflows into the next cycle.
-  TTEntry* replace = &tte[0];
-  int minV = tte[0].depth8 - ((263 + generation8 - tte[0].genBound8) & 0xF8);
-  for (int i = 1; i < ClusterSize; ++i)
-  {
+      // Find an entry to be replaced according to the replacement strategy
+      // Due to our packed storage format for generation and its cyclic
+      // nature we add 263 (256 is the modulus plus 7 to keep the unrelated
+      // lowest three bits from affecting the result) to calculate the entry
+      // age correctly even after generation8 overflows into the next cycle.
       int v = tte[i].depth8 - ((263 + generation8 - tte[i].genBound8) & 0xF8);
       if (v < minV)
       {
