@@ -1028,7 +1028,7 @@ Value Eval::evaluate(const Position& pos) {
           if (pos.this_thread()->staticContempt)
           {
               int npm = std::clamp(pos.non_pawn_material(), EndgameLimit, MidgameLimit);
-              Value contempt = pos.this_thread()->staticContempt * (npm - EndgameLimit) / (MidgameLimit - EndgameLimit);
+              int contempt = pos.this_thread()->staticContempt * (npm - EndgameLimit) / (MidgameLimit - EndgameLimit);
               v += pos.side_to_move() == WHITE ? contempt : -contempt;
           }
       }
