@@ -36,6 +36,7 @@
 #include "../uci.h"
 
 #include "tbprobe.h"
+#include "4men.h"
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -68,6 +69,8 @@ inline WDLScore operator-(WDLScore d) { return WDLScore(-int(d)); }
 inline Square operator^(Square s, int i) { return Square(int(s) ^ i); }
 
 const std::string PieceToChar = " PNBRQK  pnbrqk";
+
+bool internal4Men = true;
 
 int MapPawns[SQUARE_NB];
 int MapB1H1H7[SQUARE_NB];
@@ -158,6 +161,47 @@ struct LR {
 
 static_assert(sizeof(LR) == 3, "LR tree entry must be 3 bytes");
 
+
+#define M(c) { #c".rtbw", c##w }, { #c".rtbz", c##z }
+static const std::unordered_map<std::string, const void*> map4Men = {
+#if 1
+    M(KBvK),  M(KNvK),  M(KPvK),  M(KQvK),  M(KRvK),  M(KBBvK), M(KBNvK),
+    M(KBPvK), M(KBvKB), M(KBvKN), M(KBvKP), M(KNNvK), M(KNPvK), M(KNvKN),
+    M(KNvKP), M(KPPvK), M(KPvKP), M(KQBvK), M(KQNvK), M(KQPvK), M(KQQvK),
+    M(KQRvK), M(KQvKB), M(KQvKN), M(KQvKP), M(KQvKQ), M(KQvKR), M(KRBvK),
+    M(KRNvK), M(KRPvK), M(KRRvK), M(KRvKB), M(KRvKN), M(KRvKP), M(KRvKR)
+#endif
+#if 0
+    // WDL
+    { "KBvK.rtbw", KBvKw },   { "KNvK.rtbw", KNvKw },   { "KPvK.rtbw", KPvKw },   { "KQvK.rtbw", KQvKw },
+    { "KRvK.rtbw", KRvKw },   { "KBBvK.rtbw", KBBvKw }, { "KBNvK.rtbw", KBNvKw }, { "KBPvK.rtbw", KBPvKw },
+    { "KBvKB.rtbw", KBvKBw }, { "KBvKN.rtbw", KBvKNw }, { "KBvKP.rtbw", KBvKPw }, { "KNNvK.rtbw", KNNvKw },
+    { "KNPvK.rtbw", KNPvKw }, { "KNvKN.rtbw", KNvKNw }, { "KNvKP.rtbw", KNvKPw }, { "KPPvK.rtbw", KPPvKw },
+    { "KPvKP.rtbw", KPvKPw }, { "KQBvK.rtbw", KQBvKw }, { "KQNvK.rtbw", KQNvKw }, { "KQPvK.rtbw", KQPvKw },
+    { "KQQvK.rtbw", KQQvKw }, { "KQRvK.rtbw", KQRvKw }, { "KQvKB.rtbw", KQvKBw }, { "KQvKN.rtbw", KQvKNw },
+    { "KQvKP.rtbw", KQvKPw }, { "KQvKQ.rtbw", KQvKQw }, { "KQvKR.rtbw", KQvKRw }, { "KRBvK.rtbw", KRBvKw },
+    { "KRNvK.rtbw", KRNvKw }, { "KRPvK.rtbw", KRPvKw }, { "KRRvK.rtbw", KRRvKw }, { "KRvKB.rtbw", KRvKBw },
+    { "KRvKN.rtbw", KRvKNw }, { "KRvKP.rtbw", KRvKPw }, { "KRvKR.rtbw", KRvKRw },
+    // DTZ
+    { "KBvK.rtbz", KBvKz },   { "KNvK.rtbz", KNvKz },   { "KPvK.rtbz", KPvKz },   { "KQvK.rtbz", KQvKz },
+    { "KRvK.rtbz", KRvKz },   { "KBBvK.rtbz", KBBvKz }, { "KBNvK.rtbz", KBNvKz }, { "KBPvK.rtbz", KBPvKz },
+    { "KBvKB.rtbz", KBvKBz }, { "KBvKN.rtbz", KBvKNz }, { "KBvKP.rtbz", KBvKPz }, { "KNNvK.rtbz", KNNvKz },
+    { "KNPvK.rtbz", KNPvKz }, { "KNvKN.rtbz", KNvKNz }, { "KNvKP.rtbz", KNvKPz }, { "KPPvK.rtbz", KPPvKz },
+    { "KPvKP.rtbz", KPvKPz }, { "KQBvK.rtbz", KQBvKz }, { "KQNvK.rtbz", KQNvKz }, { "KQPvK.rtbz", KQPvKz },
+    { "KQQvK.rtbz", KQQvKz }, { "KQRvK.rtbz", KQRvKz }, { "KQvKB.rtbz", KQvKBz }, { "KQvKN.rtbz", KQvKNz },
+    { "KQvKP.rtbz", KQvKPz }, { "KQvKQ.rtbz", KQvKQz }, { "KQvKR.rtbz", KQvKRz }, { "KRBvK.rtbz", KRBvKz },
+    { "KRNvK.rtbz", KRNvKz }, { "KRPvK.rtbz", KRPvKz }, { "KRRvK.rtbz", KRRvKz }, { "KRvKB.rtbz", KRvKBz },
+    { "KRvKN.rtbz", KRvKNz }, { "KRvKP.rtbz", KRvKPz }, { "KRvKR.rtbz", KRvKRz }
+#endif
+};
+#undef M
+
+static const void* get_4men(const std::string& str)
+{
+    auto it = map4Men.find(str);
+    return it != map4Men.end() ? it->second : nullptr;
+}
+
 // Tablebases data layout is structured as following:
 //
 //  TBFile:   memory maps/unmaps the physical .rtbw and .rtbz files
@@ -168,7 +212,7 @@ static_assert(sizeof(LR) == 3, "LR tree entry must be 3 bytes");
 // memory mapped for best performance. Files are mapped at first access: at init
 // time only existence of the file is checked.
 class TBFile : public std::ifstream {
-
+public:
     std::string fname;
 
 public:
@@ -182,19 +226,26 @@ public:
 
     TBFile(const std::string& f) {
 
+        if (internal4Men)
+        {
+            fname = f;
+        }
+        else
+        {
 #ifndef _WIN32
-        constexpr char SepChar = ':';
+            constexpr char SepChar = ':';
 #else
-        constexpr char SepChar = ';';
+            constexpr char SepChar = ';';
 #endif
-        std::stringstream ss(Paths);
-        std::string path;
+            std::stringstream ss(Paths);
+            std::string path;
 
-        while (std::getline(ss, path, SepChar)) {
-            fname = path + "/" + f;
-            std::ifstream::open(fname);
-            if (is_open())
-                return;
+            while (std::getline(ss, path, SepChar)) {
+                fname = path + "/" + f;
+                std::ifstream::open(fname);
+                if (is_open())
+                    return;
+            }
         }
     }
 
@@ -202,73 +253,88 @@ public:
     // closed after mapping.
     uint8_t* map(void** baseAddress, uint64_t* mapping, TBType type) {
 
-        assert(is_open());
+        if (internal4Men)
+        {
+            if (is_open())
+                close();
 
-        close(); // Need to re-open to get native file descriptor
+            *baseAddress = const_cast<void*>(get_4men(fname));
+            *mapping = 0;
+
+            if (!*baseAddress)
+                return nullptr;
+        }
+        else
+        {
+            assert(is_open());
+
+            close(); // Need to re-open to get native file descriptor
 
 #ifndef _WIN32
-        struct stat statbuf;
-        int fd = ::open(fname.c_str(), O_RDONLY);
+            struct stat statbuf;
+            int fd = ::open(fname.c_str(), O_RDONLY);
 
-        if (fd == -1)
-            return *baseAddress = nullptr, nullptr;
+            if (fd == -1)
+                return *baseAddress = nullptr, nullptr;
 
-        fstat(fd, &statbuf);
+            fstat(fd, &statbuf);
 
-        if (statbuf.st_size % 64 != 16)
-        {
-            std::cerr << "Corrupt tablebase file " << fname << std::endl;
-            exit(EXIT_FAILURE);
-        }
+            if (statbuf.st_size % 64 != 16)
+            {
+                std::cerr << "Corrupt tablebase file " << fname << std::endl;
+                exit(EXIT_FAILURE);
+            }
 
-        *mapping = statbuf.st_size;
-        *baseAddress = mmap(nullptr, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+            *mapping = statbuf.st_size;
+            *baseAddress = mmap(nullptr, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
 #if defined(MADV_RANDOM)
-        madvise(*baseAddress, statbuf.st_size, MADV_RANDOM);
+            madvise(*baseAddress, statbuf.st_size, MADV_RANDOM);
 #endif
-        ::close(fd);
+            ::close(fd);
 
-        if (*baseAddress == MAP_FAILED)
-        {
-            std::cerr << "Could not mmap() " << fname << std::endl;
-            exit(EXIT_FAILURE);
-        }
+            if (*baseAddress == MAP_FAILED)
+            {
+                std::cerr << "Could not mmap() " << fname << std::endl;
+                exit(EXIT_FAILURE);
+            }
 #else
-        // Note FILE_FLAG_RANDOM_ACCESS is only a hint to Windows and as such may get ignored.
-        HANDLE fd = CreateFile(fname.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
-                               OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, nullptr);
+            // Note FILE_FLAG_RANDOM_ACCESS is only a hint to Windows and as such may get ignored.
+            HANDLE fd = CreateFile(fname.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                                   OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, nullptr);
 
-        if (fd == INVALID_HANDLE_VALUE)
-            return *baseAddress = nullptr, nullptr;
+            if (fd == INVALID_HANDLE_VALUE)
+                return *baseAddress = nullptr, nullptr;
 
-        DWORD size_high;
-        DWORD size_low = GetFileSize(fd, &size_high);
+            DWORD size_high;
+            DWORD size_low = GetFileSize(fd, &size_high);
 
-        if (size_low % 64 != 16)
-        {
-            std::cerr << "Corrupt tablebase file " << fname << std::endl;
-            exit(EXIT_FAILURE);
-        }
+            if (size_low % 64 != 16)
+            {
+                std::cerr << "Corrupt tablebase file " << fname << std::endl;
+                exit(EXIT_FAILURE);
+            }
 
-        HANDLE mmap = CreateFileMapping(fd, nullptr, PAGE_READONLY, size_high, size_low, nullptr);
-        CloseHandle(fd);
+            HANDLE mmap = CreateFileMapping(fd, nullptr, PAGE_READONLY, size_high, size_low, nullptr);
+            CloseHandle(fd);
 
-        if (!mmap)
-        {
-            std::cerr << "CreateFileMapping() failed" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+            if (!mmap)
+            {
+                std::cerr << "CreateFileMapping() failed" << std::endl;
+                exit(EXIT_FAILURE);
+            }
 
-        *mapping = (uint64_t)mmap;
-        *baseAddress = MapViewOfFile(mmap, FILE_MAP_READ, 0, 0, 0);
+            *mapping = (uint64_t)mmap;
+            *baseAddress = MapViewOfFile(mmap, FILE_MAP_READ, 0, 0, 0);
 
-        if (!*baseAddress)
-        {
-            std::cerr << "MapViewOfFile() failed, name = " << fname
-                      << ", error = " << GetLastError() << std::endl;
-            exit(EXIT_FAILURE);
-        }
+            if (!*baseAddress)
+            {
+                std::cerr << "MapViewOfFile() failed, name = " << fname
+                          << ", error = " << GetLastError() << std::endl;
+                exit(EXIT_FAILURE);
+            }
 #endif
+        }
+
         uint8_t* data = (uint8_t*)*baseAddress;
 
         constexpr uint8_t Magics[][4] = { { 0xD7, 0x66, 0x0C, 0xA5 },
@@ -285,6 +351,9 @@ public:
     }
 
     static void unmap(void* baseAddress, uint64_t mapping) {
+
+        if (internal4Men)
+            return;
 
 #ifndef _WIN32
         munmap(baseAddress, mapping);
@@ -469,6 +538,112 @@ public:
 
 TBTables TBTables;
 
+
+void dump_tb()
+{
+    const char* codeS[] = {
+    "KBvK",
+    "KNvK",
+    "KPvK",
+    "KQvK",
+    "KRvK",
+
+    "KBBvK",
+    "KBNvK",
+    "KBPvK",
+    "KBvKB",
+    "KBvKN",
+    "KBvKP",
+    "KNNvK",
+    "KNPvK",
+    "KNvKN",
+    "KNvKP",
+    "KPPvK",
+    "KPvKP",
+    "KQBvK",
+    "KQNvK",
+    "KQPvK",
+    "KQQvK",
+    "KQRvK",
+    "KQvKB",
+    "KQvKN",
+    "KQvKP",
+    "KQvKQ",
+    "KQvKR",
+    "KRBvK",
+    "KRNvK",
+    "KRPvK",
+    "KRRvK",
+    "KRvKB",
+    "KRvKN",
+    "KRvKP",
+    "KRvKR"
+    };
+
+    FILE* fpo = fopen("4m.h", "w");
+
+    for (int k = 0; k < 2; k++)
+    {
+        std::string ext = (k == 0 ? "w" : "z");
+
+        for (int j = 0; j < 35; j++)
+        {
+            std::string code = codeS[j];
+
+            TBFile file(code + ".rtb" + ext);
+            FILE* fp = fopen(file.fname.c_str(), "rb");
+
+            fseek(fp, 0, SEEK_END);
+            const int len = ftell(fp);
+            const int vCnt = len / 8;
+            rewind(fp);
+
+            //fprintf(fpo, "CACHE_LINE_ALIGNMENT\n");
+            //fprintf(fpo, "static constexpr uint64_t %s%s[%d] = {\n", code.c_str(), ext.c_str(), vCnt);
+
+            fprintf(fpo, "alignas(alignSize) static constexpr uint64_t %s%s[%d] = {\n", code.c_str(), ext.c_str(), vCnt);            
+
+            uint64_t v = 0;
+            int c, i = 0, vId = 0;
+            while ((c = fgetc(fp)) != EOF)
+            {
+                const int r = i % 8;
+                v = v | (uint64_t(c) << (8 * r));
+
+                if (r == 7)
+                {
+                    if (vId % 6 == 0)
+                    {
+                        fprintf(fpo, " ");
+                    }
+
+                    fprintf(fpo, " 0x%016llXULL", v);
+                    v = 0;
+
+                    if (vId < vCnt - 1)
+                    {
+                        fprintf(fpo, ",");
+
+                        if (vId % 6 == 5)
+                            fprintf(fpo, "\n");
+                    }
+
+                    vId++;
+                }
+
+                i++;
+            }
+
+            fprintf(fpo, "\n};\n\n");
+            fclose(fp);
+        }
+    }
+
+    fclose(fpo);
+    exit(0);
+}
+
+
 // If the corresponding file exists two new objects TBTable<WDL> and TBTable<DTZ>
 // are created and added to the lists and hash table. Called at init time.
 void TBTables::add(const std::vector<PieceType>& pieces) {
@@ -478,12 +653,24 @@ void TBTables::add(const std::vector<PieceType>& pieces) {
     for (PieceType pt : pieces)
         code += PieceToChar[pt];
 
-    TBFile file(code.insert(code.find('K', 1), "v") + ".rtbw"); // KRK -> KRvK
+    code.insert(code.find('K', 1), "v"); // KRK -> KRvK
 
-    if (!file.is_open()) // Only WDL file is checked
-        return;
+    if (internal4Men)
+    {
+        if (!get_4men(code + ".rtbw"))
+            return;
+    }
+    else
+    {
+        TBFile file(code + ".rtbw");
 
-    file.close();
+        if (!file.is_open()) // Only WDL file is checked
+            return;
+
+        file.close();
+
+//dump_tb();
+    }
 
     MaxCardinality = std::max((int)pieces.size(), MaxCardinality);
 
@@ -1268,6 +1455,8 @@ void Tablebases::init(const std::string& paths) {
 
     if (paths.empty() || paths == "<empty>")
         return;
+
+    internal4Men = paths == "<4-men>";
 
     // MapB1H1H7[] encodes a square below a1-h8 diagonal to 0..27
     int code = 0;
