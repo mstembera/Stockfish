@@ -148,7 +148,7 @@ namespace Trace {
   enum Tracing { NO_TRACE, TRACE };
 
   enum Term { // The first 8 entries are reserved for PieceType
-    MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, WINNABLE, TOTAL, TERM_NB
+    MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, INITIATIVE, TOTAL, TERM_NB
   };
 
   Score scores[TERM_NB][COLOR_NB];
@@ -172,7 +172,7 @@ namespace Trace {
 
   std::ostream& operator<<(std::ostream& os, Term t) {
 
-    if (t == MATERIAL || t == IMBALANCE || t == WINNABLE || t == TOTAL)
+    if (t == MATERIAL || t == IMBALANCE || t == INITIATIVE || t == TOTAL)
         os << " ----  ----"    << " | " << " ----  ----";
     else
         os << scores[t][WHITE] << " | " << scores[t][BLACK];
@@ -283,9 +283,10 @@ namespace {
 
   public:
     Evaluation() = delete;
-    explicit Evaluation(const Position& p) : pos(p) {}
+    explicit Evaluation(const Position& p) : pos(p), pe(nullptr) {}
     Evaluation& operator=(const Evaluation&) = delete;
     Value value();
+    Score initiative(Score score);
 
   private:
     template<Color Us> void initialize();
@@ -294,7 +295,7 @@ namespace {
     template<Color Us> Score threats() const;
     template<Color Us> Score passed() const;
     template<Color Us> Score space() const;
-    Value winnable(Score score) const;
+    ScaleFactor scale_factor(Value eg) const;
 
     const Position& pos;
     Material::Entry* me;
@@ -844,12 +845,12 @@ namespace {
   }
 
 
-  // Evaluation::winnable() adjusts the midgame and endgame score components, based on
+  // Evaluation::initiative() adjusts the midgame and endgame score components, based on
   // the known attacking/defending status of the players. The final value is derived
   // by interpolation from the midgame and endgame values.
 
   template<Tracing T>
-  Value Evaluation<T>::winnable(Score score) const {
+  Score Evaluation<T>::initiative(Score score) {
 
     int outflanking =  distance<File>(pos.square<KING>(WHITE), pos.square<KING>(BLACK))
                      - distance<Rank>(pos.square<KING>(WHITE), pos.square<KING>(BLACK));
@@ -862,6 +863,9 @@ namespace {
 
     bool infiltration =   rank_of(pos.square<KING>(WHITE)) > RANK_4
                        || rank_of(pos.square<KING>(BLACK)) < RANK_5;
+
+    if (!pe)
+        pe = Pawns::probe(pos);
 
     // Compute the initiative bonus for the attacking side
     int complexity =   9 * pe->passed_count()
@@ -885,7 +889,17 @@ namespace {
     mg += u;
     eg += v;
 
-    // Compute the scale factor for the winning side
+    if (T)
+        Trace::add(INITIATIVE, make_score(u, v));
+
+    return make_score(u, v);
+  }
+
+  // Evaluation::scale_factor() computes the scale factor for the winning side
+
+  template<Tracing T>
+  ScaleFactor Evaluation<T>::scale_factor(Value eg) const {
+
     Color strongSide = eg > VALUE_DRAW ? WHITE : BLACK;
     int sf = me->scale_factor(pos, strongSide);
 
@@ -913,18 +927,7 @@ namespace {
             sf = std::min(sf, 36 + 7 * pos.count<PAWN>(strongSide));
     }
 
-    // Interpolate between the middlegame and (scaled by 'sf') endgame score
-    v =  mg * int(me->game_phase())
-       + eg * int(PHASE_MIDGAME - me->game_phase()) * ScaleFactor(sf) / SCALE_FACTOR_NORMAL;
-    v /= PHASE_MIDGAME;
-
-    if (T)
-    {
-        Trace::add(WINNABLE, make_score(u, eg * ScaleFactor(sf) / SCALE_FACTOR_NORMAL - eg_value(score)));
-        Trace::add(TOTAL, make_score(mg, eg * ScaleFactor(sf) / SCALE_FACTOR_NORMAL));
-    }
-
-    return Value(v);
+    return ScaleFactor(sf);
   }
 
 
@@ -986,8 +989,13 @@ namespace {
             + space<  WHITE>() - space<  BLACK>();
 
 make_v:
-    // Derive single value from mg and eg parts of score
-    Value v = winnable(score);
+    score += initiative(score);
+
+    // Interpolate between a middlegame and a (scaled by 'sf') endgame score
+    ScaleFactor sf = scale_factor(eg_value(score));
+    Value v =   mg_value(score) * int(me->game_phase())
+              + eg_value(score) * int(PHASE_MIDGAME - me->game_phase()) * sf / SCALE_FACTOR_NORMAL;
+    v /= PHASE_MIDGAME;
 
     // In case of tracing add all remaining individual evaluation terms
     if (T)
@@ -996,6 +1004,7 @@ make_v:
         Trace::add(IMBALANCE, me->imbalance());
         Trace::add(PAWN, pe->pawn_score(WHITE), pe->pawn_score(BLACK));
         Trace::add(MOBILITY, mobility[WHITE], mobility[BLACK]);
+        Trace::add(TOTAL, score);
     }
 
     // Evaluation grain
@@ -1015,13 +1024,23 @@ make_v:
 
 Value Eval::evaluate(const Position& pos) {
 
-  bool classical = !Eval::useNNUE
-                ||  abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count());
-  Value v = classical ? Evaluation<NO_TRACE>(pos).value()
-                      : NNUE::evaluate(pos) * 5 / 4 + Tempo;
+  Value v = Value(0);
+  if (Eval::useNNUE)
+  {
+      if (abs(eg_value(pos.psq_score())) * 16 > NNUEThreshold1 * (16 + pos.rule50_count()))
+          v = Evaluation<NO_TRACE>(pos).value();
 
-  if (classical && Eval::useNNUE && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
-      v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      if (abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
+      {
+          v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+
+          Score s = pos.side_to_move() == WHITE ? make_score(v, v) : -make_score(v, v);
+          Value vi = eg_value(Evaluation<NO_TRACE>(pos).initiative(s)) / 4;
+          v += pos.side_to_move() == WHITE ? vi : -vi;
+      }
+  }
+  else
+      v = Evaluation<NO_TRACE>(pos).value();
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
@@ -1069,7 +1088,7 @@ std::string Eval::trace(const Position& pos) {
      << "     Threats | " << Term(THREAT)
      << "      Passed | " << Term(PASSED)
      << "       Space | " << Term(SPACE)
-     << "    Winnable | " << Term(WINNABLE)
+     << "  Initiative | " << Term(INITIATIVE)
      << " ------------+-------------+-------------+------------\n"
      << "       Total | " << Term(TOTAL);
 
