@@ -1035,7 +1035,7 @@ Value Eval::evaluate(const Position& pos) {
           v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
 
           Score s = pos.side_to_move() == WHITE ? make_score(v, v) : -make_score(v, v);
-          Value vi = eg_value(Evaluation<NO_TRACE>(pos).initiative(s)) / 4;
+          Value vi = mg_value(Evaluation<NO_TRACE>(pos).initiative(s)) / 4;
           v += pos.side_to_move() == WHITE ? vi : -vi;
       }
   }
