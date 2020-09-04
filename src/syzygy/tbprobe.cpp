@@ -34,9 +34,24 @@
 #include "../search.h"
 #include "../types.h"
 #include "../uci.h"
+#include "../incbin/incbin.h"
 
 #include "tbprobe.h"
-#include "4men.h"
+
+// Macro to embed the default 4-men syzygy file data in the engine binary (using incbin.h, by Dale Weiler).
+// This macro invocation will declare the following three variables
+//     const unsigned char        gEmbedded4menData[];  // a pointer to the embedded data
+//     const unsigned char *const gEmbedded4menEnd;     // a marker to the end
+//     const unsigned int         gEmbedded4menSize;    // the size of the embedded file
+// Note that this does not work in Microsof Visual Studio.
+#if 0//!defined(_MSC_VER) && !defined(EMBEDDING_OFF)
+#undef  INCBIN_ALIGNMENT
+#define INCBIN_ALIGNMENT 64
+INCBIN(Embedded4men, "syzygy/4men.syz");
+#else
+const unsigned char*       gEmbedded4menData = nullptr;
+#endif
+
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -162,44 +177,28 @@ struct LR {
 static_assert(sizeof(LR) == 3, "LR tree entry must be 3 bytes");
 
 
-#define M(c) { #c".rtbw", c##w }, { #c".rtbz", c##z }
-static const std::unordered_map<std::string, const void*> map4Men = {
-#if 1
-    M(KBvK),  M(KNvK),  M(KPvK),  M(KQvK),  M(KRvK),  M(KBBvK), M(KBNvK),
-    M(KBPvK), M(KBvKB), M(KBvKN), M(KBvKP), M(KNNvK), M(KNPvK), M(KNvKN),
-    M(KNvKP), M(KPPvK), M(KPvKP), M(KQBvK), M(KQNvK), M(KQPvK), M(KQQvK),
-    M(KQRvK), M(KQvKB), M(KQvKN), M(KQvKP), M(KQvKQ), M(KQvKR), M(KRBvK),
-    M(KRNvK), M(KRPvK), M(KRRvK), M(KRvKB), M(KRvKN), M(KRvKP), M(KRvKR)
-#endif
-#if 0
-    // WDL
-    { "KBvK.rtbw", KBvKw },   { "KNvK.rtbw", KNvKw },   { "KPvK.rtbw", KPvKw },   { "KQvK.rtbw", KQvKw },
-    { "KRvK.rtbw", KRvKw },   { "KBBvK.rtbw", KBBvKw }, { "KBNvK.rtbw", KBNvKw }, { "KBPvK.rtbw", KBPvKw },
-    { "KBvKB.rtbw", KBvKBw }, { "KBvKN.rtbw", KBvKNw }, { "KBvKP.rtbw", KBvKPw }, { "KNNvK.rtbw", KNNvKw },
-    { "KNPvK.rtbw", KNPvKw }, { "KNvKN.rtbw", KNvKNw }, { "KNvKP.rtbw", KNvKPw }, { "KPPvK.rtbw", KPPvKw },
-    { "KPvKP.rtbw", KPvKPw }, { "KQBvK.rtbw", KQBvKw }, { "KQNvK.rtbw", KQNvKw }, { "KQPvK.rtbw", KQPvKw },
-    { "KQQvK.rtbw", KQQvKw }, { "KQRvK.rtbw", KQRvKw }, { "KQvKB.rtbw", KQvKBw }, { "KQvKN.rtbw", KQvKNw },
-    { "KQvKP.rtbw", KQvKPw }, { "KQvKQ.rtbw", KQvKQw }, { "KQvKR.rtbw", KQvKRw }, { "KRBvK.rtbw", KRBvKw },
-    { "KRNvK.rtbw", KRNvKw }, { "KRPvK.rtbw", KRPvKw }, { "KRRvK.rtbw", KRRvKw }, { "KRvKB.rtbw", KRvKBw },
-    { "KRvKN.rtbw", KRvKNw }, { "KRvKP.rtbw", KRvKPw }, { "KRvKR.rtbw", KRvKRw },
-    // DTZ
-    { "KBvK.rtbz", KBvKz },   { "KNvK.rtbz", KNvKz },   { "KPvK.rtbz", KPvKz },   { "KQvK.rtbz", KQvKz },
-    { "KRvK.rtbz", KRvKz },   { "KBBvK.rtbz", KBBvKz }, { "KBNvK.rtbz", KBNvKz }, { "KBPvK.rtbz", KBPvKz },
-    { "KBvKB.rtbz", KBvKBz }, { "KBvKN.rtbz", KBvKNz }, { "KBvKP.rtbz", KBvKPz }, { "KNNvK.rtbz", KNNvKz },
-    { "KNPvK.rtbz", KNPvKz }, { "KNvKN.rtbz", KNvKNz }, { "KNvKP.rtbz", KNvKPz }, { "KPPvK.rtbz", KPPvKz },
-    { "KPvKP.rtbz", KPvKPz }, { "KQBvK.rtbz", KQBvKz }, { "KQNvK.rtbz", KQNvKz }, { "KQPvK.rtbz", KQPvKz },
-    { "KQQvK.rtbz", KQQvKz }, { "KQRvK.rtbz", KQRvKz }, { "KQvKB.rtbz", KQvKBz }, { "KQvKN.rtbz", KQvKNz },
-    { "KQvKP.rtbz", KQvKPz }, { "KQvKQ.rtbz", KQvKQz }, { "KQvKR.rtbz", KQvKRz }, { "KRBvK.rtbz", KRBvKz },
-    { "KRNvK.rtbz", KRNvKz }, { "KRPvK.rtbz", KRPvKz }, { "KRRvK.rtbz", KRRvKz }, { "KRvKB.rtbz", KRvKBz },
-    { "KRvKN.rtbz", KRvKNz }, { "KRvKP.rtbz", KRvKPz }, { "KRvKR.rtbz", KRvKRz }
-#endif
+#define M(c, ow, oz) { #c".rtbw", ow }, { #c".rtbz", oz }
+static const std::unordered_map<std::string, int> offset4Men = {
+    M( KBvK,       0, 1264384), M( KNvK,     128, 1264512), M( KPvK,     256, 1264640),
+    M( KQvK,    8128, 1268864), M( KRvK,    8448, 1274240), M(KBBvK,    8704, 1282560),
+    M(KBNvK,   66752, 1418880), M(KBPvK,   74432, 1880768), M(KBvKB,  155904, 1956608),
+    M(KBvKN,  157184, 1956736), M(KBvKP,  159488, 1956864), M(KNNvK,  267008, 1962880),
+    M(KNPvK,  268416, 1963008), M(KNvKN,  361664, 2074112), M(KNvKP,  362880, 2074240),
+    M(KPPvK,  510976, 2084928), M(KPvKP,  536128, 2093632), M(KQBvK,  781504, 2148160),
+    M(KQNvK,  786496, 2287296), M(KQPvK,  790144, 2443776), M(KQQvK,  802688, 2476032),
+    M(KQRvK,  809792, 2502016), M(KQvKB,  814400, 2546176), M(KQvKN,  821120, 2741440),
+    M(KQvKP,  831232, 2904128), M(KQvKQ,  889344, 3109952), M(KQvKR,  905920, 3116736),
+    M(KRBvK,  926464, 3425792), M(KRNvK,  929344, 3687616), M(KRPvK,  931712, 3983296),
+    M(KRRvK,  936896, 3996288), M(KRvKB,  938880, 4049856), M(KRvKN,  971840, 4059840),
+    M(KRvKP, 1071936, 4153088), M(KRvKR, 1251392, 4346560)
 };
 #undef M
 
 static const void* get_4men(const std::string& str)
 {
-    auto it = map4Men.find(str);
-    return it != map4Men.end() ? it->second : nullptr;
+    assert(gEmbedded4menData);
+    auto it = offset4Men.find(str);
+    return it != offset4Men.end() ? &gEmbedded4menData[it->second] : nullptr;
 }
 
 // Tablebases data layout is structured as following:
@@ -541,7 +540,7 @@ TBTables TBTables;
 
 void dump_tb()
 {
-    const char* codeS[] = {
+    const char* codeS[35] = {
     "KBvK",
     "KNvK",
     "KPvK",
@@ -580,7 +579,18 @@ void dump_tb()
     "KRvKR"
     };
 
-    FILE* fpo = fopen("4m.h", "w");
+
+    struct {
+        std::string name;
+        int wo, zo;
+    } Offsets[35];
+
+
+    uint8_t* buf = new uint8_t[1024 * 1024];
+    int offset = 0;
+
+    //FILE* fpo = fopen("4m.h", "w");
+    FILE* fpo = fopen("4m.syz", "wb");
 
     for (int k = 0; k < 2; k++)
     {
@@ -594,10 +604,31 @@ void dump_tb()
             FILE* fp = fopen(file.fname.c_str(), "rb");
 
             fseek(fp, 0, SEEK_END);
-            const int len = ftell(fp);
+            int len = ftell(fp);
             const int vCnt = len / 8;
             rewind(fp);
 
+            
+            Offsets[j].name = code;
+            if (k == 0)
+                Offsets[j].wo = offset;
+            else
+                Offsets[j].zo = offset;
+
+            offset += len;
+
+            fread(buf, 1, len, fp);
+            fwrite(buf, 1, len, fpo);
+
+            while (len % 64)
+            {
+                uint64_t pad = 0;
+                fwrite(&pad, 1, 8, fpo);
+                len += 8;
+                offset += 8;
+            }
+
+#if 0
             //fprintf(fpo, "CACHE_LINE_ALIGNMENT\n");
             //fprintf(fpo, "static constexpr uint64_t %s%s[%d] = {\n", code.c_str(), ext.c_str(), vCnt);
 
@@ -635,11 +666,22 @@ void dump_tb()
             }
 
             fprintf(fpo, "\n};\n\n");
+#endif
             fclose(fp);
         }
     }
 
+    fflush(fpo);
     fclose(fpo);
+
+
+    for (int i = 0; i < 35; i++)
+    {
+        printf("M(%s, %7d, %7d), ", Offsets[i].name.c_str(), Offsets[i].wo, Offsets[i].zo);
+        if (i % 3 == 2)
+            printf("\n");
+    }
+
     exit(0);
 }
 
@@ -1456,7 +1498,7 @@ void Tablebases::init(const std::string& paths) {
     if (paths.empty() || paths == "<empty>")
         return;
 
-    internal4Men = paths == "<4-men>";
+    internal4Men = (paths == "<4-men>") && gEmbedded4menData;
 
     // MapB1H1H7[] encodes a square below a1-h8 diagonal to 0..27
     int code = 0;
