@@ -1027,16 +1027,17 @@ Value Eval::evaluate(const Position& pos) {
       v = Evaluation<NO_TRACE>(pos).value();
   else
   {
-      v = NNUE::evaluate(pos) * 5 / 4;
-      v = abs(v) < 10 ? ((v + Tempo) * 7 + Evaluation<NO_TRACE>(pos).value()) / 8 : v + Tempo;
+      v = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      if (abs(v) < 10)
+          v = (v * 7 + Evaluation<NO_TRACE>(pos).value()) / 8;
   }
 
   if (   useClassical 
       && Eval::useNNUE 
       && abs(v) * 16 < NNUEThreshold2 * (16 + pos.rule50_count()))
   {
-      Value vnn = NNUE::evaluate(pos) * 5 / 4;
-      v = abs(vnn) < 10 ? ((vnn + Tempo) * 15 + v) / 16 : vnn + Tempo;
+      Value vnn = NNUE::evaluate(pos) * 5 / 4 + Tempo;
+      v = abs(vnn) < 10 ? (vnn * 15 + v) / 16 : vnn;
   }
 
   // Damp down the evaluation linearly when shuffling
