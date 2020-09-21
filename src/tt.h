@@ -40,8 +40,9 @@ struct TTEntry {
   Value eval()  const { return (Value)eval16; }
   Depth depth() const { return (Depth)depth8 + DEPTH_OFFSET; }
   bool is_pv()  const { return (bool)(genBound8 & 0x4); }
+  bool is_reversible() const { return (bool)(genBound8 & 0x8); }
   Bound bound() const { return (Bound)(genBound8 & 0x3); }
-  void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev);
+  void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, bool reversible);
 
 private:
   friend class TranspositionTable;
@@ -74,7 +75,7 @@ class TranspositionTable {
 
 public:
  ~TranspositionTable() { aligned_ttmem_free(mem); }
-  void new_search() { generation8 += 8; } // Lower 3 bits are used by PV flag and Bound
+  void new_search() { generation8 += 16; } // Lower 4 bits are used by Reversible flag, PV flag, and Bound
   TTEntry* probe(const Key key, bool& found) const;
   int hashfull() const;
   void resize(size_t mbSize);

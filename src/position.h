@@ -55,6 +55,7 @@ struct StateInfo {
   Bitboard   pinners[COLOR_NB];
   Bitboard   checkSquares[PIECE_TYPE_NB];
   int        repetition;
+  bool       reversible;
 
   // Used by NNUE
   Eval::NNUE::Accumulator accumulator;
@@ -161,6 +162,7 @@ public:
   bool has_game_cycle(int ply) const;
   bool has_repeated() const;
   int rule50_count() const;
+  bool reversible() const;
   Score psq_score() const;
   Value non_pawn_material(Color c) const;
   Value non_pawn_material() const;
@@ -358,6 +360,10 @@ inline int Position::game_ply() const {
 
 inline int Position::rule50_count() const {
   return st->rule50;
+}
+
+inline bool Position::reversible() const {
+  return st->reversible;
 }
 
 inline bool Position::opposite_bishops() const {

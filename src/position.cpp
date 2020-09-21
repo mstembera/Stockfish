@@ -702,6 +702,10 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
   ++st->rule50;
   ++st->pliesFromNull;
 
+  st->reversible =   type_of(m) == NORMAL
+                  && type_of(moved_piece(m)) != PAWN
+                  && piece_on(to_sq(m)) == NO_PIECE;
+
   // Used by NNUE
   st->accumulator.computed_accumulation = false;
   auto& dp = st->dirtyPiece;
