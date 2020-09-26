@@ -133,18 +133,18 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   // nature we add 263 (256 is the modulus plus 7 to keep the unrelated
   // lowest four bits from affecting the result) to calculate the entry
   // age correctly even after generation8 overflows into the next cycle.
+  auto rPolicy = [&](const TTEntry& e) {
+      return  (e.depth8 - ((263 + generation8 - e.genBound8) & 0xF8)) * 16
+            + (e.move16 != MOVE_NONE) * 7 + (e.value16 != VALUE_NONE) * 6 + (e.eval16 != VALUE_NONE) * 2;
+  };
+
   TTEntry* replace = &tte[0];
-  int minV =  (tte[0].depth8 - ((263 + generation8 - tte[0].genBound8) & 0xF8)) * 4
-            + (tte[0].move16 != MOVE_NONE) + (tte[0].value16 != VALUE_NONE) + (tte[0].eval16 != VALUE_NONE);
+  int minV = rPolicy(tte[0]);
   for (int i = 1; i < ClusterSize; ++i)
   {
-      int v =  (tte[i].depth8 - ((263 + generation8 - tte[i].genBound8) & 0xF8)) * 4
-             + (tte[i].move16 != MOVE_NONE) + (tte[i].value16 != VALUE_NONE) + (tte[i].eval16 != VALUE_NONE);
+      int v = rPolicy(tte[i]);
       if (v < minV)
-      {
-          replace = &tte[i];
-          minV = v;
-      }
+          replace = &tte[i], minV = v;
   }
 
   return found = false, replace;
