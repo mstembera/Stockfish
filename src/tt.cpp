@@ -62,16 +62,19 @@ void TranspositionTable::resize(size_t mbSize) {
 
   Threads.main()->wait_for_search_finished();
 
-  aligned_large_pages_free(table);
-
-  clusterCount = mbSize * 1024 * 1024 / sizeof(Cluster);
-
-  table = static_cast<Cluster*>(aligned_large_pages_alloc(clusterCount * sizeof(Cluster)));
-  if (!table)
+  if (clusterCount != mbSize * 1024 * 1024 / sizeof(Cluster))
   {
-      std::cerr << "Failed to allocate " << mbSize
-                << "MB for transposition table." << std::endl;
-      exit(EXIT_FAILURE);
+      aligned_large_pages_free(table);
+
+      clusterCount = mbSize * 1024 * 1024 / sizeof(Cluster);
+
+      table = static_cast<Cluster*>(aligned_large_pages_alloc(clusterCount * sizeof(Cluster)));
+      if (!table)
+      {
+          std::cerr << "Failed to allocate " << mbSize
+                    << "MB for transposition table." << std::endl;
+          exit(EXIT_FAILURE);
+      }
   }
 
   clear();
