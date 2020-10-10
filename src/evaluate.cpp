@@ -36,6 +36,35 @@
 #include "uci.h"
 #include "incbin/incbin.h"
 
+int PATune[32] = {
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024
+};
+
+
+int PlyAdjust[32] = {
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
+  1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024
+};
+
+void init_ply_adjust()
+{
+    PlyAdjust[0] = (PATune[0] * 5 + PATune[1]) / 6;
+    for (int i = 1; i < 31; ++i)
+    {
+        PlyAdjust[i] = (PATune[i] * 4 + PATune[i - 1] + PATune[i + 1]) / 6;
+    }
+    PlyAdjust[31] = (PATune[31] * 5 + PATune[30]) / 6;
+}
+
+
+
+TUNE(SetRange(512, 2048), PATune, init_ply_adjust);
+UPDATE_ON_LAST();
 
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
@@ -1045,6 +1074,9 @@ Value Eval::evaluate(const Position& pos) {
               && !(pos.this_thread()->nodes & 0xB))))
           v = adjusted_NNUE();
   }
+
+
+  v = v * PlyAdjust[std::min(pos.game_ply() / 4, 31)] / 1024;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
