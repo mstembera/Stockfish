@@ -193,6 +193,14 @@ namespace {
   constexpr Value NNUEThreshold1 =   Value(550);
   constexpr Value NNUEThreshold2 =   Value(150);
 
+  // Eval scale per ply
+  constexpr int PlyAdjust[32] = {
+      1066, 1064, 1054, 1042, 1033, 1030, 1030, 1025,
+      1016, 1010, 1010, 1012, 1014, 1017, 1023, 1028,
+      1027, 1025, 1025, 1023, 1019, 1019, 1022, 1020,
+      1010, 1001, 1004, 1012, 1013, 1010, 1010, 1011
+  };
+
   // KingAttackWeights[PieceType] contains king attack weights by piece type
   constexpr int KingAttackWeights[PIECE_TYPE_NB] = { 0, 0, 81, 52, 44, 10 };
 
@@ -1045,6 +1053,8 @@ Value Eval::evaluate(const Position& pos) {
               && !(pos.this_thread()->nodes & 0xB))))
           v = adjusted_NNUE();
   }
+
+  v = v * PlyAdjust[std::min(pos.game_ply() / 4, 31)] / 1024;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (100 - pos.rule50_count()) / 100;
