@@ -75,7 +75,7 @@ namespace Eval::NNUE::Layers {
       if (Marker == 1)
       {
           for (int i = 0; i < 32; ++i)
-              biases_[i] = BiasesH2[i];
+              biases_[i] = (biases_[i] + BiasesH2[i]) / 2;
       }
 
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
