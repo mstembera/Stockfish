@@ -37,6 +37,16 @@
 #include "incbin/incbin.h"
 
 
+int TunedBiases[32] = {
+  -1572, -1360, 1516, -2166, -1614, 669, -456, 3722,
+  -451, 11100, 2008, 3086, -3498, 7021, 1110, 4926,
+  5151, -502, 9867, -3013, -3117, 6004, 14809, 2426,
+  -7793, 3000, -3655, 5641, 52, -4921, -8532, -8334
+};
+
+TUNE(TunedBiases);
+UPDATE_ON_LAST();
+
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
 //     const unsigned char        gEmbeddedNNUEData[];  // a pointer to the embedded data
