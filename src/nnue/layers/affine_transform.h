@@ -24,10 +24,17 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+constexpr int BiasesH1[32] = {
+  -1639, -1275, 1578, -2065, -1650, 644, -457, 3647,
+  -452, 11217, 1995, 3174, -3631, 6672, 1042, 5050,
+   5303, -526, 9233, -2842, -2824, 6191, 14494, 2435,
+  -7489, 3049, -3602, 5938, 53, -4864, -8500, -8789
+};
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
-  template <typename PreviousLayer, IndexType OutputDimensions>
+  template <typename PreviousLayer, IndexType OutputDimensions, int Marker=0>
   class AffineTransform {
    public:
     // Input/output type
@@ -64,6 +71,13 @@ namespace Eval::NNUE::Layers {
       if (!previous_layer_.ReadParameters(stream)) return false;
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
         biases_[i] = read_little_endian<BiasType>(stream);
+
+      if (Marker == 1)
+      {
+          for (int i = 0; i < 32; ++i)
+              biases_[i] = BiasesH1[i];
+      }
+
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[i] = read_little_endian<WeightType>(stream);
       return !stream.fail();
