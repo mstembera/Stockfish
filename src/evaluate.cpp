@@ -1020,7 +1020,7 @@ Value Eval::evaluate(const Position& pos) {
   {
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&](){
-         int mat = std::min((int)pos.non_pawn_material(), 14954) + PawnValueMg * pos.count<PAWN>();
+         int mat = std::min((int)pos.non_pawn_material(), 13392) + PawnValueMg * pos.count<PAWN>();
          return Value((int64_t)NNUE::evaluate(pos) * (23000 + mat) / 32768) + Tempo;
       };
 
