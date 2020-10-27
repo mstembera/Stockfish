@@ -37,6 +37,18 @@
 #include "incbin/incbin.h"
 
 
+int TunedBias = -154;
+int TunedWeights[32] = {
+  -20, -16, -77, 51, -19, 121, -120, 24, 32, 49, -45, 14, 19, -37, -26, 96, -44, 28, 38, 38, -15, -16, 16, -35, -13, -41, -15, -11, -26, 30, -15, 20
+};
+
+auto rangeFunc = [](int m) {return std::pair<int, int>(std::max(m - 80, -127), std::min(m + 80, 127)); };
+
+TUNE(SetRange(-300, 0), TunedBias);
+TUNE(SetRange(rangeFunc), TunedWeights);
+UPDATE_ON_LAST();
+
+
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
 //     const unsigned char        gEmbeddedNNUEData[];  // a pointer to the embedded data

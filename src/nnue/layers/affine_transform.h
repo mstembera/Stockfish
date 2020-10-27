@@ -24,10 +24,14 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+
+extern int TunedBias;
+extern int TunedWeights[32];
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
-  template <typename PreviousLayer, IndexType OutputDimensions>
+  template <typename PreviousLayer, IndexType OutputDimensions, int Marker = 0>
   class AffineTransform {
    public:
     // Input/output type
@@ -75,6 +79,14 @@ namespace Eval::NNUE::Layers {
       const auto input = previous_layer_.Propagate(
           transformed_features, buffer + kSelfBufferSize);
       const auto output = reinterpret_cast<OutputType*>(buffer);
+
+      if (Marker == 1)
+      {
+          const_cast<int32_t*>(biases_)[0] = TunedBias;
+          for(int i = 0; i < 32; ++i)
+            const_cast<int8_t*>(weights_)[i] = TunedWeights[i];
+
+      }
 
   #if defined(USE_AVX512)
       constexpr IndexType kNumChunks = kPaddedInputDimensions / (kSimdWidth * 2);
