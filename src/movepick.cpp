@@ -42,6 +42,8 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
+        else if (p->value < (end-1)->value)
+            std::swap(*(p--), *(--end));
   }
 
 } // namespace
