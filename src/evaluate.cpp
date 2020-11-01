@@ -36,6 +36,35 @@
 #include "uci.h"
 #include "incbin/incbin.h"
 
+int TunedBiases1[32] = {
+  -1636, -1296, 1434, -1881, -1544, 669, -454, 3617,
+  -458, 11188, 2007, 3096, -3710, 6217, 1033, 4988,
+   4811, -546, 8955, -2867, -2619, 6637, 14132, 2474,
+  -7371, 2994, -3596, 5869, 53, -4729, -8574, -8788
+};
+
+int TunedBiases2[32] = { 
+  -6699, 8078, -4871, -8673, 9780, -11004, -10748, 573,
+  -5565, -5311, -2691, -6076, 1309, -1319, -9144, -10842,
+  -3924, -4810, -2396, -6199, 3004, -2583, -4830, -11021,
+   5333, -2859, 1087, 2350, -1125, -743, -2054, -5372
+};
+
+int TunedBias3 = -158;
+int TunedWeights3[32] = {
+  -24, -16, -75, 55, -17, 122, -118, 22, 32, 50, -34, 19, 15, -37, -20, 97, -54, 30, 35, 41, -18, -20, 17, -30, -12, -37, -21, -10, -29, 28, -13, 17
+};
+
+#if 1
+auto rangeFunc12 = [](int m) { return std::pair<int, int>(m - 2000, m + 2000); };
+TUNE(SetRange(rangeFunc12), TunedBiases1);
+TUNE(SetRange(rangeFunc12), TunedBiases2);
+
+auto rangeFunc3 = [](int m) { return std::pair<int, int>(std::max(m - 80, -127), std::min(m + 80, 127)); };
+TUNE(SetRange(-300, 0), TunedBias3);
+TUNE(SetRange(rangeFunc3), TunedWeights3);
+UPDATE_ON_LAST();
+#endif
 
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables

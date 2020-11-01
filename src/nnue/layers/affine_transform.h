@@ -24,10 +24,15 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern int TunedBiases1[32];
+extern int TunedBiases2[32];
+extern int TunedBias3;
+extern int TunedWeights3[32];
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
-  template <typename PreviousLayer, IndexType OutputDimensions>
+  template <typename PreviousLayer, IndexType OutputDimensions, int Marker = 0>
   class AffineTransform {
    public:
     // Input/output type
@@ -76,6 +81,24 @@ namespace Eval::NNUE::Layers {
           transformed_features, buffer + kSelfBufferSize);
       const auto output = reinterpret_cast<OutputType*>(buffer);
 
+#if 1
+      if (Marker == 1)
+      {
+          for (int i = 0; i < 32; ++i)
+              const_cast<int*>(biases_)[i] = TunedBiases1[i];
+      }
+      if (Marker == 2)
+      {
+          for (int i = 0; i < 32; ++i)
+              const_cast<int*>(biases_)[i] = TunedBiases2[i];
+      }
+      if (Marker == 3)
+      {
+          const_cast<int32_t*>(biases_)[0] = TunedBias3;
+          for(int i = 0; i < 32; ++i)
+              const_cast<int8_t*>(weights_)[i] = TunedWeights3[i];
+      }
+#endif
   #if defined(USE_AVX512)
       constexpr IndexType kNumChunks = kPaddedInputDimensions / (kSimdWidth * 2);
       const auto input_vector = reinterpret_cast<const __m512i*>(input);
