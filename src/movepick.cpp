@@ -42,14 +42,11 @@ namespace {
             for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
-        }
-        else
-        {
-            if (*p < *--end)
-                std::swap(*p--, *end);
-            else if (*best < *p)
-                best = p;
-        }
+        }    
+        else if (*p < *--end)
+            std::swap(*p--, *end);
+        else if (*best < *p)
+            best = p;
 
     if (*begin < *best)
         std::swap(*begin, *best);
