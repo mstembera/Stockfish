@@ -33,6 +33,7 @@ namespace {
   // a given limit. The order of moves smaller than the limit is left unspecified.
   void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
+    ExtMove *best = begin;
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
         {
@@ -42,8 +43,18 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
-        else if (*p < *--end)
-            std::swap(*p--, *end);
+        else
+        {
+            ExtMove* p0 = p;
+            if (*p < *--end)
+                std::swap(*p--, *end);
+
+            if (*best < *p0)
+                best = p0;
+        }
+
+    if (*begin < *best)
+        std::swap(*begin, *best);
   }
 
 } // namespace
@@ -202,7 +213,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -2500 * depth);
+          partial_insertion_sort(cur, endMoves, -3000 * depth);
       }
 
       ++stage;
