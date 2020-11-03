@@ -45,12 +45,10 @@ namespace {
         }
         else
         {
-            ExtMove* p0 = p;
             if (*p < *--end)
                 std::swap(*p--, *end);
-
-            if (*best < *p0)
-                best = p0;
+            else if (*best < *p)
+                best = p;
         }
 
     if (*begin < *best)
