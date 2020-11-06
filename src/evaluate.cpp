@@ -799,14 +799,8 @@ namespace {
     }
 
     // Bonus for mobile non passers
-    b = pos.pieces(Us, PAWN) & ~pe->passed_pawns(Us);
-    while (b)
-    {
-        Square s = pop_lsb(&b);
-
-        if (pos.piece_on(s + Up) == NO_PIECE)
-            score += make_score(5, 3);
-    }
+    b = shift<Up>(pos.pieces(Us, PAWN) & ~pe->passed_pawns(Us)) & ~pos.pieces();
+    score += make_score(5, 3) *  popcount(b);
 
     if (T)
         Trace::add(PASSED, Us, score);
