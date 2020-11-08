@@ -225,22 +225,14 @@ namespace Eval::NNUE::Layers {
 #endif
       };
 
-      [[maybe_unused]] auto m256_add_dpbusd_epi32x4 = [=](__m256i& acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1,
-                                                                        __m256i a2, __m256i b2, __m256i a3, __m256i b3) {
+      [[maybe_unused]] auto m256_add_dpbusd_epi32x2 = [=](__m256i& acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1) {
 #if defined (USE_VNNI)
         acc = _mm256_dpbusd_epi32(acc, a0, b0);
         acc = _mm256_dpbusd_epi32(acc, a1, b1);
-        acc = _mm256_dpbusd_epi32(acc, a2, b2);
-        acc = _mm256_dpbusd_epi32(acc, a3, b3);
 #else
         __m256i product0 = _mm256_maddubs_epi16(a0, b0);
         __m256i product1 = _mm256_maddubs_epi16(a1, b1);
-        __m256i product2 = _mm256_maddubs_epi16(a2, b2);
-        __m256i product3 = _mm256_maddubs_epi16(a3, b3);
         product0 = _mm256_adds_epi16(product0, product1);
-        product2 = _mm256_adds_epi16(product2, product3);
-        product0 = _mm256_adds_epi16(product0, product2);
-
         product0 = _mm256_madd_epi16(product0, kOnes256);
         acc = _mm256_add_epi32(acc, product0);
 #endif
@@ -273,15 +265,10 @@ namespace Eval::NNUE::Layers {
         acc = _mm_add_epi32(acc, product0);
       };
 
-      [[maybe_unused]] auto m128_add_dpbusd_epi32x4 = [=](__m128i& acc, __m128i a0, __m128i b0, __m128i a1, __m128i b1,
-                                                                        __m128i a2, __m128i b2, __m128i a3, __m128i b3) {
+      [[maybe_unused]] auto m128_add_dpbusd_epi32x2 = [=](__m128i& acc, __m128i a0, __m128i b0, __m128i a1, __m128i b1) {
         __m128i product0 = _mm_maddubs_epi16(a0, b0);
         __m128i product1 = _mm_maddubs_epi16(a1, b1);
-        __m128i product2 = _mm_maddubs_epi16(a2, b2);
-        __m128i product3 = _mm_maddubs_epi16(a3, b3);
         product0 = _mm_adds_epi16(product0, product1);
-        product2 = _mm_adds_epi16(product2, product3);
-        product0 = _mm_adds_epi16(product0, product2);
         product0 = _mm_madd_epi16(product0, kOnes128);
         acc = _mm_add_epi32(acc, product0);
       };
@@ -495,27 +482,24 @@ namespace Eval::NNUE::Layers {
           const auto row2 = reinterpret_cast<const __m256i*>(&weights_[offset2]);
           const auto row3 = reinterpret_cast<const __m256i*>(&weights_[offset3]);
 
-          int j = 0;
-          for ( ; j < (int)kNumChunks - 3; j += 4)
+          for (int j = 0; j < (int)kNumChunks - 1; j += 2)
           {
               const __m256i in0 = input_vector[j];
               const __m256i in1 = input_vector[j + 1];
-              const __m256i in2 = input_vector[j + 2];
-              const __m256i in3 = input_vector[j + 3];
 
-              m256_add_dpbusd_epi32x4(sum0, in0, row0[j], in1, row0[j + 1], in2, row0[j + 2], in3, row0[j + 3]);
-              m256_add_dpbusd_epi32x4(sum1, in0, row1[j], in1, row1[j + 1], in2, row1[j + 2], in3, row1[j + 3]);
-              m256_add_dpbusd_epi32x4(sum2, in0, row2[j], in1, row2[j + 1], in2, row2[j + 2], in3, row2[j + 3]);
-              m256_add_dpbusd_epi32x4(sum3, in0, row3[j], in1, row3[j + 1], in2, row3[j + 2], in3, row3[j + 3]);
+              m256_add_dpbusd_epi32x2(sum0, in0, row0[j], in1, row0[j + 1]);
+              m256_add_dpbusd_epi32x2(sum1, in0, row1[j], in1, row1[j + 1]);
+              m256_add_dpbusd_epi32x2(sum2, in0, row2[j], in1, row2[j + 1]);
+              m256_add_dpbusd_epi32x2(sum3, in0, row3[j], in1, row3[j + 1]);
           }
-          for ( ; j < (int)kNumChunks; ++j)
+          if constexpr (kNumChunks & 0x1)
           {
-            const __m256i in = input_vector[j];
+              const __m256i in = input_vector[kNumChunks - 1];
 
-            m256_add_dpbusd_epi32(sum0, in, row0[j]);
-            m256_add_dpbusd_epi32(sum1, in, row1[j]);
-            m256_add_dpbusd_epi32(sum2, in, row2[j]);
-            m256_add_dpbusd_epi32(sum3, in, row3[j]);
+              m256_add_dpbusd_epi32(sum0, in, row0[kNumChunks - 1]);
+              m256_add_dpbusd_epi32(sum1, in, row1[kNumChunks - 1]);
+              m256_add_dpbusd_epi32(sum2, in, row2[kNumChunks - 1]);
+              m256_add_dpbusd_epi32(sum3, in, row3[kNumChunks - 1]);
           }
 
           *outptr = m256_haddx4(sum0, sum1, sum2, sum3, bias);
@@ -574,27 +558,24 @@ namespace Eval::NNUE::Layers {
           const auto row2 = reinterpret_cast<const __m128i*>(&weights_[offset2]);
           const auto row3 = reinterpret_cast<const __m128i*>(&weights_[offset3]);
 
-          int j = 0;
-          for ( ; j < (int)kNumChunks - 3; j += 4)
+          for (int j = 0; j < (int)kNumChunks - 1; j += 2)
           {
             const __m128i in0 = input_vector[j];
             const __m128i in1 = input_vector[j + 1];
-            const __m128i in2 = input_vector[j + 2];
-            const __m128i in3 = input_vector[j + 3];
 
-            m128_add_dpbusd_epi32x4(sum0, in0, row0[j], in1, row0[j + 1], in2, row0[j + 2], in3, row0[j + 3]);
-            m128_add_dpbusd_epi32x4(sum1, in0, row1[j], in1, row1[j + 1], in2, row1[j + 2], in3, row1[j + 3]);
-            m128_add_dpbusd_epi32x4(sum2, in0, row2[j], in1, row2[j + 1], in2, row2[j + 2], in3, row2[j + 3]);
-            m128_add_dpbusd_epi32x4(sum3, in0, row3[j], in1, row3[j + 1], in2, row3[j + 2], in3, row3[j + 3]);
+            m128_add_dpbusd_epi32x2(sum0, in0, row0[j], in1, row0[j + 1]);
+            m128_add_dpbusd_epi32x2(sum1, in0, row1[j], in1, row1[j + 1]);
+            m128_add_dpbusd_epi32x2(sum2, in0, row2[j], in1, row2[j + 1]);
+            m128_add_dpbusd_epi32x2(sum3, in0, row3[j], in1, row3[j + 1]);
           }
-          for ( ; j < (int)kNumChunks; ++j)
+          if constexpr (kNumChunks & 0x1)
           {
-            const __m128i in = input_vector[j];
+            const __m128i in = input_vector[kNumChunks - 1];
 
-            m128_add_dpbusd_epi32(sum0, in, row0[j]);
-            m128_add_dpbusd_epi32(sum1, in, row1[j]);
-            m128_add_dpbusd_epi32(sum2, in, row2[j]);
-            m128_add_dpbusd_epi32(sum3, in, row3[j]);
+            m128_add_dpbusd_epi32(sum0, in, row0[kNumChunks - 1]);
+            m128_add_dpbusd_epi32(sum1, in, row1[kNumChunks - 1]);
+            m128_add_dpbusd_epi32(sum2, in, row2[kNumChunks - 1]);
+            m128_add_dpbusd_epi32(sum3, in, row3[kNumChunks - 1]);
           }
 
           *outptr = m128_haddx4(sum0, sum1, sum2, sum3, bias);
