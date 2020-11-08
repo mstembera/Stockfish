@@ -41,6 +41,8 @@ namespace {
             for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
+
+            limit -= limit / 16;
         }
   }
 
@@ -200,7 +202,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          partial_insertion_sort(cur, endMoves, -3400 * depth);
       }
 
       ++stage;
