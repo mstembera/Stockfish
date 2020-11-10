@@ -37,6 +37,22 @@
 #include "incbin/incbin.h"
 
 
+int Nc = 23040;
+int Pc = PawnValueMg;
+int Kc = KnightValueMg;
+int Bc = BishopValueMg;
+int Rc = RookValueMg;
+int Qc = QueenValueMg;
+
+
+TUNE(Nc);
+TUNE(Pc);
+TUNE(Kc);
+TUNE(Bc);
+TUNE(Rc);
+TUNE(Qc);
+
+
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
 //     const unsigned char        gEmbeddedNNUEData[];  // a pointer to the embedded data
@@ -1025,8 +1041,13 @@ Value Eval::evaluate(const Position& pos) {
   {
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&](){
-         int mat = pos.non_pawn_material() + PieceValue[MG][PAWN] * pos.count<PAWN>();
-         return NNUE::evaluate(pos) * (720 + mat / 32) / 1024 + Tempo;
+         int mat =   Pc * pos.count<PAWN>()
+                   + Kc * pos.count<KNIGHT>()
+                   + Bc * pos.count<BISHOP>()
+                   + Rc * pos.count<ROOK>()
+                   + Qc * pos.count<QUEEN>();
+             
+         return Value((int64_t)NNUE::evaluate(pos) * (Nc + mat) / 32768) + Tempo;
       };
 
       // If there is PSQ imbalance use classical eval, with small probability if it is small
