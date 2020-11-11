@@ -1025,13 +1025,13 @@ Value Eval::evaluate(const Position& pos) {
   {
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&](){
-         int mat =    133 * pos.count<PAWN>()
-                   +  741 * pos.count<KNIGHT>()
-                   +  856 * pos.count<BISHOP>()
-                   + 1194 * pos.count<ROOK>()
-                   + 2424 * pos.count<QUEEN>();
+         int mat =    129 * pos.count<PAWN>()
+                   +  761 * pos.count<KNIGHT>()
+                   +  840 * pos.count<BISHOP>()
+                   + 1235 * pos.count<ROOK>()
+                   + 2481 * pos.count<QUEEN>();
              
-         return Value((int64_t)NNUE::evaluate(pos) * (22630 + mat) / 32768) + Tempo;
+         return Value((int64_t)NNUE::evaluate(pos) * (22835 + mat) / 32768) + Tempo;
       };
 
       // If there is PSQ imbalance use classical eval, with small probability if it is small
