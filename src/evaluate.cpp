@@ -1025,9 +1025,12 @@ Value Eval::evaluate(const Position& pos) {
   {
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&](){
-         int mat =  pos.non_pawn_material()
-                  + PawnValueMg * (pos.count<PAWN>() + abs(pos.count<PAWN>(WHITE) - pos.count<PAWN>(BLACK)));
-                  
+         int mat =  pos.non_pawn_material() + PieceValue[MG][PAWN] * pos.count<PAWN>()
+                  + abs(pos.count<KNIGHT>(WHITE) - pos.count<KNIGHT>(BLACK)) * 100
+                  + abs(pos.count<BISHOP>(WHITE) - pos.count<BISHOP>(BLACK)) * 100
+                  + abs(pos.count<ROOK>(WHITE)   - pos.count<ROOK>(BLACK))   * 120
+                  + abs(pos.count<QUEEN>(WHITE)  - pos.count<QUEEN>(BLACK))  * 200;
+
          return NNUE::evaluate(pos) * (720 + mat / 32) / 1024 + Tempo;
       };
 
