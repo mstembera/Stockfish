@@ -50,7 +50,7 @@ struct Entry {
   template<Color Us>
   Score evaluate_shelter(const Position& pos, Square ksq) const;
 
-  alignas(64) Key key;
+  Key key;
   Score scores[COLOR_NB];
   Bitboard passedPawns[COLOR_NB];
   Bitboard pawnAttacks[COLOR_NB];
