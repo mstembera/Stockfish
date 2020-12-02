@@ -301,21 +301,51 @@ namespace Eval::NNUE {
           for (IndexType i = 0; info[i]; ++i)
           {
             // Difference calculation for the deactivated features
-            for (const auto index : removed[i])
+            for (int ii = 0; ii < (int)removed[i].size() - 1; ii += 2)
             {
-              const IndexType offset = kHalfDimensions * index + j * kTileHeight;
-              auto column = reinterpret_cast<const vec_t*>(&weights_[offset]);
+              IndexType index0 = removed[i][ii];
+              IndexType index1 = removed[i][ii + 1];
+              const IndexType offset0 = kHalfDimensions * index0 + j * kTileHeight;
+              const IndexType offset1 = kHalfDimensions * index1 + j * kTileHeight;
+              auto column0 = reinterpret_cast<const vec_t*>(&weights_[offset0]);
+              auto column1 = reinterpret_cast<const vec_t*>(&weights_[offset1]);
               for (IndexType k = 0; k < kNumRegs; ++k)
-                acc[k] = vec_sub_16(acc[k], column[k]);
+              {
+                acc[k] = vec_sub_16(acc[k], column0[k]);
+                acc[k] = vec_sub_16(acc[k], column1[k]);
+              }
+            }
+            if (removed[i].size() & 0x1)
+            {
+                IndexType index0 = removed[i][removed[i].size() - 1];   
+                const IndexType offset0 = kHalfDimensions * index0 + j * kTileHeight;
+                auto column0 = reinterpret_cast<const vec_t*>(&weights_[offset0]);
+                for (IndexType k = 0; k < kNumRegs; ++k)
+                    acc[k] = vec_sub_16(acc[k], column0[k]);
             }
 
             // Difference calculation for the activated features
-            for (const auto index : added[i])
+            for (int ii = 0; ii < (int)added[i].size() - 1; ii += 2)
             {
-              const IndexType offset = kHalfDimensions * index + j * kTileHeight;
-              auto column = reinterpret_cast<const vec_t*>(&weights_[offset]);
+              IndexType index0 = added[i][ii];
+              IndexType index1 = added[i][ii + 1];
+              const IndexType offset0 = kHalfDimensions * index0 + j * kTileHeight;
+              const IndexType offset1 = kHalfDimensions * index1 + j * kTileHeight;
+              auto column0 = reinterpret_cast<const vec_t*>(&weights_[offset0]);
+              auto column1 = reinterpret_cast<const vec_t*>(&weights_[offset1]);
               for (IndexType k = 0; k < kNumRegs; ++k)
-                acc[k] = vec_add_16(acc[k], column[k]);
+              {
+                acc[k] = vec_add_16(acc[k], column1[k]);
+                acc[k] = vec_add_16(acc[k], column0[k]);
+              }
+            }
+            if (added[i].size() & 0x1)
+            {
+                IndexType index0 = added[i][added[i].size() - 1];
+                const IndexType offset0 = kHalfDimensions * index0 + j * kTileHeight;
+                auto column0 = reinterpret_cast<const vec_t*>(&weights_[offset0]);
+                for (IndexType k = 0; k < kNumRegs; ++k)
+                  acc[k] = vec_add_16(acc[k], column0[k]);
             }
 
             // Store accumulator
