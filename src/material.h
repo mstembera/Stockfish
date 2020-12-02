@@ -53,7 +53,7 @@ struct Entry {
     return sf != SCALE_FACTOR_NONE ? sf : ScaleFactor(factor[c]);
   }
 
-  Key key;
+  alignas(64) Key key;
   const EndgameBase<Value>* evaluationFunction;
   const EndgameBase<ScaleFactor>* scalingFunction[COLOR_NB]; // Could be one for each
                                                              // side (e.g. KPKP, KBPsK)
