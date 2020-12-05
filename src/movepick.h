@@ -156,7 +156,7 @@ private:
   Value threshold;
   Depth depth;
   int ply;
-  ExtMove moves[MAX_MOVES];
+  alignas(64) ExtMove moves[MAX_MOVES];
 };
 
 #endif // #ifndef MOVEPICK_H_INCLUDED
