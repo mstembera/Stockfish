@@ -111,14 +111,14 @@ void init() {
 
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
       {
-          File f = File(edge_distance(file_of(s)));
+          int eDist = edge_distance(file_of(s));
           Score bonus;
           if (type_of(pc) == PAWN)
               bonus = PBonus[rank_of(s)][file_of(s)];
           else
           {
-              bonus = Bonus[pc][rank_of(s)][f];
-              if (type_of(pc) != KING)
+              bonus = Bonus[pc][rank_of(s)][eDist];
+              if (eDist < 3 && type_of(pc) != KING && type_of(pc) != BISHOP)
                   bonus += file_of(s) > FILE_D ? make_score(2, 0) : make_score(-2, 0);
           }
 
