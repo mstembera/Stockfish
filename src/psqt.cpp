@@ -112,8 +112,17 @@ void init() {
       for (Square s = SQ_A1; s <= SQ_H8; ++s)
       {
           File f = File(edge_distance(file_of(s)));
-          psq[ pc][s] = score + (type_of(pc) == PAWN ? PBonus[rank_of(s)][file_of(s)]
-                                                     : Bonus[pc][rank_of(s)][f]);
+          Score bonus;
+          if (type_of(pc) == PAWN)
+              bonus = PBonus[rank_of(s)][file_of(s)];
+          else
+          {
+              bonus = Bonus[pc][rank_of(s)][f];
+              if (type_of(pc) != KING)
+                  bonus += file_of(s) > FILE_D ? make_score(2, 0) : make_score(-2, 0);
+          }
+
+          psq[ pc][s] = score + bonus;
           psq[~pc][flip_rank(s)] = -psq[pc][s];
       }
   }
