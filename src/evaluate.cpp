@@ -37,6 +37,17 @@
 #include "incbin/incbin.h"
 
 
+int Tune92[32] = {
+  1, -6, -12, 8, -4, 5, 1, 7, -9, 1, -14, -25, 5, -9, -2, -19, 2, -5, -6, 8, -25, 0, -3, 1, 9, 1, 5, 1, 3, 8, -1, 16 // 92
+};
+
+#if 1
+auto rangeFunc = [](int m) { return std::pair<int, int>(std::max(m - 30, -127), std::min(m + 30, 127)); };
+TUNE(SetRange(rangeFunc), Tune92);
+UPDATE_ON_LAST();
+#endif
+
+
 // Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
 //     const unsigned char        gEmbeddedNNUEData[];  // a pointer to the embedded data
