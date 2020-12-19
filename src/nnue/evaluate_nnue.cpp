@@ -29,6 +29,16 @@
 
 #include "evaluate_nnue.h"
 
+int TuneW[32] = {
+  -54, 20, 62, 6, 4, 9, -36, -12, -8, 13, 20, 7, -13, -19, -45, -11, 2, -8, -117, -47, 7, -28, -23, -62, -14, -49, 17, 53, -2, 1, 8, -7
+};
+
+#if 1
+auto rangeFunc = [](int m) { return std::pair<int, int>(std::max(m - 50, -127), std::min(m + 50, 127)); };
+TUNE(SetRange(rangeFunc), TuneW);
+UPDATE_ON_LAST();
+#endif
+
 namespace Eval::NNUE {
 
   // Input feature converter
