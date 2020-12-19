@@ -24,6 +24,9 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern int TuneW[32];
+extern int TuneB[32];
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
@@ -121,6 +124,15 @@ namespace Eval::NNUE::Layers {
         const TransformedFeatureType* transformed_features, char* buffer) const {
       const auto input = previous_layer_.Propagate(
           transformed_features, buffer + kSelfBufferSize);
+
+      if (kPaddedInputDimensions == 512 && kOutputDimensions == 32)
+      {
+          for (int i = 0; i < 32; ++i)
+          {
+              const_cast<int8_t*>(weights_)[i * kPaddedInputDimensions + 80] = TuneW[i];
+              const_cast<int32_t*>(biases_)[i] = TuneB[i];
+          }
+      }
 
 #if defined (USE_AVX512)
 

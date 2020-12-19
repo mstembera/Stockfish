@@ -29,6 +29,25 @@
 
 #include "evaluate_nnue.h"
 
+int TuneW[32] = {
+  -54, 20, 62, 6, 4, 9, -36, -12, -8, 13, 20, 7, -13, -19, -45, -11, 2, -8, -117, -47, 7, -28, -23, -62, -14, -49, 17, 53, -2, 1, 8, -7
+};
+
+int TuneB[32] = {
+  -1636, -1296, 1434, -1881, -1544, 669, -454, 3617, -458, 11188, 2007, 3096, -3710, 6217, 1033, 4988,
+  4811, -546, 8955, -2867, -2619, 6637, 14132, 2474, -7371, 2994, -3596, 5869, 53, -4729, -8574, -8788
+};
+
+#if 1
+auto rangeFuncW = [](int m) { return std::pair<int, int>(std::max(m - 50, -127), std::min(m + 50, 127)); };
+TUNE(SetRange(rangeFuncW), TuneW);
+
+auto rangeFuncB = [](int m) { return std::pair<int, int>(m - 2000, m + 2000); };
+TUNE(SetRange(rangeFuncB), TuneB);
+
+UPDATE_ON_LAST();
+#endif
+
 namespace Eval::NNUE {
 
   // Input feature converter
