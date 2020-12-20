@@ -24,6 +24,11 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern const int TuneW[32];
+extern const double TuneWf[32];
+
+extern FILE* fpo;
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
@@ -62,10 +67,33 @@ namespace Eval::NNUE::Layers {
    // Read network parameters
     bool ReadParameters(std::istream& stream) {
       if (!previous_layer_.ReadParameters(stream)) return false;
+
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
-        biases_[i] = read_little_endian<BiasType>(stream);
+      {
+        biases_[i] = read_little_endian<BiasType>(stream, false);
+
+        // insert any bias changes here
+
+        fwrite(&biases_[i], sizeof(int), 1, fpo);
+
+      }
+
+
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
-        weights_[i] = read_little_endian<WeightType>(stream);
+      {
+          weights_[i] = read_little_endian<WeightType>(stream, false);
+      }
+      if (kPaddedInputDimensions == 512 && kOutputDimensions == 32)
+      {
+          for (int i = 0; i < 32; ++i)
+              const_cast<int8_t*>(weights_)[i * kPaddedInputDimensions + 80] =
+                  TuneWf[i] > 0 ? int(TuneWf[i] + 0.5) : int(TuneWf[i] - 0.5);
+      }
+      for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
+      {
+          fwrite(&weights_[i], sizeof(char), 1, fpo);
+      }
+
 
 #if defined (USE_SSSE3)
       // Determine if quadruplets of weight and input products can be summed using 16bits
@@ -121,6 +149,8 @@ namespace Eval::NNUE::Layers {
         const TransformedFeatureType* transformed_features, char* buffer) const {
       const auto input = previous_layer_.Propagate(
           transformed_features, buffer + kSelfBufferSize);
+
+      exit(0);
 
 #if defined (USE_AVX512)
 

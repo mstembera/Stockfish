@@ -29,6 +29,24 @@
 
 #include "evaluate_nnue.h"
 
+const int TuneW[32] = {
+  -54, 20, 62, 6, 4, 9, -36, -12, -8, 13, 20, 7, -13, -19, -45, -11, 2, -8, -117, -47, 7, -28, -23, -62, -14, -49, 17, 53, -2, 1, 8, -7
+};
+
+const double TuneWf[32] = {
+  -54.19, 17.83, 62.05, 7.56, 3.68, 7.50, -37.23, -13.35, -7.35, 13.75, 21.09, 6.12, -11.91, -19.48, -47.19, -11.16, 0.98, -7.52, -116.91,
+  -46.50, 6.02, -28.19, -22.75, -59.99, -11.96, -49.71, 15.41, 51.21, -2.17, 0.61, 5.08, -3.68
+};
+
+
+FILE* fpo = nullptr;
+#if 1
+struct FO {
+    FO() { fpo = fopen("NewNet.nnue", "wb"); }
+    ~FO() { fclose(fpo); fpo = nullptr; }
+} fo;
+#endif
+
 namespace Eval::NNUE {
 
   // Input feature converter
@@ -88,6 +106,9 @@ namespace Eval::NNUE {
     if (!stream || version != kVersion) return false;
     architecture->resize(size);
     stream.read(&(*architecture)[0], size);
+    
+    fwrite(&(*architecture)[0], 1, size, fpo);
+
     return !stream.fail();
   }
 

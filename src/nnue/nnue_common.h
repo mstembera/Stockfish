@@ -43,6 +43,9 @@
 #include <arm_neon.h>
 #endif
 
+
+extern FILE* fpo;
+
 namespace Eval::NNUE {
 
   // Version of the evaluation file
@@ -113,7 +116,7 @@ namespace Eval::NNUE {
   // from a stream in little-endian order. We swap the byte order after the read if
   // necessary to return a result with the byte ordering of the compiling machine.
   template <typename IntType>
-  inline IntType read_little_endian(std::istream& stream) {
+  inline IntType read_little_endian(std::istream& stream, bool wr = true) {
 
       IntType result;
       std::uint8_t u[sizeof(IntType)];
@@ -124,6 +127,9 @@ namespace Eval::NNUE {
           v = (v << 8) | u[sizeof(IntType) - i - 1];
 
       std::memcpy(&result, &v, sizeof(IntType));
+
+      if (wr) fwrite(&result, sizeof(IntType), 1, fpo);
+
       return result;
   }
 
