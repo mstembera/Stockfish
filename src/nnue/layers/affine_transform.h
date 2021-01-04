@@ -24,6 +24,9 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern int8_t w0[32][32];
+extern int8_t* wS;
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
@@ -66,6 +69,16 @@ namespace Eval::NNUE::Layers {
         biases_[i] = read_little_endian<BiasType>(stream);
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[i] = read_little_endian<WeightType>(stream);
+
+      if (kPaddedInputDimensions == 32 && kOutputDimensions == 32)
+      {
+          wS = weights_;
+
+          for (int i = 0; i < 32; ++i)
+              for (int j = 0; j < 32; ++j)
+                  w0[i][j] = weights_[i * 32 + j];
+      }
+
 
 #if defined (USE_SSSE3)
       // Determine if quadruplets of weight and input products can be summed using 16bits
