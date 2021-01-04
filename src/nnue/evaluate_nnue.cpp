@@ -29,6 +29,31 @@
 
 #include "evaluate_nnue.h"
 
+int8_t w0[32][512];
+int8_t* wS = nullptr;
+int TuneS[32] = { 0 };
+
+#if 1
+void initW()
+{
+    if (wS)
+    {
+        for (int i = 0; i < 32; ++i)
+            for (int j = 0; j < 512; ++j)
+            {
+                int sw = w0[i][j] * (100 + TuneS[i]) / 100;
+                sw = std::max(std::min(sw, 127), -127);
+                wS[i * 512 + j] = sw;
+            }
+    }
+}
+
+auto rangeFuncW = [](int m) { return std::pair<int, int>(m - 80, m + 400); };
+TUNE(SetRange(rangeFuncW), TuneS, initW);
+
+UPDATE_ON_LAST();
+#endif
+
 namespace Eval::NNUE {
 
   // Input feature converter
