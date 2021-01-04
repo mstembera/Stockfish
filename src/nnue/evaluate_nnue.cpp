@@ -31,14 +31,16 @@
 
 int8_t w0[32][512];
 int8_t* wS = nullptr;
-int TuneS[32] = { 0 };
+int32_t* wB = nullptr;
+int TuneS[8] = { 0 };
+int TuneB[8] = { -1636, -1296, 1434, -1881, -1544, 669, -454, 3617 };
 
 #if 1
 void initW()
 {
     if (wS)
     {
-        for (int i = 0; i < 32; ++i)
+        for (int i = 0; i < 8; ++i)
             for (int j = 0; j < 512; ++j)
             {
                 int sw = w0[i][j] * (100 + TuneS[i]) / 100;
@@ -48,8 +50,21 @@ void initW()
     }
 }
 
-auto rangeFuncW = [](int m) { return std::pair<int, int>(m - 80, m + 400); };
+void initB()
+{
+    if (wB)
+    {
+        for (int i = 0; i < 8; ++i)
+            wB[i] = TuneB[i];
+    }
+}
+
+
+auto rangeFuncW = [](int m) { return std::pair<int, int>(m - 67, m + 200); };
 TUNE(SetRange(rangeFuncW), TuneS, initW);
+
+auto rangeFuncB = [](int m) { return std::pair<int, int>(m - 1200, m + 1200); };
+TUNE(SetRange(rangeFuncB), TuneB, initB);
 
 UPDATE_ON_LAST();
 #endif

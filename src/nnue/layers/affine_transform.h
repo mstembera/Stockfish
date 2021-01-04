@@ -24,9 +24,10 @@
 #include <iostream>
 #include "../nnue_common.h"
 
-extern int TuneS[32];
+extern int TuneS[8];
 extern int8_t w0[32][512];
 extern int8_t* wS;
+extern int32_t* wB;
 
 namespace Eval::NNUE::Layers {
 
@@ -74,6 +75,7 @@ namespace Eval::NNUE::Layers {
       if (kPaddedInputDimensions == 512 && kOutputDimensions == 32)
       {
           wS = weights_;
+          wB = biases_;
 
           for (int i = 0; i < 32; ++i)
               for (int j = 0; j < 512; ++j)
