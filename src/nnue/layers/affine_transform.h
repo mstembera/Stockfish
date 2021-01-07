@@ -94,15 +94,45 @@ namespace Eval::NNUE::Layers {
                       for (int k = 0; k < 8; ++k)
                       {
                           IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
-                          sum[w[idx] < 0] += w[idx];
-                          if (sum[0] > 258 || sum[1] < -258)
+                          sum[w[idx] < 0] += w[idx];    
+                      }
+
+                      while (sum[0] > 258)
+                      {
+                          int maxK = 0, maxW = 0;
+                          for (int k = 0; k < 8; ++k)
                           {
-                              sum[w[idx] < 0] -= w[idx];
-                              canSaturate16.add(j, i + k / 2 * 4 + k % 2 + x * 2, w[idx]);
-                              w[idx] = 0;
+                              IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
+                              if (w[idx] > maxW)
+                                  maxK = k, maxW = w[idx];
                           }
+
+                          IndexType idx = maxK / 2 * kOutputDimensions * 4 + maxK % 2;
+                          sum[0] -= w[idx];
+                          canSaturate16.add(j, i + maxK / 2 * 4 + maxK % 2 + x * 2, w[idx]);
+                          w[idx] = 0;
+                      }
+                      while (sum[1] < -258)
+                      {
+                          int minK = 0, minW = 0;
+                          for (int k = 0; k < 8; ++k)
+                          {
+                              IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
+                              if (w[idx] < minW)
+                                  minK = k, minW = w[idx];
+                          }
+
+                          IndexType idx = minK / 2 * kOutputDimensions * 4 + minK % 2;
+                          sum[1] -= w[idx];
+                          canSaturate16.add(j, i + minK / 2 * 4 + minK % 2 + x * 2, w[idx]);
+                          w[idx] = 0;
                       }
                   }
+
+          // Non functional optimization for faster more linear access
+          std::sort(canSaturate16.ids, canSaturate16.ids + canSaturate16.count,
+                    [](const typename CanSaturate::Entry& e1, const typename CanSaturate::Entry& e2)
+                    { return e1.in * 65536 + e1.out < e2.in * 65536 + e2.out; });
 #endif
       }
 #endif
@@ -408,7 +438,7 @@ namespace Eval::NNUE::Layers {
 #if defined (USE_SSSE3)
     struct CanSaturate {
         int count;
-        struct {
+        struct Entry {
             uint16_t out;
             uint16_t in;
             int8_t w;
