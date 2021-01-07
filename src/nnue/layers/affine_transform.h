@@ -412,7 +412,7 @@ namespace Eval::NNUE::Layers {
             uint16_t out;
             uint16_t in;
             int8_t w;
-        } ids[kPaddedInputDimensions * kOutputDimensions / 2];
+        } ids[kPaddedInputDimensions * kOutputDimensions * 3 / 4];
 
         void add(int i, int j, int8_t w) {
             ids[count].out = i;
