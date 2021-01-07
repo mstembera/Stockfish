@@ -43,7 +43,7 @@ namespace Eval::NNUE::Layers {
         CeilToMultiple<IndexType>(kInputDimensions, kMaxSimdWidth);
 #if defined (USE_AVX512)
     static constexpr const IndexType kOutputSimdWidth = kSimdWidth / 2;
-#else
+#elif defined (USE_SSSE3)
     static constexpr const IndexType kOutputSimdWidth = kSimdWidth / 4;
 #endif
 
@@ -84,6 +84,7 @@ namespace Eval::NNUE::Layers {
       if (kOutputDimensions > 1 && !stream.fail())
       {
           canSaturate16.count = 0;
+#if !defined(USE_VNNI)
           for (IndexType i = 0; i < kPaddedInputDimensions; i += 16)
               for (IndexType j = 0; j < kOutputDimensions; ++j)
                   for (int x = 0; x < 2; ++x)
@@ -102,6 +103,7 @@ namespace Eval::NNUE::Layers {
                           }
                       }
                   }
+#endif
       }
 #endif
 
@@ -228,22 +230,22 @@ namespace Eval::NNUE::Layers {
 
 #if defined (USE_AVX512)
       using vec_t = __m512i;
-      auto& vec_setzero = _mm512_setzero_si512;
-      auto& vec_set_32 = _mm512_set1_epi32;
+      #define vec_setzero _mm512_setzero_si512
+      #define vec_set_32 _mm512_set1_epi32
       auto& vec_add_dpbusd_32 = m512_add_dpbusd_epi32;
       auto& vec_add_dpbusd_32x4 = m512_add_dpbusd_epi32x4;
       auto& vec_hadd = m512_hadd;
 #elif defined (USE_AVX2)
       using vec_t = __m256i;
-      auto& vec_setzero = _mm256_setzero_si256;
-      auto& vec_set_32 = _mm256_set1_epi32;
+      #define vec_setzero _mm256_setzero_si256
+      #define vec_set_32 _mm256_set1_epi32
       auto& vec_add_dpbusd_32 = m256_add_dpbusd_epi32;
       auto& vec_add_dpbusd_32x4 = m256_add_dpbusd_epi32x4;
       auto& vec_hadd = m256_hadd;
 #elif defined (USE_SSSE3)
       using vec_t = __m128i;
-      auto& vec_setzero = _mm_setzero_si128;
-      auto& vec_set_32 = _mm_set1_epi32;
+      #define vec_setzero _mm_setzero_si128
+      #define vec_set_32 _mm_set1_epi32
       auto& vec_add_dpbusd_32 = m128_add_dpbusd_epi32;
       auto& vec_add_dpbusd_32x4 = m128_add_dpbusd_epi32x4;
       auto& vec_hadd = m128_hadd;
@@ -266,7 +268,7 @@ namespace Eval::NNUE::Layers {
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
           std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
-          for (int i = 0; i < (int)kNumChunks; i += 4)
+          for (int i = 0; i < (int)kNumChunks - 3; i += 4)
           {
               const vec_t in0 = vec_set_32(input32[i + 0]);
               const vec_t in1 = vec_set_32(input32[i + 1]);
@@ -280,7 +282,7 @@ namespace Eval::NNUE::Layers {
                   vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
           }
           for (int i = 0; i < canSaturate16.count; ++i)
-              output[canSaturate16.out_ids[i]] += input[canSaturate16.in_ids[i]] * canSaturate16.weights[i];
+              output[canSaturate16.ids[i].out] += input[canSaturate16.ids[i].in] * canSaturate16.ids[i].w;
       }
       else if constexpr (kOutputDimensions == 1)
       {
@@ -406,13 +408,16 @@ namespace Eval::NNUE::Layers {
 #if defined (USE_SSSE3)
     struct CanSaturate {
         int count;
-        uint16_t out_ids[kPaddedInputDimensions * kOutputDimensions / 2];
-        uint16_t in_ids[kPaddedInputDimensions * kOutputDimensions / 2];
-        int8_t weights[kPaddedInputDimensions * kOutputDimensions / 2];
+        struct {
+            uint16_t out;
+            uint16_t in;
+            int8_t w;
+        } ids[kPaddedInputDimensions * kOutputDimensions / 2];
+
         void add(int i, int j, int8_t w) {
-            out_ids[count] = i;
-            in_ids [count] = j;
-            weights[count] = w;
+            ids[count].out = i;
+            ids[count].in = j;
+            ids[count].w = w;
             ++count;
         }
     } canSaturate16;
