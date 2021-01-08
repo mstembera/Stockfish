@@ -300,6 +300,9 @@ namespace Eval::NNUE::Layers {
 
           for (int i = 0; i < (int)kNumChunks - 3; i += 4)
           {
+              if (!input32[i + 0] && !input32[i + 1] && !input32[i + 2] && !input32[i + 3])
+                  continue;
+
               const vec_t in0 = vec_set_32(input32[i + 0]);
               const vec_t in1 = vec_set_32(input32[i + 1]);
               const vec_t in2 = vec_set_32(input32[i + 2]);
