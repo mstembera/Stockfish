@@ -286,22 +286,22 @@ namespace Eval::NNUE::Layers {
           int i = 0;
           for (; i < (int)kNumChunks - 3; )
           {
-              while (i < (int)kNumChunks - 3 && !input32[i]) ++i;
+              while (i < (int)kNumChunks - 4 && !input32[i]) ++i;
               const vec_t in0 = vec_set_32(input32[i]);
               const auto col0 = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
               ++i;
 
-              while (i < (int)kNumChunks - 2 && !input32[i]) ++i;
+              while (i < (int)kNumChunks - 3 && !input32[i]) ++i;
               const vec_t in1 = vec_set_32(input32[i]);
               const auto col1 = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
               ++i;
 
-              while (i < (int)kNumChunks - 1 && !input32[i]) ++i;
+              while (i < (int)kNumChunks - 2 && !input32[i]) ++i;
               const vec_t in2 = vec_set_32(input32[i]);
               const auto col2 = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
               ++i;
 
-              while (i < (int)kNumChunks     && !input32[i]) ++i;
+              while (i < (int)kNumChunks - 1 && !input32[i]) ++i;
               const vec_t in3 = vec_set_32(input32[i]);
               const auto col3 = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
               ++i;
@@ -313,7 +313,7 @@ namespace Eval::NNUE::Layers {
           {
               if (!input32[i])
                   continue;
-              
+
               const vec_t in0 = vec_set_32(input32[i]);
               const auto col0 = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
               for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
