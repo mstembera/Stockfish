@@ -277,22 +277,28 @@ namespace Eval::NNUE::Layers {
       // because then it is also an input dimension.
       if constexpr (kOutputDimensions % kOutputSimdWidth == 0)
       {
-          constexpr IndexType kNumChunks = kPaddedInputDimensions / 4;
+          constexpr IndexType kNumChunks = kPaddedInputDimensions / 8;
 
           const auto input32 = reinterpret_cast<const std::int32_t*>(input);
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
           std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
-          for (int i = 0; i < (int)kNumChunks - 3; i += 4)
+          int nonZeroChunks = (int)kNumChunks;
+          if constexpr (kNumChunks == 64)
+          {
+              while (nonZeroChunks > 0 && input32[nonZeroChunks - 1] == 0 && input32[nonZeroChunks + kNumChunks - 1] == 0)
+                  --nonZeroChunks;
+          }
+          for (int i = 0; i < nonZeroChunks; i += 2)
           {
               const vec_t in0 = vec_set_32(input32[i + 0]);
               const vec_t in1 = vec_set_32(input32[i + 1]);
-              const vec_t in2 = vec_set_32(input32[i + 2]);
-              const vec_t in3 = vec_set_32(input32[i + 3]);
+              const vec_t in2 = vec_set_32(input32[i + kNumChunks + 0]);
+              const vec_t in3 = vec_set_32(input32[i + kNumChunks + 1]);
               const auto col0 = reinterpret_cast<const vec_t*>(&weights_[(i + 0) * kOutputDimensions * 4]);
               const auto col1 = reinterpret_cast<const vec_t*>(&weights_[(i + 1) * kOutputDimensions * 4]);
-              const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + 2) * kOutputDimensions * 4]);
-              const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + 3) * kOutputDimensions * 4]);
+              const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + kNumChunks + 0) * kOutputDimensions * 4]);
+              const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + kNumChunks + 1) * kOutputDimensions * 4]);
               for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
                   vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
           }
