@@ -283,14 +283,11 @@ namespace Eval::NNUE::Layers {
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
           std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
-          int nonZeroChunks = (int)kNumChunks;
-          if constexpr (kNumChunks == 64)
+          for (int i = 0; i < (int)kNumChunks - 1; i += 2)
           {
-              while (nonZeroChunks > 0 && input32[nonZeroChunks - 1] == 0 && input32[nonZeroChunks + kNumChunks - 1] == 0)
-                  --nonZeroChunks;
-          }
-          for (int i = 0; i < nonZeroChunks; i += 2)
-          {
+              if (!(input32[i + 0] | input32[i + 1] | input32[i + kNumChunks + 0] | input32[i + kNumChunks + 1]))
+                  continue;
+
               const vec_t in0 = vec_set_32(input32[i + 0]);
               const vec_t in1 = vec_set_32(input32[i + 1]);
               const vec_t in2 = vec_set_32(input32[i + kNumChunks + 0]);
