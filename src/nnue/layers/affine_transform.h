@@ -85,15 +85,24 @@ namespace Eval::NNUE::Layers {
       {
           canSaturate16.count = 0;
 #if !defined(USE_VNNI)
-          for (IndexType i = 0; i < kPaddedInputDimensions; i += 16)
+          for (IndexType i = 0; i * 2 < kPaddedInputDimensions; i += 8)
               for (IndexType j = 0; j < kOutputDimensions; ++j)
                   for (int x = 0; x < 2; ++x)
                   {
                       WeightType* w = &weights_[i * kOutputDimensions + j * 4 + x * 2];
                       int sum[2] = {0, 0};
+                      auto kToIdx = [=](IndexType k) -> int {
+                          int idx = 0;
+                          if (k > 3)
+                          {
+                              k -= 4;
+                              idx += kPaddedInputDimensions / 2 * kOutputDimensions;
+                          }
+                          return idx + k / 2 * kOutputDimensions * 4 + k % 2;
+                      };
                       for (int k = 0; k < 8; ++k)
                       {
-                          IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
+                          IndexType idx = kToIdx(k);
                           sum[w[idx] < 0] += w[idx];
                       }
                       for (int sign : {-1, 1})
@@ -102,14 +111,14 @@ namespace Eval::NNUE::Layers {
                               int maxK = 0, maxW = 0;
                               for (int k = 0; k < 8; ++k)
                               {
-                                  IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
+                                  IndexType idx = kToIdx(k);
                                   if (maxW < sign * w[idx])
                                       maxK = k, maxW = sign * w[idx];
                               }
 
-                              IndexType idx = maxK / 2 * kOutputDimensions * 4 + maxK % 2;
+                              IndexType idx = kToIdx(maxK);
                               sum[sign == -1] -= w[idx];
-                              canSaturate16.add(j, i + maxK / 2 * 4 + maxK % 2 + x * 2, w[idx]);
+                              canSaturate16.add(j, i + (maxK < 4 ? maxK / 2 * 4 : (maxK - 4) / 2 * 4 + kPaddedInputDimensions / 2) + maxK % 2 + x * 2, w[idx]);
                               w[idx] = 0;
                           }
                   }
@@ -283,11 +292,14 @@ namespace Eval::NNUE::Layers {
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
           std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
-          for (int i = 0; i < (int)kNumChunks - 1; i += 2)
+          int nonZeroChunks = (int)kNumChunks;
+          if constexpr (kNumChunks == 64)
           {
-              if (!(input32[i + 0] | input32[i + 1] | input32[i + kNumChunks + 0] | input32[i + kNumChunks + 1]))
-                  continue;
-
+              while (nonZeroChunks > 0 && input32[nonZeroChunks - 1] == 0 && input32[nonZeroChunks + kNumChunks - 1] == 0)
+                  --nonZeroChunks;
+          }
+          for (int i = 0; i < nonZeroChunks; i += 2)
+          {
               const vec_t in0 = vec_set_32(input32[i + 0]);
               const vec_t in1 = vec_set_32(input32[i + 1]);
               const vec_t in2 = vec_set_32(input32[i + kNumChunks + 0]);
