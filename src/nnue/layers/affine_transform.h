@@ -149,13 +149,13 @@ namespace Eval::NNUE::Layers {
 #endif
       };
 
-      [[maybe_unused]] auto m512_add_dpbusd_epi32x4 = [=](__m512i& acc, __m512i a0, __m512i b0, __m512i a1, __m512i b1,
-                                                                        __m512i a2, __m512i b2, __m512i a3, __m512i b3) {
+      [[maybe_unused]] auto m512_add_dpbusd_epi32x4 = [=](__m512i& dst, __m512i src, __m512i a0, __m512i b0, __m512i a1, __m512i b1,
+                                                                                     __m512i a2, __m512i b2, __m512i a3, __m512i b3) {
 #if defined (USE_VNNI)
-        acc = _mm512_dpbusd_epi32(acc, a0, b0);
-        acc = _mm512_dpbusd_epi32(acc, a1, b1);
-        acc = _mm512_dpbusd_epi32(acc, a2, b2);
-        acc = _mm512_dpbusd_epi32(acc, a3, b3);
+        dst = _mm512_dpbusd_epi32(src, a0, b0);
+        dst = _mm512_dpbusd_epi32(src, a1, b1);
+        dst = _mm512_dpbusd_epi32(src, a2, b2);
+        dst = _mm512_dpbusd_epi32(src, a3, b3);
 #else
         __m512i product0 = _mm512_maddubs_epi16(a0, b0);
         __m512i product1 = _mm512_maddubs_epi16(a1, b1);
@@ -165,7 +165,7 @@ namespace Eval::NNUE::Layers {
         product2 = _mm512_add_epi16(product2, product3);
         product0 = _mm512_add_epi16(product0, product2);
         product0 = _mm512_madd_epi16(product0, kOnes512);
-        acc = _mm512_add_epi32(acc, product0);
+        dst = _mm512_add_epi32(src, product0);
 #endif
       };
 
@@ -191,13 +191,13 @@ namespace Eval::NNUE::Layers {
 #endif
       };
 
-      [[maybe_unused]] auto m256_add_dpbusd_epi32x4 = [=](__m256i& acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1,
-                                                                        __m256i a2, __m256i b2, __m256i a3, __m256i b3) {
+      [[maybe_unused]] auto m256_add_dpbusd_epi32x4 = [=](__m256i& dst, __m256i src, __m256i a0, __m256i b0, __m256i a1, __m256i b1,
+                                                                                     __m256i a2, __m256i b2, __m256i a3, __m256i b3) {
 #if defined (USE_VNNI)
-        acc = _mm256_dpbusd_epi32(acc, a0, b0);
-        acc = _mm256_dpbusd_epi32(acc, a1, b1);
-        acc = _mm256_dpbusd_epi32(acc, a2, b2);
-        acc = _mm256_dpbusd_epi32(acc, a3, b3);
+        dst = _mm256_dpbusd_epi32(src, a0, b0);
+        dst = _mm256_dpbusd_epi32(src, a1, b1);
+        dst = _mm256_dpbusd_epi32(src, a2, b2);
+        dst = _mm256_dpbusd_epi32(src, a3, b3);
 #else
         __m256i product0 = _mm256_maddubs_epi16(a0, b0);
         __m256i product1 = _mm256_maddubs_epi16(a1, b1);
@@ -207,7 +207,7 @@ namespace Eval::NNUE::Layers {
         product2 = _mm256_add_epi16(product2, product3);
         product0 = _mm256_add_epi16(product0, product2);
         product0 = _mm256_madd_epi16(product0, kOnes256);
-        acc = _mm256_add_epi32(acc, product0);
+        dst = _mm256_add_epi32(src, product0);
 #endif
       };
 
@@ -228,8 +228,8 @@ namespace Eval::NNUE::Layers {
         acc = _mm_add_epi32(acc, product0);
       };
 
-      [[maybe_unused]] auto m128_add_dpbusd_epi32x4 = [=](__m128i& acc, __m128i a0, __m128i b0, __m128i a1, __m128i b1,
-                                                                        __m128i a2, __m128i b2, __m128i a3, __m128i b3) {
+      [[maybe_unused]] auto m128_add_dpbusd_epi32x4 = [=](__m128i& dst, __m128i src, __m128i a0, __m128i b0, __m128i a1, __m128i b1,
+                                                                                     __m128i a2, __m128i b2, __m128i a3, __m128i b3) {
         __m128i product0 = _mm_maddubs_epi16(a0, b0);
         __m128i product1 = _mm_maddubs_epi16(a1, b1);
         __m128i product2 = _mm_maddubs_epi16(a2, b2);
@@ -238,7 +238,7 @@ namespace Eval::NNUE::Layers {
         product2 = _mm_adds_epi16(product2, product3);
         product0 = _mm_adds_epi16(product0, product2);
         product0 = _mm_madd_epi16(product0, kOnes128);
-        acc = _mm_add_epi32(acc, product0);
+        dst = _mm_add_epi32(src, product0);
       };
 
 #endif
@@ -280,8 +280,8 @@ namespace Eval::NNUE::Layers {
           constexpr IndexType kNumChunks = kPaddedInputDimensions / 4;
 
           const auto input32 = reinterpret_cast<const std::int32_t*>(input);
+          const vec_t* srcptr = reinterpret_cast<const vec_t*>(biases_);
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
-          std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
           for (int i = 0; i < (int)kNumChunks - 3; i += 4)
           {
@@ -294,7 +294,8 @@ namespace Eval::NNUE::Layers {
               const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + 2) * kOutputDimensions * 4]);
               const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + 3) * kOutputDimensions * 4]);
               for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
-                  vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+                  vec_add_dpbusd_32x4(outptr[j], srcptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+              srcptr = outptr;
           }
           for (int i = 0; i < canSaturate16.count; ++i)
               output[canSaturate16.ids[i].out] += input[canSaturate16.ids[i].in] * canSaturate16.ids[i].w;
