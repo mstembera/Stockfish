@@ -283,19 +283,56 @@ namespace Eval::NNUE::Layers {
           vec_t* outptr = reinterpret_cast<vec_t*>(output);
           std::memcpy(output, biases_, kOutputDimensions * sizeof(OutputType));
 
-          for (int i = 0; i < (int)kNumChunks - 3; i += 4)
+          if constexpr (kNumChunks >= 32)
           {
-              const vec_t in0 = vec_set_32(input32[i + 0]);
-              const vec_t in1 = vec_set_32(input32[i + 1]);
-              const vec_t in2 = vec_set_32(input32[i + 2]);
-              const vec_t in3 = vec_set_32(input32[i + 3]);
-              const auto col0 = reinterpret_cast<const vec_t*>(&weights_[(i + 0) * kOutputDimensions * 4]);
-              const auto col1 = reinterpret_cast<const vec_t*>(&weights_[(i + 1) * kOutputDimensions * 4]);
-              const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + 2) * kOutputDimensions * 4]);
-              const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + 3) * kOutputDimensions * 4]);
-              for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
-                  vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+              int nonZeroChunks = 0;
+              int32_t iP[kNumChunks];
+              const vec_t* ws[kNumChunks];
+
+              for (int i = 0; i < (int)kNumChunks; ++i)
+              {
+                  iP[nonZeroChunks] = input32[i];
+                  ws[nonZeroChunks] = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
+                  nonZeroChunks += (bool)input32[i];
+              }
+              while (nonZeroChunks & 0x3)
+              {
+                  iP[nonZeroChunks] = 0;
+                  ws[nonZeroChunks] = ws[nonZeroChunks - 1];
+                  ++nonZeroChunks;
+              }
+              
+              for (int i = 0; i < (int)nonZeroChunks - 3; i += 4)
+              {
+                  const vec_t in0 = vec_set_32(iP[i + 0]);
+                  const vec_t in1 = vec_set_32(iP[i + 1]);
+                  const vec_t in2 = vec_set_32(iP[i + 2]);
+                  const vec_t in3 = vec_set_32(iP[i + 3]);
+                  const auto col0 = ws[i + 0];
+                  const auto col1 = ws[i + 1];
+                  const auto col2 = ws[i + 2];
+                  const auto col3 = ws[i + 3];
+                  for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
+                      vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+              }        
           }
+          else
+          {
+              for (int i = 0; i < (int)kNumChunks - 3; i += 4)
+              {
+                  const vec_t in0 = vec_set_32(input32[i + 0]);
+                  const vec_t in1 = vec_set_32(input32[i + 1]);
+                  const vec_t in2 = vec_set_32(input32[i + 2]);
+                  const vec_t in3 = vec_set_32(input32[i + 3]);
+                  const auto col0 = reinterpret_cast<const vec_t*>(&weights_[(i + 0) * kOutputDimensions * 4]);
+                  const auto col1 = reinterpret_cast<const vec_t*>(&weights_[(i + 1) * kOutputDimensions * 4]);
+                  const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + 2) * kOutputDimensions * 4]);
+                  const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + 3) * kOutputDimensions * 4]);
+                  for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
+                      vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+              }
+          }
+
           for (int i = 0; i < canSaturate16.count; ++i)
               output[canSaturate16.ids[i].out] += input[canSaturate16.ids[i].in] * canSaturate16.ids[i].w;
       }
