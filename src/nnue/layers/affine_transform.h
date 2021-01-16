@@ -153,9 +153,9 @@ namespace Eval::NNUE::Layers {
                                                                                      __m512i a2, __m512i b2, __m512i a3, __m512i b3) {
 #if defined (USE_VNNI)
         dst = _mm512_dpbusd_epi32(src, a0, b0);
-        dst = _mm512_dpbusd_epi32(src, a1, b1);
-        dst = _mm512_dpbusd_epi32(src, a2, b2);
-        dst = _mm512_dpbusd_epi32(src, a3, b3);
+        dst = _mm512_dpbusd_epi32(dst, a1, b1);
+        dst = _mm512_dpbusd_epi32(dst, a2, b2);
+        dst = _mm512_dpbusd_epi32(dst, a3, b3);
 #else
         __m512i product0 = _mm512_maddubs_epi16(a0, b0);
         __m512i product1 = _mm512_maddubs_epi16(a1, b1);
@@ -195,9 +195,9 @@ namespace Eval::NNUE::Layers {
                                                                                      __m256i a2, __m256i b2, __m256i a3, __m256i b3) {
 #if defined (USE_VNNI)
         dst = _mm256_dpbusd_epi32(src, a0, b0);
-        dst = _mm256_dpbusd_epi32(src, a1, b1);
-        dst = _mm256_dpbusd_epi32(src, a2, b2);
-        dst = _mm256_dpbusd_epi32(src, a3, b3);
+        dst = _mm256_dpbusd_epi32(dst, a1, b1);
+        dst = _mm256_dpbusd_epi32(dst, a2, b2);
+        dst = _mm256_dpbusd_epi32(dst, a3, b3);
 #else
         __m256i product0 = _mm256_maddubs_epi16(a0, b0);
         __m256i product1 = _mm256_maddubs_epi16(a1, b1);
