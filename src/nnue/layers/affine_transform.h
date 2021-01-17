@@ -286,35 +286,37 @@ namespace Eval::NNUE::Layers {
           if constexpr (kNumChunks >= 32)
           {
               int nonZeroChunks = 0;
-              int32_t iP[kNumChunks];
-              const vec_t* ws[kNumChunks];
+              struct {
+                  int32_t in;
+                  const vec_t* w;
+              } nonZero[kNumChunks];
 
               for (int i = 0; i < (int)kNumChunks; ++i)
               {
-                  iP[nonZeroChunks] = input32[i];
-                  ws[nonZeroChunks] = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
+                  nonZero[nonZeroChunks].in = input32[i];
+                  nonZero[nonZeroChunks].w = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]);
                   nonZeroChunks += (bool)input32[i];
               }
               while (nonZeroChunks & 0x3)
               {
-                  iP[nonZeroChunks] = 0;
-                  ws[nonZeroChunks] = ws[nonZeroChunks - 1];
+                  nonZero[nonZeroChunks].in = 0;
+                  nonZero[nonZeroChunks].w = nonZero[nonZeroChunks - 1].w;
                   ++nonZeroChunks;
               }
               
               for (int i = 0; i < (int)nonZeroChunks - 3; i += 4)
               {
-                  const vec_t in0 = vec_set_32(iP[i + 0]);
-                  const vec_t in1 = vec_set_32(iP[i + 1]);
-                  const vec_t in2 = vec_set_32(iP[i + 2]);
-                  const vec_t in3 = vec_set_32(iP[i + 3]);
-                  const auto col0 = ws[i + 0];
-                  const auto col1 = ws[i + 1];
-                  const auto col2 = ws[i + 2];
-                  const auto col3 = ws[i + 3];
+                  const vec_t in0 = vec_set_32(nonZero[i + 0].in);
+                  const vec_t in1 = vec_set_32(nonZero[i + 1].in);
+                  const vec_t in2 = vec_set_32(nonZero[i + 2].in);
+                  const vec_t in3 = vec_set_32(nonZero[i + 3].in);
+                  const auto col0 = nonZero[i + 0].w;
+                  const auto col1 = nonZero[i + 1].w;
+                  const auto col2 = nonZero[i + 2].w;
+                  const auto col3 = nonZero[i + 3].w;
                   for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
                       vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
-              }        
+              }
           }
           else
           {
