@@ -69,57 +69,29 @@ namespace Eval::NNUE::Layers {
       if (!previous_layer_.ReadParameters(stream)) return false;
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
         biases_[i] = read_little_endian<BiasType>(stream);
+
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
-#if !defined (USE_SSSE3)
-        weights_[i] = read_little_endian<WeightType>(stream);
-#else
-        weights_[
-          (i / 4) % (kPaddedInputDimensions / 4) * kOutputDimensions * 4 +
-          i / kPaddedInputDimensions * 4 +
-          i % 4
-        ] = read_little_endian<WeightType>(stream);
+          weights_[i] = read_little_endian<WeightType>(stream);
 
-      // Determine if eights of weight and input products can be summed using 16bits
-      // without saturation. We assume worst case combinations of 0 and 127 for all inputs.
-      if (kOutputDimensions > 1 && !stream.fail())
+#if defined (USE_SSSE3)
+      if constexpr (kOutputDimensions % kOutputSimdWidth == 0)
       {
-          canSaturate16.count = 0;
-#if !defined(USE_VNNI)
-          for (IndexType i = 0; i < kPaddedInputDimensions; i += 16)
-              for (IndexType j = 0; j < kOutputDimensions; ++j)
-                  for (int x = 0; x < 2; ++x)
-                  {
-                      WeightType* w = &weights_[i * kOutputDimensions + j * 4 + x * 2];
-                      int sum[2] = {0, 0};
-                      for (int k = 0; k < 8; ++k)
-                      {
-                          IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
-                          sum[w[idx] < 0] += w[idx];
-                      }
-                      for (int sign : {-1, 1})
-                          while (sign * sum[sign == -1] > 258)
+          int8_t tmpW[kOutputDimensions * kPaddedInputDimensions];
+          std::memcpy(tmpW, weights_, kOutputDimensions * kPaddedInputDimensions);
+
+          int idxOut = 0;
+          for (std::size_t i1 = 0; i1 < kPaddedInputDimensions; i1 += 16)
+              for (std::size_t i2 = 0; i2 < kOutputDimensions; i2 += kOutputSimdWidth)
+                  for (std::size_t i3 = 0; i3 < 16; i3 += 4)
+                      for (std::size_t i4 = 0; i4 < kOutputSimdWidth; ++i4)
+                          for (std::size_t i5 = 0; i5 < 4; ++i5)
                           {
-                              int maxK = 0, maxW = 0;
-                              for (int k = 0; k < 8; ++k)
-                              {
-                                  IndexType idx = k / 2 * kOutputDimensions * 4 + k % 2;
-                                  if (maxW < sign * w[idx])
-                                      maxK = k, maxW = sign * w[idx];
-                              }
-
-                              IndexType idx = maxK / 2 * kOutputDimensions * 4 + maxK % 2;
-                              sum[sign == -1] -= w[idx];
-                              canSaturate16.add(j, i + maxK / 2 * 4 + maxK % 2 + x * 2, w[idx]);
-                              w[idx] = 0;
+                              int idxIn = (i2 + i4) * kPaddedInputDimensions + i1 + i3 + i5;
+                              weights_[idxOut++] = tmpW[idxIn];
                           }
-                  }
-
-          // Non functional optimization for faster more linear access
-          std::sort(canSaturate16.ids, canSaturate16.ids + canSaturate16.count,
-                    [](const typename CanSaturate::Entry& e1, const typename CanSaturate::Entry& e2)
-                    { return e1.in == e2.in ? e1.out < e2.out : e1.in < e2.in; });
-#endif
       }
+
+      canSaturate16.count = 0;
 #endif
 
       return !stream.fail();
@@ -289,12 +261,12 @@ namespace Eval::NNUE::Layers {
               const vec_t in1 = vec_set_32(input32[i + 1]);
               const vec_t in2 = vec_set_32(input32[i + 2]);
               const vec_t in3 = vec_set_32(input32[i + 3]);
-              const auto col0 = reinterpret_cast<const vec_t*>(&weights_[(i + 0) * kOutputDimensions * 4]);
-              const auto col1 = reinterpret_cast<const vec_t*>(&weights_[(i + 1) * kOutputDimensions * 4]);
-              const auto col2 = reinterpret_cast<const vec_t*>(&weights_[(i + 2) * kOutputDimensions * 4]);
-              const auto col3 = reinterpret_cast<const vec_t*>(&weights_[(i + 3) * kOutputDimensions * 4]);
+
+              const auto column4x = reinterpret_cast<const vec_t*>(&weights_[i * kOutputDimensions * 4]); 
+
               for (int j = 0; j * kOutputSimdWidth < kOutputDimensions; ++j)
-                  vec_add_dpbusd_32x4(outptr[j], in0, col0[j], in1, col1[j], in2, col2[j], in3, col3[j]);
+                  vec_add_dpbusd_32x4(outptr[j], in0, column4x[4 * j + 0], in1, column4x[4 * j + 1],
+                                                 in2, column4x[4 * j + 2], in3, column4x[4 * j + 3]);
           }
           for (int i = 0; i < canSaturate16.count; ++i)
               output[canSaturate16.ids[i].out] += input[canSaturate16.ids[i].in] * canSaturate16.ids[i].w;
