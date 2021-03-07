@@ -123,9 +123,9 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   for (int i = 0; i < ClusterSize; ++i)
       if (tte[i].key16 == key16 || !tte[i].depth8)
       {
-          tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
-
-          return found = (bool)tte[i].depth8, &tte[i];
+          std::swap(tte[0], tte[i]);
+          tte[0].genBound8 = uint8_t(generation8 | (tte[0].genBound8 & (GENERATION_DELTA - 1))); // Refresh
+          return found = (bool)tte[0].depth8, &tte[0];
       }
 
   // Find an entry to be replaced according to the replacement strategy
