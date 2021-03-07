@@ -87,6 +87,9 @@ namespace Eval::NNUE::Layers {
           initSVD();
           wP = weights_;
           bP = biases_;
+
+      //updateW();
+      //updateB();
       }
 
 
@@ -182,9 +185,9 @@ namespace Eval::NNUE::Layers {
         __m512i product1 = _mm512_maddubs_epi16(a1, b1);
         __m512i product2 = _mm512_maddubs_epi16(a2, b2);
         __m512i product3 = _mm512_maddubs_epi16(a3, b3);
-        product0 = _mm512_add_epi16(product0, product1);
-        product2 = _mm512_add_epi16(product2, product3);
-        product0 = _mm512_add_epi16(product0, product2);
+        product0 = _mm512_adds_epi16(product0, product1);
+        product2 = _mm512_adds_epi16(product2, product3);
+        product0 = _mm512_adds_epi16(product0, product2);
         product0 = _mm512_madd_epi16(product0, kOnes512);
         acc = _mm512_add_epi32(acc, product0);
 #endif
@@ -224,9 +227,9 @@ namespace Eval::NNUE::Layers {
         __m256i product1 = _mm256_maddubs_epi16(a1, b1);
         __m256i product2 = _mm256_maddubs_epi16(a2, b2);
         __m256i product3 = _mm256_maddubs_epi16(a3, b3);
-        product0 = _mm256_add_epi16(product0, product1);
-        product2 = _mm256_add_epi16(product2, product3);
-        product0 = _mm256_add_epi16(product0, product2);
+        product0 = _mm256_adds_epi16(product0, product1);
+        product2 = _mm256_adds_epi16(product2, product3);
+        product0 = _mm256_adds_epi16(product0, product2);
         product0 = _mm256_madd_epi16(product0, kOnes256);
         acc = _mm256_add_epi32(acc, product0);
 #endif
