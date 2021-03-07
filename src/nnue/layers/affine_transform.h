@@ -24,6 +24,10 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern int8_t* wP;
+extern void initSVD();
+//extern void updateW();
+
 namespace Eval::NNUE::Layers {
 
   // Affine transformation layer
@@ -69,15 +73,25 @@ namespace Eval::NNUE::Layers {
       if (!previous_layer_.ReadParameters(stream)) return false;
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
         biases_[i] = read_little_endian<BiasType>(stream);
+      
+      WeightType tmp[kOutputDimensions * kPaddedInputDimensions];
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
-#if !defined (USE_SSSE3)
-        weights_[i] = read_little_endian<WeightType>(stream);
-#else
+        tmp[i] = read_little_endian<WeightType>(stream);
+
+      std::memcpy(weights_, tmp, kOutputDimensions * kPaddedInputDimensions * sizeof(WeightType));
+      if (kPaddedInputDimensions == 32 && kOutputDimensions == 32)
+      {
+          wP = weights_;
+          initSVD();
+      }
+
+#if defined (USE_SSSE3)
+      for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[
           (i / 4) % (kPaddedInputDimensions / 4) * kOutputDimensions * 4 +
           i / kPaddedInputDimensions * 4 +
           i % 4
-        ] = read_little_endian<WeightType>(stream);
+        ] = tmp[i];
 
       // Determine if eights of weight and input products can be summed using 16bits
       // without saturation. We assume worst case combinations of 0 and 127 for all inputs.
@@ -161,9 +175,9 @@ namespace Eval::NNUE::Layers {
         __m512i product1 = _mm512_maddubs_epi16(a1, b1);
         __m512i product2 = _mm512_maddubs_epi16(a2, b2);
         __m512i product3 = _mm512_maddubs_epi16(a3, b3);
-        product0 = _mm512_add_epi16(product0, product1);
-        product2 = _mm512_add_epi16(product2, product3);
-        product0 = _mm512_add_epi16(product0, product2);
+        product0 = _mm512_adds_epi16(product0, product1);
+        product2 = _mm512_adds_epi16(product2, product3);
+        product0 = _mm512_adds_epi16(product0, product2);
         product0 = _mm512_madd_epi16(product0, kOnes512);
         acc = _mm512_add_epi32(acc, product0);
 #endif
@@ -203,9 +217,9 @@ namespace Eval::NNUE::Layers {
         __m256i product1 = _mm256_maddubs_epi16(a1, b1);
         __m256i product2 = _mm256_maddubs_epi16(a2, b2);
         __m256i product3 = _mm256_maddubs_epi16(a3, b3);
-        product0 = _mm256_add_epi16(product0, product1);
-        product2 = _mm256_add_epi16(product2, product3);
-        product0 = _mm256_add_epi16(product0, product2);
+        product0 = _mm256_adds_epi16(product0, product1);
+        product2 = _mm256_adds_epi16(product2, product3);
+        product0 = _mm256_adds_epi16(product0, product2);
         product0 = _mm256_madd_epi16(product0, kOnes256);
         acc = _mm256_add_epi32(acc, product0);
 #endif
