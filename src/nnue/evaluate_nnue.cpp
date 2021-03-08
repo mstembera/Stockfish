@@ -142,3 +142,72 @@ namespace Stockfish::Eval::NNUE {
   }
 
 } // namespace Stockfish::Eval::NNUE
+
+
+#include "../eigen3/Eigen/Dense"
+
+int8_t* wP = nullptr;
+int TuneS[16] = { 0 };
+
+constexpr int HI = 32, WI = 32; //512
+//typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Mtx;
+typedef Eigen::Matrix<double, HI, WI> Mtx;
+
+Mtx W, U, VT, SM;
+double Sigma[32];
+
+void initSVD()
+{
+    //W.resize(HI, WI);
+    for (int i = 0; i < HI; ++i)
+        for (int j = 0; j < WI; ++j)
+            W(i, j) = wP[i * WI + j];
+
+    Eigen::BDCSVD<typename Eigen::MatrixBase<Mtx>::PlainObject> BdcSVD = W.bdcSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
+    const Eigen::BDCSVD<Mtx>& SVD = BdcSVD.compute(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+    U = SVD.matrixU(); //HIxHI
+    VT = SVD.matrixV().transpose(); //WIxWI
+
+    //SM.resize(HI, WI);
+    SM.setZero();
+    auto S = SVD.singularValues();
+    for (int i = 0; i < HI; ++i)
+        SM(i, i) = Sigma[i] = S(i);
+}
+
+void updateW()
+{
+    if (!wP)
+        return;
+
+    // Tune the first 10 biggest singular values
+    for (int i = 0; i < 16; ++i)
+        if (TuneS[i] > 0)
+            SM(i, i) = Sigma[i] * (100.0 + TuneS[i] * (15.0 + i) / 30.0) / 100.0;
+        else
+            SM(i, i) = Sigma[i] * 100.0 / (100.0 - TuneS[i] * (15.0 + i) / 30.0);
+
+    // Reconstruct new W matrix
+    Mtx WNew = U * SM * VT;
+    //Mtx Delta = W - WNew;
+
+    for (int i = 0; i < HI; ++i)
+        for (int j = 0; j < WI; ++j)
+        {
+            double w = WNew(i, j);
+            int iw = std::min(std::max((int)round(w), -127), 127);
+            wP[i * WI + j] = iw;
+        }
+}
+
+#if 1
+namespace Stockfish {
+
+auto rangeFuncS = [](int m) { return std::pair<int, int>(m - 150, m + 150); };
+TUNE(SetRange(rangeFuncS), TuneS, updateW);
+
+UPDATE_ON_LAST();
+
+}
+#endif

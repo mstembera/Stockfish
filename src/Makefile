@@ -155,75 +155,75 @@ endif
 ifeq ($(findstring -ssse3,$(ARCH)),-ssse3)
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
+	ssse3 = no
 endif
 
 ifeq ($(findstring -sse41,$(ARCH)),-sse41)
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
+	ssse3 = no
+	sse41 = no
 endif
 
 ifeq ($(findstring -modern,$(ARCH)),-modern)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
+	ssse3 = no
+	sse41 = no
 endif
 
 ifeq ($(findstring -avx2,$(ARCH)),-avx2)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
-	avx2 = yes
+	ssse3 = no
+	sse41 = no
+	avx2 = no
 endif
 
 ifeq ($(findstring -bmi2,$(ARCH)),-bmi2)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
-	avx2 = yes
-	pext = yes
+	ssse3 = no
+	sse41 = no
+	avx2 = no
+	pext = no
 endif
 
 ifeq ($(findstring -avx512,$(ARCH)),-avx512)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
-	avx2 = yes
-	pext = yes
-	avx512 = yes
+	ssse3 = no
+	sse41 = no
+	avx2 = no
+	pext = no
+	avx512 = no
 endif
 
 ifeq ($(findstring -vnni256,$(ARCH)),-vnni256)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
-	avx2 = yes
-	pext = yes
-	vnni256 = yes
+	ssse3 = no
+	sse41 = no
+	avx2 = no
+	pext = no
+	vnni256 = no
 endif
 
 ifeq ($(findstring -vnni512,$(ARCH)),-vnni512)
 	popcnt = yes
 	sse = yes
 	sse2 = yes
-	ssse3 = yes
-	sse41 = yes
-	avx2 = yes
-	pext = yes
-	avx512 = yes
-	vnni512 = yes
+	ssse3 = no
+	sse41 = no
+	avx2 = no
+	pext = no
+	avx512 = no
+	vnni512 = no
 endif
 
 ifeq ($(sse),yes)
