@@ -149,16 +149,16 @@ namespace Stockfish::Eval::NNUE {
 int8_t* wP = nullptr;
 int TuneS[16] = { 0 };
 
-constexpr int HI = 32, WI = 32; //512
-//typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Mtx;
-typedef Eigen::Matrix<double, HI, WI> Mtx;
+constexpr int HI = 32, WI = 512;
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Mtx;
+//typedef Eigen::Matrix<double, HI, WI> Mtx;
 
 Mtx W, U, VT, SM;
 double Sigma[32];
 
 void initSVD()
 {
-    //W.resize(HI, WI);
+    W.resize(HI, WI);
     for (int i = 0; i < HI; ++i)
         for (int j = 0; j < WI; ++j)
             W(i, j) = wP[i * WI + j];
@@ -169,7 +169,7 @@ void initSVD()
     U = SVD.matrixU(); //HIxHI
     VT = SVD.matrixV().transpose(); //WIxWI
 
-    //SM.resize(HI, WI);
+    SM.resize(HI, WI);
     SM.setZero();
     auto S = SVD.singularValues();
     for (int i = 0; i < HI; ++i)
@@ -181,7 +181,7 @@ void updateW()
     if (!wP)
         return;
 
-    // Tune the first 10 biggest singular values
+    // Tune the first 16 biggest singular values
     for (int i = 0; i < 16; ++i)
         if (TuneS[i] > 0)
             SM(i, i) = Sigma[i] * (100.0 + TuneS[i] * (15.0 + i) / 30.0) / 100.0;
@@ -204,7 +204,7 @@ void updateW()
 #if 1
 namespace Stockfish {
 
-auto rangeFuncS = [](int m) { return std::pair<int, int>(m - 150, m + 150); };
+auto rangeFuncS = [](int m) { return std::pair<int, int>(m - 125, m + 125); };
 TUNE(SetRange(rangeFuncS), TuneS, updateW);
 
 UPDATE_ON_LAST();

@@ -26,6 +26,7 @@
 
 extern int8_t* wP;
 extern void initSVD();
+//extern void updateW();
 
 namespace Stockfish::Eval::NNUE::Layers {
 
@@ -72,18 +73,17 @@ namespace Stockfish::Eval::NNUE::Layers {
       if (!previous_layer_.ReadParameters(stream)) return false;
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
         biases_[i] = read_little_endian<BiasType>(stream);
-            
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[i] = read_little_endian<WeightType>(stream);
       
 
-      if (kPaddedInputDimensions == 32 && kOutputDimensions == 32)
+      if (kPaddedInputDimensions == 512 && kOutputDimensions == 32)
       {
           wP = weights_;
           initSVD();
       }
-
 #if 0 //defined (USE_SSSE3)
+      
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[
           (i / 4) % (kPaddedInputDimensions / 4) * kOutputDimensions * 4 +
