@@ -123,8 +123,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   TTEntry* const tte = first_entry(key, eId);
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
 
-  constexpr int searchCnt = 3;
-  constexpr int order[8] = { 0, 1, 2, 3, 4, 5, 0, 1 };
+  constexpr int searchCnt = 4;
+  constexpr int order[9] = { 0, 1, 2, 3, 4, 5, 0, 1, 2 };
   for (int i = 0; i < searchCnt; ++i)
   {
       int cId = order[i + eId];
