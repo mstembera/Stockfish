@@ -24,6 +24,10 @@
 #include <iostream>
 #include "../nnue_common.h"
 
+extern int8_t* wP;
+extern void initEigen();
+extern void updateW();
+
 namespace Stockfish::Eval::NNUE::Layers {
 
   // Affine transformation layer
@@ -70,14 +74,23 @@ namespace Stockfish::Eval::NNUE::Layers {
       for (std::size_t i = 0; i < kOutputDimensions; ++i)
         biases_[i] = read_little_endian<BiasType>(stream);
       for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
-#if !defined (USE_SSSE3)
         weights_[i] = read_little_endian<WeightType>(stream);
-#else
+      
+
+      if (kPaddedInputDimensions == 32 && kOutputDimensions == 32)
+      {
+          wP = weights_;
+          initEigen();
+      }
+
+#if 0 //defined (USE_SSSE3)
+      
+      for (std::size_t i = 0; i < kOutputDimensions * kPaddedInputDimensions; ++i)
         weights_[
           (i / 4) % (kPaddedInputDimensions / 4) * kOutputDimensions * 4 +
           i / kPaddedInputDimensions * 4 +
           i % 4
-        ] = read_little_endian<WeightType>(stream);
+        ] = tmp[i];
 
       // Determine if eights of weight and input products can be summed using 16bits
       // without saturation. We assume worst case combinations of 0 and 127 for all inputs.

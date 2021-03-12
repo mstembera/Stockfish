@@ -142,3 +142,88 @@ namespace Stockfish::Eval::NNUE {
   }
 
 } // namespace Stockfish::Eval::NNUE
+
+
+#include "../eigen3/Eigen/Dense"
+
+int8_t* wP = nullptr;
+int TuneE[18] = { 0 };
+
+constexpr int HI = 32, WI = 32;
+typedef Eigen::Matrix<double, HI, WI> Mtx;
+typedef Eigen::Matrix<std::complex<double>, HI, WI> MtxC;
+
+Mtx W;
+MtxC Q, QI, D;
+std::complex<double> Lambda[32];
+
+void initEigen()
+{
+    for (int i = 0; i < HI; ++i)
+        for (int j = 0; j < WI; ++j)
+            W(i, j) = wP[i * WI + j];
+
+    
+    Eigen::EigenSolver<Mtx> es(W);
+
+    Q = es.eigenvectors();
+    QI = Q.inverse();
+    Eigen::EigenSolver<Mtx>::EigenvalueType ev = es.eigenvalues();
+    D = ev.asDiagonal();
+
+
+    for (int i = 0; i < HI; ++i)
+        Lambda[i] = D(i, i);
+}
+
+void updateW()
+{
+    if (!wP)
+        return;
+
+    // Tune eigen values
+    int eId = 0;
+    for (int i = 0; i < 18; ++i)
+    {
+        if (TuneE[i] > 0)
+            D(eId, eId) = Lambda[eId] * (100.0 + TuneE[i]) / 100.0;
+        else
+            D(eId, eId) = Lambda[eId] * 100.0 / (100.0 - TuneE[i]);
+
+        eId++;
+
+        if (Lambda[eId].imag() == -Lambda[eId - 1].imag()) // complex conjugate
+        {
+            if (TuneE[i] > 0)
+                D(eId, eId) = Lambda[eId] * (100.0 + TuneE[i]) / 100.0;
+            else
+                D(eId, eId) = Lambda[eId] * 100.0 / (100.0 - TuneE[i]);
+
+            eId++;
+        }
+    }
+
+    // Reconstruct new W matrix
+    //M = Q * D * Q^-1
+    MtxC WNew = Q * D * QI;
+
+    for (int i = 0; i < HI; ++i)
+        for (int j = 0; j < WI; ++j)
+        {
+            double w = WNew(i, j).real();
+            int iw = std::min(std::max((int)round(w), -127), 127);
+            wP[i * WI + j] = iw;
+        }
+}
+
+
+#if 1
+namespace Stockfish {
+
+auto rangeFunc = [](int m) { return std::pair<int, int>(m - 125, m + 125); };
+TUNE(SetRange(rangeFunc), TuneE, updateW);
+
+UPDATE_ON_LAST();
+
+}
+#endif
