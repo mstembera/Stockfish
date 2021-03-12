@@ -119,28 +119,38 @@ void TranspositionTable::clear() {
 
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
-  TTEntry* const tte = first_entry(key);
+  int eId;
+  TTEntry* const tte = first_entry(key, eId);
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
 
-  for (int i = 0; i < ClusterSize; ++i)
-      if (tte[i].key16 == key16 || !tte[i].depth8)
+  constexpr int searchCnt = 3;
+  constexpr int order[8] = { 0, 1, 2, 3, 4, 5, 0, 1 };
+  for (int i = 0; i < searchCnt; ++i)
+  {
+      int cId = order[i + eId];
+      if (tte[cId].key16 == key16 || !tte[cId].depth8)
       {
-          tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
+          tte[cId].genBound8 = uint8_t(generation8 | (tte[cId].genBound8 & (GENERATION_DELTA - 1))); // Refresh
 
-          return found = (bool)tte[i].depth8, &tte[i];
+          return found = (bool)tte[cId].depth8, &tte[cId];
       }
+  }
 
   // Find an entry to be replaced according to the replacement strategy
-  TTEntry* replace = tte;
-  for (int i = 1; i < ClusterSize; ++i)
+  TTEntry* replace = &tte[order[eId]];
+  for (int i = 1; i < searchCnt; ++i)
+  {
+      int cId = order[i + eId];
+
       // Due to our packed storage format for generation and its cyclic
       // nature we add GENERATION_CYCLE (256 is the modulus, plus what
       // is needed to keep the unrelated lowest n bits from affecting
       // the result) to calculate the entry age correctly even after
       // generation8 overflows into the next cycle.
       if (  replace->depth8 - ((GENERATION_CYCLE + generation8 - replace->genBound8) & GENERATION_MASK)
-          >   tte[i].depth8 - ((GENERATION_CYCLE + generation8 -   tte[i].genBound8) & GENERATION_MASK))
-          replace = &tte[i];
+          > tte[cId].depth8 - ((GENERATION_CYCLE + generation8 - tte[cId].genBound8) & GENERATION_MASK))
+          replace = &tte[cId];
+  }
 
   return found = false, replace;
 }
@@ -151,12 +161,12 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
 int TranspositionTable::hashfull() const {
 
-  int cnt = 0;
-  for (int i = 0; i < 1000; ++i)
-      for (int j = 0; j < ClusterSize; ++j)
+  int cnt = 0, n = 0;
+  for (int i = 0; n < 1000; ++i)
+      for (int j = 0; j < ClusterSize && n < 1000; ++j, ++n)
           cnt += table[i].entry[j].depth8 && (table[i].entry[j].genBound8 & GENERATION_MASK) == generation8;
 
-  return cnt / ClusterSize;
+  return cnt;
 }
 
 } // namespace Stockfish

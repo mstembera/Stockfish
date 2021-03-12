@@ -65,14 +65,14 @@ private:
 
 class TranspositionTable {
 
-  static constexpr int ClusterSize = 3;
+  static constexpr int ClusterSize = 6;
 
   struct Cluster {
     TTEntry entry[ClusterSize];
-    char padding[2]; // Pad to 32 bytes
+    char padding[4]; // Pad to 64 bytes
   };
 
-  static_assert(sizeof(Cluster) == 32, "Unexpected Cluster size");
+  static_assert(sizeof(Cluster) == 64, "Unexpected Cluster size");
 
   // Constants used to refresh the hash table periodically
   static constexpr unsigned GENERATION_BITS  = 3;                                // nb of bits reserved for other things
@@ -90,6 +90,12 @@ public:
 
   TTEntry* first_entry(const Key key) const {
     return &table[mul_hi64(key, clusterCount)].entry[0];
+  }
+
+  TTEntry* first_entry(const Key key, int& eId) const {
+    uint64_t cId = mul_hi64(key, clusterCount);
+    eId = int(mul_hi64(key, clusterCount * ClusterSize) - cId * ClusterSize);
+    return &table[cId].entry[0];
   }
 
 private:
