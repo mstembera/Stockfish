@@ -1041,40 +1041,39 @@ make_v:
   // specifically correct for cornered bishops to fix FRC with NNUE.
   Value fix_FRC(const Position& pos) {
 
-    Value bAdjust = Value(0);
+    constexpr Bitboard Corners =  1ULL << SQ_A1 | 1ULL << SQ_H1 | 1ULL << SQ_A8 | 1ULL << SQ_H8;
+    if (!(pos.pieces(BISHOP) & Corners))
+        return VALUE_ZERO;
+
+    Value bAdjust = VALUE_ZERO;
 
     constexpr Value p1=Value(209), p2=Value(136), p3=Value(148);
+   
+    if (   pos.piece_on(SQ_A1) == W_BISHOP
+        && pos.piece_on(SQ_B2) == W_PAWN)
+        bAdjust -= !pos.empty(SQ_B3)              ? p1
+                  : pos.piece_on(SQ_C3) == W_PAWN ? p2
+                                                  : p3;
 
-    Color Us = pos.side_to_move();
-    if (   (pos.pieces(Us, BISHOP) & relative_square(Us, SQ_A1))
-        && (pos.pieces(Us, PAWN) & relative_square(Us, SQ_B2)))
-    {
-        bAdjust      -= !pos.empty(relative_square(Us,SQ_B3))                            ? p1
-                       : pos.piece_on(relative_square(Us,SQ_C3)) == make_piece(Us, PAWN) ? p2
-                                                                                         : p3;
-    }
-    if (   (pos.pieces(Us, BISHOP) & relative_square(Us, SQ_H1))
-        && (pos.pieces(Us, PAWN) & relative_square(Us, SQ_G2)))
-    {
-        bAdjust      -= !pos.empty(relative_square(Us,SQ_G3))                            ? p1
-                       : pos.piece_on(relative_square(Us,SQ_F3)) == make_piece(Us, PAWN) ? p2
-                                                                                         : p3;
-    }
-    if (   (pos.pieces(~Us, BISHOP) & relative_square(Us, SQ_A8))
-        && (pos.pieces(~Us, PAWN) & relative_square(Us, SQ_B7)))
-    {
-        bAdjust      += !pos.empty(relative_square(Us,SQ_B6))                             ? p1
-                       : pos.piece_on(relative_square(Us,SQ_C6)) == make_piece(~Us, PAWN) ? p2
-                                                                                          : p3;
-    }
-    if (   (pos.pieces(~Us, BISHOP) & relative_square(Us, SQ_H8))
-        && (pos.pieces(~Us, PAWN) & relative_square(Us, SQ_G7)))
-    {
-        bAdjust      += !pos.empty(relative_square(Us,SQ_G6))                             ? p1
-                       : pos.piece_on(relative_square(Us,SQ_F6)) == make_piece(~Us, PAWN) ? p2
-                                                                                          : p3;
-    }
-    return bAdjust;
+    if (   pos.piece_on(SQ_H1) == W_BISHOP
+        && pos.piece_on(SQ_G2) == W_PAWN)
+        bAdjust -= !pos.empty(SQ_G3)              ? p1
+                  : pos.piece_on(SQ_F3) == W_PAWN ? p2
+                                                  : p3;
+
+    if (   pos.piece_on(SQ_A8) == B_BISHOP
+        && pos.piece_on(SQ_B7) == B_PAWN)
+        bAdjust += !pos.empty(SQ_B6)              ? p1
+                  : pos.piece_on(SQ_C6) == B_PAWN ? p2
+                                                  : p3;
+
+    if (   pos.piece_on(SQ_H8) == B_BISHOP
+        && pos.piece_on(SQ_G7) == B_PAWN)
+        bAdjust += !pos.empty(SQ_G6)              ? p1
+                  : pos.piece_on(SQ_F6) == B_PAWN ? p2
+                                                  : p3;
+
+    return pos.side_to_move() == WHITE ? bAdjust : -bAdjust;
   }
 
 } // namespace
