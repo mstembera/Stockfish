@@ -31,17 +31,21 @@ namespace {
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
-  // partial_insertion_sort() sorts moves in descending order up to and including
+  // approximate_inserion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void approximate_inserion_sort(ExtMove* begin, ExtMove* end, int limit, int tolerance) {
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
         {
+            int reducedValue = p->value - tolerance * int(sortedEnd - begin);
             ExtMove tmp = *p, *q;
             *p = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            for (q = sortedEnd; q != begin && (q - 1)->value < reducedValue; --q)
+            {
                 *q = *(q - 1);
+                reducedValue += tolerance;
+            }
             *q = tmp;
         }
   }
@@ -202,7 +206,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          approximate_inserion_sort(cur, endMoves, -3000 * depth, 30 / depth);
       }
 
       ++stage;
