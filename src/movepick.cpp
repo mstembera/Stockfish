@@ -35,12 +35,11 @@ namespace {
   // a given limit. The order of moves smaller than the limit is left unspecified.
   void approximate_inserion_sort(ExtMove* begin, ExtMove* end, int depth) {
 
-    int limit = -3000 * depth;
+    int limit = -3000 * depth, reductionFactor = 512 / depth;
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
         {
-            int tolerance = std::max(1000 - p->value, 0) / (depth * 4);
-            int reducedValue = p->value - tolerance;
+            int reducedValue = p->value - std::max(250 - p->value, 0) * reductionFactor / 1024;
             ExtMove tmp = *p, *q;
             *p = *++sortedEnd;
             for (q = sortedEnd; q != begin && (q - 1)->value < reducedValue; --q)
