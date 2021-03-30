@@ -33,19 +33,18 @@ namespace {
 
   // approximate_inserion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void approximate_inserion_sort(ExtMove* begin, ExtMove* end, int limit, int tolerance) {
+  void approximate_inserion_sort(ExtMove* begin, ExtMove* end, int depth) {
 
+    int limit = -3000 * depth;
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
         {
-            int reducedValue = p->value - tolerance * int(sortedEnd - begin);
+            int tolerance = std::max(1000 - p->value, 0) / (depth * 4);
+            int reducedValue = p->value - tolerance;
             ExtMove tmp = *p, *q;
             *p = *++sortedEnd;
             for (q = sortedEnd; q != begin && (q - 1)->value < reducedValue; --q)
-            {
                 *q = *(q - 1);
-                reducedValue += tolerance;
-            }
             *q = tmp;
         }
   }
@@ -206,7 +205,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          approximate_inserion_sort(cur, endMoves, -3200 * depth, 75 / depth);
+          approximate_inserion_sort(cur, endMoves, depth);
       }
 
       ++stage;
