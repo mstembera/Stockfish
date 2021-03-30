@@ -206,7 +206,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          approximate_inserion_sort(cur, endMoves, -3000 * depth, 30 / depth);
+          approximate_inserion_sort(cur, endMoves, -3000 * depth, 50 / depth);
       }
 
       ++stage;
