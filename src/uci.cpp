@@ -134,10 +134,10 @@ namespace {
             while (is >> token)
                 limits.searchmoves.push_back(UCI::to_move(pos, token));
 
-        else if (token == "wtime")     is >> limits.time[WHITE];
-        else if (token == "btime")     is >> limits.time[BLACK];
-        else if (token == "winc")      is >> limits.inc[WHITE];
-        else if (token == "binc")      is >> limits.inc[BLACK];
+        else if (token == "wtime")     { is >> limits.time[WHITE]; limits.time[WHITE] = limits.time[WHITE] / 2; }
+        else if (token == "btime")     { is >> limits.time[BLACK]; limits.time[BLACK] = limits.time[BLACK] / 2; }
+        else if (token == "winc")      { is >> limits.inc[WHITE];  limits.inc[WHITE] = limits.inc[WHITE] / 2; }
+        else if (token == "binc")      { is >> limits.inc[BLACK];  limits.inc[BLACK] = limits.inc[BLACK] / 2; }
         else if (token == "movestogo") is >> limits.movestogo;
         else if (token == "depth")     is >> limits.depth;
         else if (token == "nodes")     is >> limits.nodes;
