@@ -1088,6 +1088,7 @@ Value Eval::evaluate(const Position& pos) {
       v = Evaluation<NO_TRACE>(pos).value();
   else
   {
+#if 0
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&]()
       {
@@ -1129,6 +1130,9 @@ Value Eval::evaluate(const Position& pos) {
                   && abs(v) * 16 < (NNUEThreshold1 + pos.non_pawn_material() / 64) * r50
                   && !(pos.this_thread()->nodes & 0xB))))
           v = adjusted_NNUE();
+#else
+      v = NNUE::evaluate(pos);
+#endif
   }
 
   // Damp down the evaluation linearly when shuffling
