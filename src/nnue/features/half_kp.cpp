@@ -24,14 +24,34 @@
 
 namespace Stockfish::Eval::NNUE::Features {
 
+    struct IDXTable {
+
+        uint16_t idx[SQUARE_NB][COLOR_NB][PIECE_NB][SQUARE_NB];
+
+        IDXTable()
+        {
+            for (Square ks = SQ_A1; ks < SQUARE_NB; ++ks)
+                for (Color c: { WHITE, BLACK })
+                    for (Piece pc : { W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN,
+                                      B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN })
+                        for (Square s = SQ_A1; s < SQUARE_NB; ++s)
+                            idx[ks][c][pc][s] = HalfKP::generate_index(c, s, pc, ks);
+        }
+
+    } idxTable;
+
   // Orient a square according to perspective (rotates by 180 for black)
   inline Square HalfKP::orient(Color perspective, Square s) {
     return Square(int(s) ^ (bool(perspective) * 63));
   }
 
   // Index of a feature for a given king position and another piece on some square
-  inline IndexType HalfKP::make_index(Color perspective, Square s, Piece pc, Square ksq) {
+  inline IndexType HalfKP::generate_index(Color perspective, Square s, Piece pc, Square ksq) {
     return IndexType(orient(perspective, s) + PieceSquareIndex[perspective][pc] + PS_NB * ksq);
+  }
+
+  inline IndexType HalfKP::make_index(Color perspective, Square s, Piece pc, Square ksq) { 
+    return idxTable.idx[ksq][perspective][pc][s];
   }
 
   // Get a list of indices for active features

@@ -68,6 +68,8 @@ namespace Stockfish::Eval::NNUE::Features {
     static IndexType make_index(Color perspective, Square s, Piece pc, Square ksq);
 
    public:
+    static IndexType generate_index(Color perspective, Square s, Piece pc, Square ksq);
+
     // Feature name
     static constexpr const char* Name = "HalfKP(Friend)";
 
