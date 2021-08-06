@@ -1107,9 +1107,14 @@ Value Eval::evaluate(const Position& pos) {
       int r50 = pos.rule50_count();
       Value psq = Value(abs(eg_value(pos.psq_score())));
       bool classical =   psq * 5 > (850 + pos.non_pawn_material() / 64) * (5 + r50)
-                      || (   pos.count<ROOK>(WHITE) == pos.count<KNIGHT>(BLACK)
-                          && pos.count<ROOK>() == 3
-                          && pos.count<KNIGHT>() == 3);
+                      || (   pos.count<QUEEN>(WHITE) == 1
+                          && pos.count<QUEEN>(BLACK) == 1
+                          && pos.count<BISHOP>(WHITE) == 2
+                          && pos.count<BISHOP>(BLACK) == 2
+                          && (   (   pos.count<ROOK>(WHITE) == 1 && pos.count<KNIGHT>(WHITE) == 2
+                                  && pos.count<ROOK>(BLACK) == 2 && pos.count<KNIGHT>(BLACK) == 1)
+                              || (   pos.count<ROOK>(WHITE) == 2 && pos.count<KNIGHT>(WHITE) == 1
+                                  && pos.count<ROOK>(BLACK) == 1 && pos.count<KNIGHT>(BLACK) == 2)));
 
       v = classical ? Evaluation<NO_TRACE>(pos).value()  // classical
                     : adjusted_NNUE();                   // NNUE
