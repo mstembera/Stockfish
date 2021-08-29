@@ -44,8 +44,8 @@ namespace {
                 *q = *(q - 1);
             *q = tmp;
         }
-        else
-            limit -= 200;
+        else if (p->value > sortedEnd->value && p->value > limit - (p - sortedEnd) * 128)
+            std::swap(*p, *sortedEnd++);
   }
 
 } // namespace
@@ -204,7 +204,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth + 400);
+          partial_insertion_sort(cur, endMoves, -3000 * depth);
       }
 
       ++stage;
