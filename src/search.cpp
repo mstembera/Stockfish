@@ -468,9 +468,13 @@ void Thread::search() {
               totBestMoveChanges += th->bestMoveChanges;
               th->bestMoveChanges = 0;
           }
+
+          PieceType cPt = type_of(rootPos.piece_on(to_sq(rootMoves[0].pv[0])));
+          double captureType =  (cPt == QUEEN) ? 0.6 : (cPt == ROOK) ? 0.75
+                              : (cPt == BISHOP || cPt == KNIGHT) ? 0.8 : (cPt == PAWN) ? 1.0 : 1.1;
           double bestMoveInstability = 1.073 + std::max(1.0, 2.25 - 9.9 / rootDepth)
                                               * totBestMoveChanges / Threads.size();
-          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability;
+          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * captureType;
 
           // Cap used time in case of a single legal move for a better viewer experience in tournaments
           // yielding correct scores and sufficiently fast moves.
