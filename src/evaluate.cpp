@@ -292,7 +292,7 @@ namespace {
     Evaluation() = delete;
     explicit Evaluation(const Position& p) : pos(p) {}
     Evaluation& operator=(const Evaluation&) = delete;
-    Value value();
+    Value value(bool moreLAzy);
 
   private:
     template<Color Us> void initialize();
@@ -965,7 +965,7 @@ namespace {
   // of view of the side to move.
 
   template<Tracing T>
-  Value Evaluation<T>::value() {
+  Value Evaluation<T>::value(bool moreLAzy) {
 
     assert(!pos.checkers());
 
@@ -991,7 +991,7 @@ namespace {
         return abs(mg_value(score) + eg_value(score)) > lazyThreshold + pos.non_pawn_material() / 32;
     };
 
-    if (lazy_skip(LazyThreshold1))
+    if (lazy_skip(LazyThreshold1  * (8 - moreLAzy) / 8))
         goto make_v;
 
     // Main evaluation begins here
@@ -1011,7 +1011,7 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + passed< WHITE>() - passed< BLACK>();
 
-    if (lazy_skip(LazyThreshold2))
+    if (lazy_skip(LazyThreshold2 * (8 - moreLAzy) / 8))
         goto make_v;
 
     score +=  threats<WHITE>() - threats<BLACK>()
@@ -1086,7 +1086,7 @@ Value Eval::evaluate(const Position& pos) {
   Value v;
 
   if (!Eval::useNNUE)
-      v = Evaluation<NO_TRACE>(pos).value();
+      v = Evaluation<NO_TRACE>(pos).value(false);
   else
   {
       // Scale and shift NNUE for compatibility with search and classical evaluation
@@ -1110,7 +1110,7 @@ Value Eval::evaluate(const Position& pos) {
       Value psq = Value(abs(eg_value(pos.psq_score())));
       bool classical = psq * 5 > (850 + pos.non_pawn_material() / 64) * (5 + r50);
 
-      v = classical ? Evaluation<NO_TRACE>(pos).value()  // classical
+      v = classical ? Evaluation<NO_TRACE>(pos).value(true)  // classical
                     : adjusted_NNUE();                   // NNUE
   }
 
@@ -1142,7 +1142,7 @@ std::string Eval::trace(Position& pos) {
 
   pos.this_thread()->trend = SCORE_ZERO; // Reset any dynamic contempt
 
-  v = Evaluation<TRACE>(pos).value();
+  v = Evaluation<TRACE>(pos).value(false);
 
   ss << std::showpoint << std::noshowpos << std::fixed << std::setprecision(2)
      << " Contributing terms for the classical eval:\n"
