@@ -33,7 +33,7 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit, int goodCnt) {
 
     for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
         if (p->value >= limit)
@@ -43,6 +43,9 @@ namespace {
             for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
+
+            if (sortedEnd - begin == goodCnt)
+                break;
         }
   }
 
@@ -96,16 +99,18 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the histories.
 template<GenType Type>
-void MovePicker::score() {
+int MovePicker::score(int limit) {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
+  int goodCnt = 0;
   for (auto& m : *this)
       if constexpr (Type == CAPTURES)
           m.value =  int(PieceValue[MG][pos.piece_on(to_sq(m))]) * 6
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
       else if constexpr (Type == QUIETS)
+      {
           m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
@@ -113,6 +118,8 @@ void MovePicker::score() {
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    + (ply < MAX_LPH ? 6 * (*lowPlyHistory)[ply][from_to(m)] : 0);
 
+          goodCnt += m.value >= limit;
+      }
       else // Type == EVASIONS
       {
           if (pos.capture(m))
@@ -123,6 +130,8 @@ void MovePicker::score() {
                        + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                        - (1 << 28);
       }
+
+  return goodCnt;
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -201,8 +210,8 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3200 * depth);
+          int goodCnt = score<QUIETS>(-3000 * depth);
+          partial_insertion_sort(cur, endMoves, -3000 * depth, goodCnt);
       }
 
       ++stage;
