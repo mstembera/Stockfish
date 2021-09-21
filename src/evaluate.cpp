@@ -1078,6 +1078,34 @@ make_v:
 } // namespace Eval
 
 
+Value eval_cr(const Position& pos)
+{
+    if (pos.non_pawn_material() < 10000)
+        return VALUE_ZERO;
+ 
+    // Adjust for castling rights
+    constexpr int penalty[2][2] = { {0, 25}, {60, 100} };
+    Value v = VALUE_ZERO;
+ 
+    if (pos.piece_on(SQ_E1) == W_KING)
+    {
+        v += (pos.piece_on(SQ_H1) == W_ROOK) * 8 + (pos.piece_on(SQ_A1) == W_ROOK) * 4;
+        v -= penalty[pos.piece_on(SQ_H1) == W_ROOK && !pos.can_castle(WHITE_OO)]
+                    [pos.piece_on(SQ_A1) == W_ROOK && !pos.can_castle(WHITE_OOO)];
+    }
+ 
+    if (pos.piece_on(SQ_E8) == B_KING)
+    {
+        v -= (pos.piece_on(SQ_H8) == B_ROOK) * 8 + (pos.piece_on(SQ_A8) == B_ROOK) * 4;
+        v += penalty[pos.piece_on(SQ_H8) == B_ROOK && !pos.can_castle(BLACK_OO)]
+                    [pos.piece_on(SQ_A8) == B_ROOK && !pos.can_castle(BLACK_OOO)];
+    }
+ 
+    v = v * int(pos.non_pawn_material() - 10000) / 8192;
+
+    return pos.side_to_move() == WHITE ? v : -v;
+}
+
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
@@ -1097,6 +1125,8 @@ Value Eval::evaluate(const Position& pos) {
                      + 32 * pos.non_pawn_material() / 1024;
 
          Value nnue = NNUE::evaluate(pos, true) * scale / 1024;
+
+         nnue += eval_cr(pos);
 
          if (pos.is_chess960())
              nnue += fix_FRC(pos);
