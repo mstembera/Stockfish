@@ -37,6 +37,7 @@ struct Entry {
   Bitboard pawn_attacks_span(Color c) const { return pawnAttacksSpan[c]; }
   int passed_count() const { return popcount(passedPawns[WHITE] | passedPawns[BLACK]); }
   int blocked_count() const { return blockedCount; }
+  Value shelter_bonus(Color c, CastlingRights cr) const { return cr & KING_SIDE ? shelterBonus[c][0] : shelterBonus[c][1]; }
 
   template<Color Us>
   Score king_safety(const Position& pos) {
@@ -59,6 +60,7 @@ struct Entry {
   Score kingSafety[COLOR_NB];
   int castlingRights[COLOR_NB];
   int blockedCount;
+  Value shelterBonus[COLOR_NB][2];
 };
 
 typedef HashTable<Entry, 131072> Table;

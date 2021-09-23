@@ -1078,6 +1078,50 @@ make_v:
 } // namespace Eval
 
 
+Value eval_cr(const Position& pos)
+{
+    constexpr Bitboard Corners = 1ULL << SQ_A1 | 1ULL << SQ_H1 | 1ULL << SQ_A8 | 1ULL << SQ_H8;
+    if (   !(pos.pieces(KING) & (1ULL << SQ_E1 | 1ULL << SQ_E8))
+        || !(pos.pieces(ROOK) & Corners)
+        || pos.castling_rights() == ANY_CASTLING)
+        return VALUE_ZERO;
+
+    Value v = VALUE_ZERO;
+    const Pawns::Entry* pe = Pawns::probe(pos);
+
+    if (pos.piece_on(SQ_E1) == W_KING)
+    {
+        Value penalty = VALUE_ZERO;
+
+        if (   pos.piece_on(SQ_H1) == W_ROOK
+            && !pos.can_castle(WHITE_OO))
+            penalty = pe->shelter_bonus(WHITE, KING_SIDE);
+
+        if (   pos.piece_on(SQ_A1) == W_ROOK
+            && !pos.can_castle(WHITE_OOO))
+            penalty = std::max(penalty, pe->shelter_bonus(WHITE, QUEEN_SIDE));
+
+        v -= penalty;
+    }
+
+    if (pos.piece_on(SQ_E8) == B_KING)
+    {
+        Value penalty = VALUE_ZERO;
+
+        if (   pos.piece_on(SQ_H8) == B_ROOK
+            && !pos.can_castle(BLACK_OO))
+            penalty = pe->shelter_bonus(BLACK, KING_SIDE);
+
+        if (   pos.piece_on(SQ_A8) == B_ROOK
+            && !pos.can_castle(BLACK_OOO))
+            penalty = std::max(penalty, pe->shelter_bonus(BLACK, QUEEN_SIDE));
+
+        v += penalty;
+    }
+
+    return pos.side_to_move() == WHITE ? v : -v;
+}
+
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
@@ -1097,6 +1141,8 @@ Value Eval::evaluate(const Position& pos) {
                      + 32 * pos.non_pawn_material() / 1024;
 
          Value nnue = NNUE::evaluate(pos, true) * scale / 1024;
+
+         nnue += eval_cr(pos);
 
          if (pos.is_chess960())
              nnue += fix_FRC(pos);

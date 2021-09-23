@@ -272,17 +272,23 @@ Score Entry::do_king_safety(const Position& pos) {
   Square ksq = pos.square<KING>(Us);
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.castling_rights(Us);
+  shelterBonus[Us][0] = shelterBonus[Us][1] = VALUE_ZERO;
   auto compare = [](Score a, Score b) { return mg_value(a) < mg_value(b); };
 
   Score shelter = evaluate_shelter<Us>(pos, ksq);
+  Value baseShelter = mg_value(shelter);
 
   // If we can castle use the bonus after castling if it is bigger
 
+  Score shelterKS = evaluate_shelter<Us>(pos, relative_square(Us, SQ_G1));
+  shelterBonus[Us][0] = std::max(mg_value(shelterKS) - baseShelter, VALUE_ZERO);
   if (pos.can_castle(Us & KING_SIDE))
-      shelter = std::max(shelter, evaluate_shelter<Us>(pos, relative_square(Us, SQ_G1)), compare);
+      shelter = std::max(shelter, shelterKS, compare);
 
+  Score shelterQS = evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1));
+  shelterBonus[Us][1] = std::max(mg_value(shelterQS) - baseShelter, VALUE_ZERO);
   if (pos.can_castle(Us & QUEEN_SIDE))
-      shelter = std::max(shelter, evaluate_shelter<Us>(pos, relative_square(Us, SQ_C1)), compare);
+      shelter = std::max(shelter, shelterQS, compare);
 
   // In endgame we like to bring our king near our closest pawn
   Bitboard pawns = pos.pieces(Us, PAWN);
