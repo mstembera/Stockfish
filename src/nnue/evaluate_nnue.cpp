@@ -162,6 +162,10 @@ namespace Stockfish::Eval::NNUE {
 
     const std::size_t bucket = (pos.count<ALL_PIECES>() - 1) / 4;
     const auto psqt = featureTransformer->transform(pos, transformedFeatures, bucket);
+
+    if (abs(psqt) > 800 * OutputScale)
+        return static_cast<Value>(psqt / OutputScale);
+
     const auto output = network[bucket]->propagate(transformedFeatures, buffer);
 
     int materialist = psqt;
