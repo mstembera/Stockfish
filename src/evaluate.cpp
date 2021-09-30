@@ -1087,10 +1087,12 @@ Value eval_cr(const Position& pos)
         return VALUE_ZERO;
 
     Value v = VALUE_ZERO;
-    const Pawns::Entry* pe = Pawns::probe(pos);
+    Pawns::Entry* pe = Pawns::probe(pos);
 
     if (pos.piece_on(SQ_E1) == W_KING)
     {
+        pe->king_safety<WHITE>(pos);
+
         Value bonus = VALUE_ZERO;
 
         if (   pos.piece_on(SQ_H1) == W_ROOK
@@ -1113,6 +1115,8 @@ Value eval_cr(const Position& pos)
 
     if (pos.piece_on(SQ_E8) == B_KING)
     {
+        pe->king_safety<BLACK>(pos);
+
         Value bonus = VALUE_ZERO;
 
         if (   pos.piece_on(SQ_H8) == B_ROOK
