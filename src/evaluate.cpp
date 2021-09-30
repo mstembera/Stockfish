@@ -1083,7 +1083,7 @@ Value eval_cr(const Position& pos)
     constexpr Bitboard Corners = 1ULL << SQ_A1 | 1ULL << SQ_H1 | 1ULL << SQ_A8 | 1ULL << SQ_H8;
     if (   !(pos.pieces(KING) & (1ULL << SQ_E1 | 1ULL << SQ_E8))
         || !(pos.pieces(ROOK) & Corners)
-        || pos.castling_rights() == ANY_CASTLING)
+        || pos.non_pawn_material() <= 12000)
         return VALUE_ZERO;
 
     Value v = VALUE_ZERO;
@@ -1091,33 +1091,49 @@ Value eval_cr(const Position& pos)
 
     if (pos.piece_on(SQ_E1) == W_KING)
     {
-        Value penalty = VALUE_ZERO;
+        Value bonus = VALUE_ZERO;
 
         if (   pos.piece_on(SQ_H1) == W_ROOK
-            && !pos.can_castle(WHITE_OO))
-            penalty = pe->shelter_bonus(WHITE, KING_SIDE);
+            && (   pos.piece_on(SQ_A1) != W_ROOK
+                || pe->shelter_bonus(WHITE, KING_SIDE) >= pe->shelter_bonus(WHITE, QUEEN_SIDE)))
+        {
+            bonus = pos.can_castle(WHITE_OO)
+                   ? pe->shelter_bonus(WHITE, KING_SIDE) / 8
+                   : -pe->shelter_bonus(WHITE, KING_SIDE);
+        }
+        else if (pos.piece_on(SQ_A1) == W_ROOK)
+        {
+            bonus = pos.can_castle(WHITE_OOO)
+                   ? pe->shelter_bonus(WHITE, QUEEN_SIDE) / 8
+                   : -pe->shelter_bonus(WHITE, QUEEN_SIDE);
+        }
 
-        if (   pos.piece_on(SQ_A1) == W_ROOK
-            && !pos.can_castle(WHITE_OOO))
-            penalty = std::max(penalty, pe->shelter_bonus(WHITE, QUEEN_SIDE));
-
-        v -= penalty;
+        v += bonus;
     }
 
     if (pos.piece_on(SQ_E8) == B_KING)
     {
-        Value penalty = VALUE_ZERO;
+        Value bonus = VALUE_ZERO;
 
         if (   pos.piece_on(SQ_H8) == B_ROOK
-            && !pos.can_castle(BLACK_OO))
-            penalty = pe->shelter_bonus(BLACK, KING_SIDE);
+            && (   pos.piece_on(SQ_A8) != B_ROOK
+                || pe->shelter_bonus(BLACK, KING_SIDE) >= pe->shelter_bonus(BLACK, QUEEN_SIDE)))
+        {
+            bonus = pos.can_castle(BLACK_OO)
+                   ? pe->shelter_bonus(BLACK, KING_SIDE) / 8
+                   : -pe->shelter_bonus(BLACK, KING_SIDE);
+        }
+        else if (pos.piece_on(SQ_A8) == B_ROOK)
+        {
+            bonus = pos.can_castle(BLACK_OOO)
+                   ? pe->shelter_bonus(BLACK, QUEEN_SIDE) / 8
+                   : -pe->shelter_bonus(BLACK, QUEEN_SIDE);
+        }
 
-        if (   pos.piece_on(SQ_A8) == B_ROOK
-            && !pos.can_castle(BLACK_OOO))
-            penalty = std::max(penalty, pe->shelter_bonus(BLACK, QUEEN_SIDE));
-
-        v += penalty;
+        v -= bonus;
     }
+
+    v = v * int(pos.non_pawn_material() - 12000) / 4096;
 
     return pos.side_to_move() == WHITE ? v : -v;
 }

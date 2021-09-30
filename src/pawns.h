@@ -37,7 +37,7 @@ struct Entry {
   Bitboard pawn_attacks_span(Color c) const { return pawnAttacksSpan[c]; }
   int passed_count() const { return popcount(passedPawns[WHITE] | passedPawns[BLACK]); }
   int blocked_count() const { return blockedCount; }
-  Value shelter_bonus(Color c, CastlingRights cr) const { return cr & KING_SIDE ? shelterBonus[c][0] : shelterBonus[c][1]; }
+  Value shelter_bonus(Color c, CastlingRights cr) const { return shelterBonus[c][bool(cr & QUEEN_SIDE)]; }
 
   template<Color Us>
   Score king_safety(const Position& pos) {

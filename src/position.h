@@ -106,7 +106,6 @@ public:
 
   // Castling
   CastlingRights castling_rights(Color c) const;
-  CastlingRights castling_rights() const;
   bool can_castle(CastlingRights cr) const;
   bool castling_impeded(CastlingRights cr) const;
   Square castling_rook_square(CastlingRights cr) const;
@@ -264,10 +263,6 @@ inline bool Position::is_on_semiopen_file(Color c, Square s) const {
 
 inline bool Position::can_castle(CastlingRights cr) const {
   return st->castlingRights & cr;
-}
-
-inline CastlingRights Position::castling_rights() const {
-  return CastlingRights(st->castlingRights);
 }
 
 inline CastlingRights Position::castling_rights(Color c) const {
