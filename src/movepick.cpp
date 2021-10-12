@@ -111,7 +111,8 @@ void MovePicker::score() {
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   + (ply < MAX_LPH ? 6 * (*lowPlyHistory)[ply][from_to(m)] : 0);
+                   + (ply < MAX_LPH ? 6 * (*lowPlyHistory)[ply][from_to(m)] : 0)
+                   + (edge_distance(file_of(to_sq(m))) > edge_distance(file_of(from_sq(m))));
 
       else // Type == EVASIONS
       {
