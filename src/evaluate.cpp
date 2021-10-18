@@ -1090,7 +1090,7 @@ Value Eval::evaluate(const Position& pos) {
               pos.state()->previous && pos.state()->previous->accumulator.computed[BLACK]);
 
   if (  !useNNUE
-      || abs(eg_value(pos.psq_score())) * 5 > (820 + 32 * acc + pos.non_pawn_material() / 64) * (5 + pos.rule50_count()))
+      || abs(eg_value(pos.psq_score())) * 5 > (830 + pos.non_pawn_material() / 64) * (5 + pos.rule50_count()) + 128 * acc)
       v = Evaluation<NO_TRACE>(pos).value();          // classical
   else
   {
