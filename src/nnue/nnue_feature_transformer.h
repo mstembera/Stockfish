@@ -414,20 +414,23 @@ namespace Stockfish::Eval::NNUE {
         // Gather all features to be updated.
         const Square ksq = pos.square<KING>(perspective); 
         IndexList removed[stN], added[stN];
-        
-        constexpr int maxUpdateCnt = 3;
-        for(int i = 0; i <= std::min(stID, maxUpdateCnt - 1); ++i)
+        constexpr int maxUpdateCnt = 2;
+        int mergeCnt = std::max(1, stID - (maxUpdateCnt - 2));
+
+        for (int i = 0; i < mergeCnt; ++i)
+            FeatureSet::append_changed_indices(
+                ksq, stl[i], perspective, removed[0], added[0]);
+        stl[0]->accumulator.computed[perspective] = true;
+
+        int shift = mergeCnt - 1;
+        for (int i = mergeCnt; i <= stID; ++i)
         {
             FeatureSet::append_changed_indices(
-              ksq, stl[i], perspective, removed[i], added[i]);
+                ksq, stl[i], perspective, removed[i - shift], added[i - shift]);
 
             stl[i]->accumulator.computed[perspective] = true;
+            stl[i - shift] = stl[i];
         }
-
-        for (int i = maxUpdateCnt; i <= stID; ++i)
-            FeatureSet::append_changed_indices(
-                ksq, stl[i], perspective, removed[maxUpdateCnt - 1], added[maxUpdateCnt - 1]);
-            
         stID = std::min(stID, maxUpdateCnt - 1);
 
         // Now update the accumulators
