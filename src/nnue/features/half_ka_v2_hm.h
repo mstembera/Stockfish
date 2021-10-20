@@ -79,16 +79,18 @@ namespace Stockfish::Eval::NNUE::Features {
     static constexpr IndexType Dimensions =
         static_cast<IndexType>(SQUARE_NB) * static_cast<IndexType>(PS_NB) / 2;
 
+#define P(v) (v * PS_NB)
     static constexpr int KingBuckets[64] = {
-      -1, -1, -1, -1, 31, 30, 29, 28,
-      -1, -1, -1, -1, 27, 26, 25, 24,
-      -1, -1, -1, -1, 23, 22, 21, 20,
-      -1, -1, -1, -1, 19, 18, 17, 16,
-      -1, -1, -1, -1, 15, 14, 13, 12,
-      -1, -1, -1, -1, 11, 10, 9, 8,
-      -1, -1, -1, -1, 7, 6, 5, 4,
-      -1, -1, -1, -1, 3, 2, 1, 0
+      -1, -1, -1, -1, P(31), P(30), P(29), P(28),
+      -1, -1, -1, -1, P(27), P(26), P(25), P(24),
+      -1, -1, -1, -1, P(23), P(22), P(21), P(20),
+      -1, -1, -1, -1, P(19), P(18), P(17), P(16),
+      -1, -1, -1, -1, P(15), P(14), P(13), P(12),
+      -1, -1, -1, -1, P(11), P(10), P( 9), P( 8),
+      -1, -1, -1, -1, P( 7), P( 6), P( 5), P( 4),
+      -1, -1, -1, -1, P( 3), P( 2), P( 1), P( 0)
     };
+#undef P
 
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
