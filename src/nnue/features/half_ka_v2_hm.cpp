@@ -62,11 +62,11 @@ namespace Stockfish::Eval::NNUE::Features {
   ) {
     const auto& dp = st->dirtyPiece;
     for (int i = 0; i < dp.dirty_num; ++i) {
-      Piece pc = dp.piece[i];
-      if (dp.from[i] != SQ_NONE)
-        removed.push_back(make_index(perspective, dp.from[i], pc, ksq));
-      if (dp.to[i] != SQ_NONE)
-        added.push_back(make_index(perspective, dp.to[i], pc, ksq));
+      Piece pc = dp.pieces[i].pc;
+      if (dp.pieces[i].from != SQ_NONE)
+        removed.push_back(make_index(perspective, dp.pieces[i].from, pc, ksq));
+      if (dp.pieces[i].to != SQ_NONE)
+        added.push_back(make_index(perspective, dp.pieces[i].to, pc, ksq));
     }
   }
 
@@ -79,7 +79,7 @@ namespace Stockfish::Eval::NNUE::Features {
   }
 
   bool HalfKAv2_hm::requires_refresh(StateInfo* st, Color perspective) {
-    return st->dirtyPiece.piece[0] == make_piece(perspective, KING);
+    return st->dirtyPiece.pieces[0].pc == make_piece(perspective, KING);
   }
 
 }  // namespace Stockfish::Eval::NNUE::Features
