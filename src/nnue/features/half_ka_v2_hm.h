@@ -80,7 +80,7 @@ namespace Stockfish::Eval::NNUE::Features {
         static_cast<IndexType>(SQUARE_NB) * static_cast<IndexType>(PS_NB) / 2;
 
 #define P(v) (v * PS_NB)
-    static constexpr int KingBuckets[COLOR_NB][64] = {
+    static constexpr int KingBuckets[COLOR_NB][SQUARE_NB] = {
       { P(28), P(29), P(30), P(31), P(31), P(30), P(29), P(28),
         P(24), P(25), P(26), P(27), P(27), P(26), P(25), P(24),
         P(20), P(21), P(22), P(23), P(23), P(22), P(21), P(20),
@@ -99,6 +99,26 @@ namespace Stockfish::Eval::NNUE::Features {
         P(28), P(29), P(30), P(31), P(31), P(30), P(29), P(28) }
     };
 #undef P
+
+    // Orient a square according to perspective (rotates by 180 for black)
+    static constexpr int OrientTBL[COLOR_NB][SQUARE_NB] = {
+      { SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1 },
+      { SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8 }
+    };
 
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
