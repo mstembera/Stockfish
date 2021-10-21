@@ -31,8 +31,7 @@ namespace Stockfish::Eval::NNUE::Features {
 
   // Index of a feature for a given king position and another piece on some square
   inline IndexType HalfKAv2_hm::make_index(Color perspective, Square s, Piece pc, Square ksq) {
-    Square o_ksq = orient(perspective, ksq, ksq);
-    return IndexType(orient(perspective, s, ksq) + PieceSquareIndex[perspective][pc] + KingBuckets[o_ksq]);
+    return IndexType(orient(perspective, s, ksq) + PieceSquareIndex[perspective][pc] + KingBuckets[perspective][ksq]);
   }
 
   // Get a list of indices for active features
