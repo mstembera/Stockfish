@@ -1087,25 +1087,25 @@ Value eval_cr(const Position& pos)
     if (pos.piece_on(SQ_E1) == W_KING)
     {
         if (   pos.piece_on(SQ_H1) == W_ROOK
-            && !(pos.pieces() & (1ULL << SQ_F1 | 1ULL << SQ_G1)))
-            v += pos.can_castle(WHITE_OO) ? 5 : -25;
+            && !pos.can_castle(WHITE_OO))
+            v -= 20 - 6 * popcount(pos.pieces() & (1ULL << SQ_F1 | 1ULL << SQ_G1));
 
         if (   pos.piece_on(SQ_A1) == W_ROOK
-            && !(pos.pieces() & (1ULL << SQ_B1 | 1ULL << SQ_C1 | 1ULL << SQ_D1)))
-            v += pos.can_castle(WHITE_OOO) ? 2 : -10;
+            && !pos.can_castle(WHITE_OOO))
+            v -= 10 - 2 * popcount(pos.pieces() & (1ULL << SQ_B1 | 1ULL << SQ_C1 | 1ULL << SQ_D1));
     }
  
     if (pos.piece_on(SQ_E8) == B_KING)
     {
         if (   pos.piece_on(SQ_H8) == B_ROOK
-            && !(pos.pieces() & (1ULL << SQ_F8 | 1ULL << SQ_G8)))
-            v -= pos.can_castle(BLACK_OO) ? 5 : -25;
+            && !pos.can_castle(BLACK_OO))
+            v += 20 - 6 * popcount(pos.pieces() & (1ULL << SQ_F8 | 1ULL << SQ_G8));
 
         if (   pos.piece_on(SQ_A8) == B_ROOK
-            && !(pos.pieces() & (1ULL << SQ_B8 | 1ULL << SQ_C8 | 1ULL << SQ_D8)))
-            v -= pos.can_castle(BLACK_OOO) ? 2 : -10;
+            && !pos.can_castle(BLACK_OOO))
+            v += 10 - 2 * popcount(pos.pieces() & (1ULL << SQ_B8 | 1ULL << SQ_C8 | 1ULL << SQ_D8));
     }
- 
+
     v = v * int(pos.non_pawn_material() - 10000) / 8192;
 
     return pos.side_to_move() == WHITE ? v : -v;
