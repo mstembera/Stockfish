@@ -1092,7 +1092,7 @@ Value Eval::evaluate(const Position& pos) {
   else
   {
       int scale =   898
-                  + 24 * std::min(pos.count<PAWN>(), 12)
+                  + 27 * std::min(pos.count<PAWN>(), 12)
                   + 33 * pos.non_pawn_material() / 1024;
 
        v = NNUE::evaluate(pos, true) * scale / 1024;  // NNUE
