@@ -309,6 +309,9 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
 
   assert((Pt != PAWN) && (is_ok(s)));
 
+  if (!occupied)
+      return PseudoAttacks[Pt][s];
+
   switch (Pt)
   {
   case BISHOP: return BishopMagics[s].attacks[BishopMagics[s].index(occupied)];
@@ -321,6 +324,9 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
 inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
 
   assert((pt != PAWN) && (is_ok(s)));
+
+  if (!occupied)
+      return PseudoAttacks[pt][s];
 
   switch (pt)
   {
