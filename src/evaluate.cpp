@@ -1091,9 +1091,22 @@ Value Eval::evaluate(const Position& pos) {
       v = Evaluation<NO_TRACE>(pos).value();          // classical
   else
   {
-       int scale =   898
+       int scale =   885
                    + 24 * pos.count<PAWN>()
                    + 33 * pos.non_pawn_material() / 1024;
+
+       Bitboard wP = pos.pieces(WHITE, PAWN), bP = pos.pieces(BLACK, PAWN);
+
+       int pAsym = (  (bool(wP & FileABB) != bool(bP & FileABB))
+                    + (bool(wP & FileBBB) != bool(bP & FileBBB))
+                    + (bool(wP & FileCBB) != bool(bP & FileCBB))
+                    + (bool(wP & FileDBB) != bool(bP & FileDBB))
+                    + (bool(wP & FileEBB) != bool(bP & FileEBB))
+                    + (bool(wP & FileFBB) != bool(bP & FileFBB))
+                    + (bool(wP & FileGBB) != bool(bP & FileGBB))
+                    + (bool(wP & FileHBB) != bool(bP & FileHBB)));
+
+       scale += pAsym * 12;
 
        Value nnue     = NNUE::evaluate(pos, true);     // NNUE
        Color stm      = pos.side_to_move();
