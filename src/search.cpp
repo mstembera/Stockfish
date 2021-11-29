@@ -1060,10 +1060,10 @@ moves_loop: // When in check, search starts here
 
               // Continuation history based pruning (~20 Elo)
               if (   lmrDepth < 5
-                  && history < -3000 * depth + 3000)
+                  && history < -2858 * depth + 1996)
                   continue;
 
-              history += thisThread->mainHistory[us][from_to(move)];                  
+              history += thisThread->mainHistory[us][from_to(move)];
 
               // Futility pruning: parent node (~5 Elo)
               if (   !ss->inCheck
@@ -1072,7 +1072,7 @@ moves_loop: // When in check, search starts here
                   continue;
 
               // Prune moves with negative SEE (~20 Elo)
-              if (!pos.see_ge(move, Value(-21 * lmrDepth * lmrDepth - 21 * lmrDepth)))
+              if (!pos.see_ge(move, Value(-19 * lmrDepth * lmrDepth - 19 * lmrDepth)))
                   continue;
           }
       }
