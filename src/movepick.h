@@ -156,6 +156,7 @@ private:
   Depth depth;
   int ply;
   ExtMove moves[MAX_MOVES];
+  bool isSorted;
 };
 
 } // namespace Stockfish

@@ -132,8 +132,21 @@ Move MovePicker::select(Pred filter) {
 
   while (cur < endMoves)
   {
-      if (T == Best)
-          std::swap(*cur, *std::max_element(cur, endMoves));
+      if (T == Best && !isSorted)
+      {
+          isSorted = true;
+          ExtMove* bestM = cur;
+          for (ExtMove* m = cur + 1; m != endMoves; ++m)
+          {
+              if (*(m - 1) < *m)
+              {
+                  isSorted = endMoves - cur < 3;
+                  if (*bestM < *m)
+                      bestM = m;
+              }
+          }
+          std::swap(*cur, *bestM);
+      }
 
       if (*cur != ttMove && filter())
           return *cur++;
@@ -165,6 +178,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
+      isSorted = false;
       ++stage;
       goto top;
 
@@ -230,6 +244,7 @@ top:
       endMoves = generate<EVASIONS>(pos, cur);
 
       score<EVASIONS>();
+      isSorted = false;
       ++stage;
       [[fallthrough]];
 
