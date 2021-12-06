@@ -100,11 +100,18 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
+  isSorted = true;
+  int previousValue = INT_MAX;
+
   for (auto& m : *this)
       if constexpr (Type == CAPTURES)
+      {
           m.value =  int(PieceValue[MG][pos.piece_on(to_sq(m))]) * 6
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
+          isSorted = isSorted && previousValue >= m.value;
+          previousValue = m.value;
+      }
       else if constexpr (Type == QUIETS)
           m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
@@ -122,6 +129,9 @@ void MovePicker::score() {
               m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
                        + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                        - (1 << 28);
+          
+          isSorted = isSorted && previousValue >= m.value;
+          previousValue = m.value;
       }
 }
 
@@ -133,20 +143,7 @@ Move MovePicker::select(Pred filter) {
   while (cur < endMoves)
   {
       if (T == Best && !isSorted)
-      {
-          isSorted = true;
-          ExtMove* bestM = cur;
-          for (ExtMove* m = cur + 1; m != endMoves; ++m)
-          {
-              if (*(m - 1) < *m)
-              {
-                  isSorted = endMoves - cur < 3;
-                  if (*bestM < *m)
-                      bestM = m;
-              }
-          }
-          std::swap(*cur, *bestM);
-      }
+          std::swap(*cur, *std::max_element(cur, endMoves));
 
       if (*cur != ttMove && filter())
           return *cur++;
@@ -178,7 +175,6 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      isSorted = false;
       ++stage;
       goto top;
 
@@ -244,7 +240,6 @@ top:
       endMoves = generate<EVASIONS>(pos, cur);
 
       score<EVASIONS>();
-      isSorted = false;
       ++stage;
       [[fallthrough]];
 
