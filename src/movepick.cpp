@@ -17,7 +17,7 @@
 */
 
 #include <cassert>
-
+#include <climits>
 #include "movepick.h"
 
 namespace Stockfish {
