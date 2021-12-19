@@ -49,22 +49,24 @@ void TTEntry::save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev) 
   }
   else
   {
-      // Preserve any existing move for the same position
+      // Overwrite less valuable entries
+      if (   v != VALUE_NONE   
+          && (   d - DEPTH_OFFSET + 2 * pv > depth8 - 4
+              || b == BOUND_EXACT))
+      {
+          depth8    = (uint8_t)(d - DEPTH_OFFSET);
+          genBound8 = (uint8_t)(TT.generation8 | b);
+          value16   = (int16_t)v;
+      }
+
+      // Preserve some existing values for the same position
+      genBound8 |= uint8_t(pv) << 2;
+      
       if (m)
           move16 = (uint16_t)m;
 
-      // Overwrite less valuable entries
-      if (   d - DEPTH_OFFSET + 2 * pv > depth8 - 4
-          || b == BOUND_EXACT)
-      {
-          depth8    = (uint8_t)(d - DEPTH_OFFSET);
-          genBound8 = (uint8_t)(TT.generation8 | uint8_t(pv) << 2 | b);
-          if (v != VALUE_NONE)
-              value16 = (int16_t)v;
-          
-          if (ev != VALUE_NONE)
-              eval16 = (int16_t)ev;
-      }
+      if (ev != VALUE_NONE)
+          eval16 = (int16_t)ev;
   }
 }
 
@@ -114,8 +116,8 @@ void TranspositionTable::clear() {
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;
 
-          auto c_init = [](Cluster& c) { std::for_each_n(c.entry, ClusterSize, [](TTEntry& e) { e.init(); }); };
-          std::for_each_n(&table[start], len, c_init);
+          auto c_init = [](Cluster& c) { std::for_each(c.entry, c.entry + ClusterSize, [](TTEntry& e) { e.init(); }); };
+          std::for_each(&table[start], &table[start] + len, c_init);
       });
   }
 
