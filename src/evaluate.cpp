@@ -1101,7 +1101,7 @@ Value Eval::evaluate(const Position& pos) {
        Color stm      = pos.side_to_move();
        Value optimism = pos.this_thread()->optimism[stm];
        Value psq      = (stm == WHITE ? 1 : -1) * eg_value(pos.psq_score());
-       int complexity = abs(nnue - psq) / 256;
+       int complexity = abs(nnue - psq) * 4 / (1000 + abs(nnue));
 
        optimism *= (1 + complexity);
        v = (nnue + optimism) * scale / 1024 - optimism;
