@@ -107,9 +107,14 @@ void MovePicker::score() {
 
   for (auto& m : *this)
       if constexpr (Type == CAPTURES)
+      {
           m.value =  int(PieceValue[MG][pos.piece_on(to_sq(m))]) * 6
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
+          if (!pos.see_ge(m.move, Value(-69 * m.value / 1024)))
+              m.value -= 2000000;
+
+      }
       else if constexpr (Type == QUIETS)
           m.value =      (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
@@ -134,9 +139,10 @@ void MovePicker::score() {
 template<MovePicker::PickType T, typename Pred>
 Move MovePicker::select(Pred filter) {
 
+  stopBest = false;
   while (cur < endMoves)
   {
-      if (T == Best)
+      if (T == Best && !stopBest)
           std::swap(*cur, *std::max_element(cur, endMoves));
 
       if (*cur != ttMove && filter())
@@ -174,9 +180,9 @@ top:
 
   case GOOD_CAPTURE:
       if (select<Best>([&](){
-                       return cur->value > -5000 && (cur->value > 16000 || pos.see_ge(*cur, Value(-69 * cur->value / 1024))) ?
+                       return cur->value > -1000000 ?
                               // Move losing capture to endBadCaptures to be tried later
-                              true : (*endBadCaptures++ = *cur, false); }))
+                              true : (*endBadCaptures++ = *cur, stopBest = true, false); }))
           return *(cur - 1);
 
       // Prepare the pointers to loop over the refutations array
