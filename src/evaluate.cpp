@@ -1091,7 +1091,7 @@ Value Eval::evaluate(const Position& pos) {
   {
       v = Evaluation<NO_TRACE>(pos).value();          // classical
       Value psq = (pos.side_to_move() == WHITE ? 1 : -1) * eg_value(pos.psq_score());
-      useClassical = abs(v) >= 300 && abs(v - psq) < 100;
+      useClassical = abs(v) >= 300 && abs(v - psq) < 200;
   }
 
   // If result of a classical evaluation is much lower than threshold fall back to NNUE
