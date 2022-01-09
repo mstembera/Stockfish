@@ -1055,19 +1055,19 @@ make_v:
 
     if (   pos.piece_on(SQ_A1) == W_BISHOP
         && pos.piece_on(SQ_B2) == W_PAWN)
-        correction -= CorneredBishop * (3 + !pos.empty(SQ_B3));
+        correction -= CorneredBishop * (3 - pos.empty(SQ_B3));
 
     if (   pos.piece_on(SQ_H1) == W_BISHOP
         && pos.piece_on(SQ_G2) == W_PAWN)
-        correction -= CorneredBishop * (3 + !pos.empty(SQ_G3));
+        correction -= CorneredBishop * (3 - pos.empty(SQ_G3));
 
     if (   pos.piece_on(SQ_A8) == B_BISHOP
         && pos.piece_on(SQ_B7) == B_PAWN)
-        correction += CorneredBishop * (3 + !pos.empty(SQ_B6));
+        correction += CorneredBishop * (3 - pos.empty(SQ_B6));
 
     if (   pos.piece_on(SQ_H8) == B_BISHOP
         && pos.piece_on(SQ_G7) == B_PAWN)
-        correction += CorneredBishop * (3 + !pos.empty(SQ_G6));
+        correction += CorneredBishop * (3 - pos.empty(SQ_G6));
 
     return pos.side_to_move() == WHITE ?  Value(correction)
                                        : -Value(correction);
