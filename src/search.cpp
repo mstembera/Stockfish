@@ -311,8 +311,8 @@ void Thread::search() {
 
   int searchAgainCounter = 0;
 
-  Move bestMoveD9 = MOVE_NONE;
-  Value secondScoreD9 = VALUE_NONE;
+  Move bestMoveD5 = MOVE_NONE;
+  Value secondScoreD5 = VALUE_NONE;
   const size_t multiPVBackup = multiPV;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
@@ -352,15 +352,15 @@ void Thread::search() {
           // Get a low depth estimate for the score of the 2nd best move
           if (Limits.use_time_management() && mainThread && rootMoves.size() > 1)
           {
-              if (rootDepth == 9 && multiPV == 1)
+              if (rootDepth == 5 && multiPV == 1)
               {
                   multiPV = 2;
               }
-              else if (rootDepth == 10 && multiPV > 1)
+              else if (rootDepth == 6 && multiPV > 1)
               {                  
                   multiPV = multiPVBackup;
-                  bestMoveD9 = rootMoves[0].pv[0];
-                  secondScoreD9 = rootMoves[1].score;
+                  bestMoveD5 = rootMoves[0].pv[0];
+                  secondScoreD5 = rootMoves[1].score;
               }
           }
 
@@ -491,9 +491,9 @@ void Thread::search() {
           double complexPosition = std::clamp(1.0 + (complexity - 232) / 1750.0, 0.5, 1.5);
 
           double secondMoveScale = 1.0;
-          if (bestMoveD9 == rootMoves[0].pv[0])
+          if (bestMoveD5 == rootMoves[0].pv[0])
           {
-              int scoreDelta = std::max(std::min(rootMoves[0].score - secondScoreD9 - PawnValueEg, QueenValueEg), VALUE_ZERO);
+              int scoreDelta = std::max(std::min(rootMoves[0].score - secondScoreD5 - PawnValueEg, QueenValueEg), VALUE_ZERO);
               secondMoveScale = 0.3 + 0.7 * double(QueenValueEg - scoreDelta) / QueenValueEg;
           }
 
