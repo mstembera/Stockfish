@@ -311,6 +311,10 @@ void Thread::search() {
 
   int searchAgainCounter = 0;
 
+  Move bestMoveD8 = MOVE_NONE;
+  Value secondScoreD8 = VALUE_NONE;
+  const size_t multiPVBackup = multiPV;
+
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
          && !Threads.stop
@@ -344,6 +348,21 @@ void Thread::search() {
 
           // Reset UCI info selDepth for each depth and each PV line
           selDepth = 0;
+
+          // Get a low depth estimate for the score of the 2nd best move
+          if (Limits.use_time_management() && rootMoves.size() > 1)
+          {
+              if (rootDepth == 7 && multiPV == 1)
+              {
+                  multiPV = 2;
+              }
+              else if (rootDepth == 8 && multiPV > 1)
+              {                  
+                  multiPV = multiPVBackup;
+                  bestMoveD8 = rootMoves[0].pv[0];
+                  secondScoreD8 = rootMoves[1].score;
+              }
+          }
 
           // Reset aspiration window starting size
           if (rootDepth >= 4)
@@ -471,7 +490,14 @@ void Thread::search() {
           int complexity = mainThread->complexityAverage.value();
           double complexPosition = std::clamp(1.0 + (complexity - 232) / 1750.0, 0.5, 1.5);
 
-          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * complexPosition;
+          double secondMoveScale = 1.0;
+          if (bestMoveD8 == rootMoves[0].pv[0])
+          {
+              int scoreDelta = std::max(std::min(rootMoves[0].score - secondScoreD8 - PawnValueEg, QueenValueEg), VALUE_ZERO);
+              secondMoveScale = 0.3 + 0.7 * double(QueenValueEg - scoreDelta) / QueenValueEg;
+          }
+
+          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * complexPosition * secondMoveScale;
 
           // Cap used time in case of a single legal move for a better viewer experience in tournaments
           // yielding correct scores and sufficiently fast moves.
