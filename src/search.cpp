@@ -492,10 +492,10 @@ void Thread::search() {
           double complexPosition = std::clamp(1.0 + (complexity - 232) / 1750.0, 0.5, 1.5);
 
           double secondMoveScale = 1.0;
-          if (bestMoveD5 == rootMoves[0].pv[0] && abs(rootMoves[0].score - firstScoreD5) < PawnValueEg / 4)
+          if (bestMoveD5 == rootMoves[0].pv[0] && rootMoves[0].score - firstScoreD5 > -PawnValueEg / 5)
           {
               int scoreDelta = std::max(std::min(rootMoves[0].score - secondScoreD5 - PawnValueEg, QueenValueEg), VALUE_ZERO);
-              secondMoveScale = 0.3 + 0.7 * double(QueenValueEg - scoreDelta) / QueenValueEg;
+              secondMoveScale = 0.1 + 0.9 * double(QueenValueEg - scoreDelta) / QueenValueEg;
           }
 
           double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * complexPosition * secondMoveScale;
