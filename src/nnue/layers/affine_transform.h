@@ -27,6 +27,11 @@
 #include "../nnue_common.h"
 #include "../../simd.h"
 
+namespace Stockfish {
+    extern int EbucketID;
+    extern int TunedBiases[8];
+}
+
 /*
   This file contains the definition for a fully connected layer (aka affine transform).
   Two approaches are employed, depending on the sizes of the transform.
@@ -266,7 +271,7 @@ namespace Stockfish::Eval::NNUE::Layers {
 
     // Forward propagation
     const OutputType* propagate(
-        const TransformedFeatureType* transformedFeatures, char* buffer) const {
+        const TransformedFeatureType* transformedFeatures, char* buffer) {
       const auto input = previousLayer.propagate(
         transformedFeatures, buffer + SelfBufferSize);
       OutputType* output = reinterpret_cast<OutputType*>(buffer);
@@ -463,7 +468,11 @@ namespace Stockfish::Eval::NNUE::Layers {
     }
     // Forward propagation
     const OutputType* propagate(
-        const TransformedFeatureType* transformedFeatures, char* buffer) const {
+        const TransformedFeatureType* transformedFeatures, char* buffer) {
+
+        if (OutputDimensions == 1 && InputDimensions == 32)
+            biases[0] = TunedBiases[EbucketID];
+
       const auto input = previousLayer.propagate(
         transformedFeatures, buffer + SelfBufferSize);
       const auto output = reinterpret_cast<OutputType*>(buffer);

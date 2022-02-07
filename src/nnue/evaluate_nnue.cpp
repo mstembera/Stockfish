@@ -32,6 +32,14 @@
 
 #include "evaluate_nnue.h"
 
+namespace Stockfish {
+    int EbucketID = 0;
+    int TunedBiases[8] = { 3673, 652, -337, 442, -1602, -862, -395, 197 };
+    auto rangeFunc = [](int v) { return std::pair<int, int>(v - 500, v + 500); };
+    TUNE(SetRange(rangeFunc), TunedBiases);
+    UPDATE_ON_LAST();
+}
+
 namespace Stockfish::Eval::NNUE {
 
   // Input feature converter
@@ -163,6 +171,8 @@ namespace Stockfish::Eval::NNUE {
 
     const std::size_t bucket = (pos.count<ALL_PIECES>() - 1) / 4;
     const auto psqt = featureTransformer->transform(pos, transformedFeatures, bucket);
+
+    EbucketID = bucket;
     const auto positional = network[bucket]->propagate(transformedFeatures, buffer)[0];
 
     // Give more value to positional evaluation when adjusted flag is set
