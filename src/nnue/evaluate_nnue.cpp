@@ -34,8 +34,8 @@
 
 namespace Stockfish {
     int EbucketID = 0;
-    int TunedBiases[8] = { 3673, 652, -337, 442, -1602, -862, -395, 197 };
-    auto rangeFunc = [](int v) { return std::pair<int, int>(v - 500, v + 500); };
+    int TunedBiases[8] = { 3679, 627, -329, 419, -1588, -878, -382, 175 };
+    auto rangeFunc = [](int v) { return std::pair<int, int>(v - 600, v + 600); };
     TUNE(SetRange(rangeFunc), TunedBiases);
     UPDATE_ON_LAST();
 }
