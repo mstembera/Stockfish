@@ -105,11 +105,11 @@ struct Network
     };
 
 #if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
-    static char bufferRaw[sizeof(Buffer) + alignment];
-    static char* bufferRawAligned = align_ptr_up<alignment>(&bufferRaw[0]);
-    static Buffer& buffer = *(new (bufferRawAligned) Buffer);
+    static thread_local char bufferRaw[sizeof(Buffer) + alignment];
+    static thread_local char* bufferRawAligned = align_ptr_up<alignment>(&bufferRaw[0]);
+    static thread_local Buffer& buffer = *(new (bufferRawAligned) Buffer);
 #else
-    alignas(alignment) static Buffer buffer;
+    alignas(alignment) static thread_local Buffer buffer;
 #endif
 
     fc_0.propagate(transformedFeatures, buffer.fc_0_out);
