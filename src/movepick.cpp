@@ -208,7 +208,7 @@ top:
 
           score<QUIETS>();
 
-          if (endMoves - cur > 3)
+          if (endMoves - cur > depth / 4 + 2)
           {
               partial_insertion_sort(cur, endMoves, -3000 * depth);
               pickBest = false;
@@ -228,7 +228,10 @@ top:
               if (select<Best>([&](){return   *cur != refutations[0].move
                                            && *cur != refutations[1].move
                                            && *cur != refutations[2].move;}))
+              {
+                  pickBest = (cur - 1)->value >= -3000 * depth;
                   return *(cur - 1);
+              }
           }
           else
           {
