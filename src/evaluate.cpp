@@ -988,13 +988,15 @@ namespace {
     score += pe->pawn_score(WHITE) - pe->pawn_score(BLACK);
 
     // Early exit if score is high
-    auto lazy_skip = [&](Value lazyThreshold) {
-        return abs(mg_value(score) + eg_value(score)) >   lazyThreshold
-                                                        + std::abs(pos.this_thread()->bestValue) * 5 / 4
-                                                        + pos.non_pawn_material() / 32;
+    auto skip_value = [&]() {
+        return  abs(mg_value(score) + eg_value(score))
+              - std::abs(pos.this_thread()->bestValue) * 5 / 4
+              - pos.non_pawn_material() / 32;
     };
 
-    if (lazy_skip(LazyThreshold1))
+    int skipValue = skip_value();
+
+    if (skipValue > LazyThreshold1)
         goto make_v;
 
     // Main evaluation begins here
@@ -1014,7 +1016,8 @@ namespace {
     score +=  king<   WHITE>() - king<   BLACK>()
             + passed< WHITE>() - passed< BLACK>();
 
-    if (lazy_skip(LazyThreshold2))
+    skipValue = skip_value();
+    if (skipValue > LazyThreshold2)
         goto make_v;
 
     score +=  threats<WHITE>() - threats<BLACK>()
@@ -1022,7 +1025,7 @@ namespace {
 
 make_v:
     // Derive single value from mg and eg parts of score
-    Value v = winnable(score);
+    Value v = skipValue > LazyThreshold1 * 2 ? eg_value(score) : winnable(score);
 
     // In case of tracing add all remaining individual evaluation terms
     if constexpr (T)
