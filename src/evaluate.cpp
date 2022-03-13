@@ -1025,7 +1025,7 @@ namespace {
 
 make_v:
     // Derive single value from mg and eg parts of score
-    Value v = skipValue > LazyThreshold1 * 3 ? eg_value(score) : winnable(score);
+    Value v = skipValue > LazyThreshold1 ? eg_value(score) : winnable(score);
 
     // In case of tracing add all remaining individual evaluation terms
     if constexpr (T)
