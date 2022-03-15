@@ -995,7 +995,6 @@ namespace {
     };
 
     int skipValue = skip_value();
-
     if (skipValue > LazyThreshold1)
         goto make_v;
 
@@ -1025,7 +1024,9 @@ namespace {
 
 make_v:
     // Derive single value from mg and eg parts of score
-    Value v = skipValue > LazyThreshold1 * 4 ? eg_value(score) : winnable(score);
+    Value v =  skipValue > LazyThreshold1 * 3 
+             ? (mg_value(score) * me->game_phase() + eg_value(score) * (PHASE_MIDGAME - me->game_phase())) / PHASE_MIDGAME
+             : winnable(score);
 
     // In case of tracing add all remaining individual evaluation terms
     if constexpr (T)
