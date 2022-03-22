@@ -1088,7 +1088,7 @@ Value Eval::evaluate(const Position& pos) {
   // Deciding between classical and NNUE eval (~10 Elo): for high PSQ imbalance we use classical,
   // but we switch to NNUE during long shuffling or with high material on the board.
   if (  !useNNUE
-      || abs(eg_value(pos.psq_score())) * 5 > (818 + (pos.count<ALL_PIECES>() - pos.count<PAWN>()) * 19) * (5 + pos.rule50_count()))
+      || abs(eg_value(pos.psq_score())) * 5 > (856 + pos.non_pawn_material() / 64) * (5 + pos.rule50_count()))
   {
       v = Evaluation<NO_TRACE>(pos).value();          // classical
       useClassical = abs(v) >= 297;
@@ -1098,7 +1098,7 @@ Value Eval::evaluate(const Position& pos) {
   if (useNNUE && !useClassical)
   {
        Value nnue     = NNUE::evaluate(pos, true);     // NNUE
-       int scale      = 1036 + 20 * pos.non_pawn_material() / 1024;
+       int scale      = 1006 + 15 * (pos.count<ALL_PIECES>() - pos.count<PAWN>());
        Color stm      = pos.side_to_move();
        Value optimism = pos.this_thread()->optimism[stm];
        Value psq      = (stm == WHITE ? 1 : -1) * eg_value(pos.psq_score());
