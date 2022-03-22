@@ -169,16 +169,29 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
+      if ((useNext = endMoves - cur > 3))
+          partial_insertion_sort(cur, endMoves, -3000 * depth);
+
       ++stage;
       goto top;
 
   case GOOD_CAPTURE:
-      if (select<Next>([&](){
-                       return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
-                              // Move losing capture to endBadCaptures to be tried later
-                              true : (*endBadCaptures++ = *cur, false); }))
-          return *(cur - 1);
+      if (useNext)
+      {
+          if (select<Next>([&](){
+                           return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
+                                  // Move losing capture to endBadCaptures to be tried later
+                                  true : (*endBadCaptures++ = *cur, false); }))
+              return *(cur - 1);
+      }
+      else
+      {
+          if (select<Best>([&](){
+                           return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
+                                  // Move losing capture to endBadCaptures to be tried later
+                                  true : (*endBadCaptures++ = *cur, false); }))
+              return *(cur - 1);
+      }
 
       // Prepare the pointers to loop over the refutations array
       cur = std::begin(refutations);
@@ -242,12 +255,24 @@ top:
       return select<Best>([](){ return true; });
 
   case PROBCUT:
-      return select<Next>([&](){ return pos.see_ge(*cur, threshold); });
+      if (useNext)
+          return select<Next>([&](){ return pos.see_ge(*cur, threshold); });
+      else
+          return select<Best>([&](){ return pos.see_ge(*cur, threshold); });
 
   case QCAPTURE:
-      if (select<Next>([&](){ return   depth > DEPTH_QS_RECAPTURES
-                                    || to_sq(*cur) == recaptureSquare; }))
-          return *(cur - 1);
+      if (useNext)
+      {
+          if (select<Next>([&](){ return   depth > DEPTH_QS_RECAPTURES
+                                        || to_sq(*cur) == recaptureSquare; }))
+              return *(cur - 1);
+       }
+      else
+      {
+          if (select<Best>([&](){ return   depth > DEPTH_QS_RECAPTURES
+                                        || to_sq(*cur) == recaptureSquare; }))
+              return *(cur - 1);
+      }
 
       // If we did not find any move and we do not try checks, we have finished
       if (depth != DEPTH_QS_CHECKS)
