@@ -143,11 +143,14 @@ void MovePicker::score() {
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    +     (threatened & from_sq(m) ?
-                           (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
-                          : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
-                          :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
-                          :                                                                           0)
-                          :                                                                           0);
+                            (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
+                          :  type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
+                          :                                          !(to_sq(m) & threatenedByPawn)  ? 15000
+                          :  0)
+                          : (type_of(pos.moved_piece(m)) == QUEEN &&  (to_sq(m) & threatenedByRook)  ? -50000
+                          :  type_of(pos.moved_piece(m)) == ROOK  &&  (to_sq(m) & threatenedByMinor) ? -25000
+                          :                                           (to_sq(m) & threatenedByPawn)  ? -15000
+                          :  0));
 
       else // Type == EVASIONS
       {
