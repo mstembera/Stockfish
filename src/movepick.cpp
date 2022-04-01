@@ -98,6 +98,18 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, Depth d, const Cap
                              && pos.see_ge(ttm, threshold));
 }
 
+template<PieceType Pt>
+static void add_defenders(const Position& pos, Bitboard& defendedBy1, Bitboard& defendedBy2)
+{
+    Bitboard defenders = pos.pieces(pos.side_to_move(), Pt);
+    while (defenders)
+    {
+        Bitboard b = attacks_bb<Pt>(pop_lsb(defenders), pos.pieces());
+        defendedBy2 |= defendedBy1 & b;
+        defendedBy1 |= b;
+    }
+}
+
 /// MovePicker::score() assigns a numerical value to each move in a list, used
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the histories.
@@ -106,7 +118,7 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook;
+  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook, attackedBy1, defendedBy1, defendedBy2;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -121,6 +133,17 @@ void MovePicker::score() {
       threatened =  (pos.pieces(us, QUEEN) & threatenedByRook)
                   | (pos.pieces(us, ROOK)  & threatenedByMinor)
                   | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      attackedBy1 = pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us) | threatenedByRook;
+      
+      defendedBy1 = pos.attacks_by<PAWN>(us);
+      defendedBy2 = us == WHITE ? pawn_double_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                                : pawn_double_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+      add_defenders<KNIGHT>(pos, defendedBy1, defendedBy2);
+      add_defenders<BISHOP>(pos, defendedBy1, defendedBy2);
+      add_defenders<ROOK>(  pos, defendedBy1, defendedBy2);
+      add_defenders<QUEEN>( pos, defendedBy1, defendedBy2);
+      add_defenders<KING>(  pos, defendedBy1, defendedBy2);
   }
   else
   {
@@ -129,6 +152,9 @@ void MovePicker::score() {
       (void) threatenedByPawn;
       (void) threatenedByMinor;
       (void) threatenedByRook;
+      (void) attackedBy1;
+      (void) defendedBy1;
+      (void) defendedBy2;
   }
 
   for (auto& m : *this)
@@ -147,7 +173,12 @@ void MovePicker::score() {
                           : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
-                          :                                                                           0);
+                          :                                                                           0)
+                   +     ((attackedBy1 & from_sq(m)) && !(defendedBy1 & from_sq(m)) ?
+                           PieceValue[MG][pos.moved_piece(m)] * 8 : 0)
+                   -     ((attackedBy1 & to_sq(m)) && (    !(defendedBy2 & to_sq(m))
+                                                       || (!(defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ?
+                           PieceValue[MG][pos.moved_piece(m)] * 8 : 0);
 
       else // Type == EVASIONS
       {
