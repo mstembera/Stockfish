@@ -176,8 +176,7 @@ void MovePicker::score() {
                           :                                                                           0)
                    +     ((attackedBy1 & from_sq(m)) && !(defendedBy1 & from_sq(m)) ?
                            PieceValue[MG][pos.moved_piece(m)] * 8 : 0)
-                   -     ((attackedBy1 & to_sq(m)) && (    !(defendedBy2 & to_sq(m))
-                                                       || (!(defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ?
+                   -     ((attackedBy1 & to_sq(m)) && !(defendedBy2 & to_sq(m)) && !((defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN) ?
                            PieceValue[MG][pos.moved_piece(m)] * 8 : 0);
 
       else // Type == EVASIONS
