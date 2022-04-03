@@ -173,7 +173,7 @@ void MovePicker::score() {
                           :                                                                           0)
                    +     (   !(defendedBy1 & from_sq(m)) 
                           && (    (defendedBy2 & to_sq(m))
-                              || ((defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ? PieceValue[MG][pos.moved_piece(m)] / 4 : 0);
+                              || ((defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ? 100 : 0);
 
       else // Type == EVASIONS
       {
