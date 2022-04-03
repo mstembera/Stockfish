@@ -99,15 +99,14 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, Depth d, const Cap
 }
 
 template<PieceType Pt>
-static void add_attacks(const Position& pos, Color c, Bitboard& by1, Bitboard& by2, Bitboard& by3)
+static void add_defenders(const Position& pos, Bitboard& defendedBy1, Bitboard& defendedBy2)
 {
-    Bitboard pcs = pos.pieces(c, Pt);
-    while (pcs)
+    Bitboard defenders = pos.pieces(pos.side_to_move(), Pt);
+    while (defenders)
     {
-        Bitboard b = attacks_bb<Pt>(pop_lsb(pcs), pos.pieces());
-        by3 |= by2 & b;
-        by2 |= by1 & b;
-        by1 |= b;
+        Bitboard b = attacks_bb<Pt>(pop_lsb(defenders), pos.pieces());
+        defendedBy2 |= defendedBy1 & b;
+        defendedBy1 |= b;
     }
 }
 
@@ -119,8 +118,7 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook;
-  Bitboard attackedBy1, attackedBy2, attackedBy3, defendedBy1, defendedBy2, defendedBy3;
+  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook, defendedBy1, defendedBy2;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -135,28 +133,15 @@ void MovePicker::score() {
       threatened =  (pos.pieces(us, QUEEN) & threatenedByRook)
                   | (pos.pieces(us, ROOK)  & threatenedByMinor)
                   | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
-
-
-      attackedBy1 = threatenedByPawn;
-      attackedBy2 = us == WHITE ? pawn_double_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN))
-                                : pawn_double_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN));
-      attackedBy3 = 0;
-      add_attacks<KNIGHT>(pos, ~us, attackedBy1, attackedBy2, attackedBy3);
-      add_attacks<BISHOP>(pos, ~us, attackedBy1, attackedBy2, attackedBy3);
-      add_attacks<ROOK>(  pos, ~us, attackedBy1, attackedBy2, attackedBy3);
-      add_attacks<QUEEN>( pos, ~us, attackedBy1, attackedBy2, attackedBy3);
-      add_attacks<KING>(  pos, ~us, attackedBy1, attackedBy2, attackedBy3);
-
       
       defendedBy1 = pos.attacks_by<PAWN>(us);
       defendedBy2 = us == WHITE ? pawn_double_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
                                 : pawn_double_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
-      defendedBy3 = 0;
-      add_attacks<KNIGHT>(pos, us, defendedBy1, defendedBy2, defendedBy3);
-      add_attacks<BISHOP>(pos, us, defendedBy1, defendedBy2, defendedBy3);
-      add_attacks<ROOK>(  pos, us, defendedBy1, defendedBy2, defendedBy3);
-      add_attacks<QUEEN>( pos, us, defendedBy1, defendedBy2, defendedBy3);
-      add_attacks<KING>(  pos, us, defendedBy1, defendedBy2, defendedBy3);
+      add_defenders<KNIGHT>(pos, defendedBy1, defendedBy2);
+      add_defenders<BISHOP>(pos, defendedBy1, defendedBy2);
+      add_defenders<ROOK>(  pos, defendedBy1, defendedBy2);
+      add_defenders<QUEEN>( pos, defendedBy1, defendedBy2);
+      add_defenders<KING>(  pos, defendedBy1, defendedBy2);
   }
   else
   {
@@ -165,12 +150,8 @@ void MovePicker::score() {
       (void) threatenedByPawn;
       (void) threatenedByMinor;
       (void) threatenedByRook;
-      (void) attackedBy1;
-      (void) attackedBy2;
-      (void) attackedBy3;
       (void) defendedBy1;
       (void) defendedBy2;
-      (void) defendedBy3;
   }
 
   for (auto& m : *this)
@@ -190,14 +171,9 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
-                   +     (   ((attackedBy3 & from_sq(m)) && !(defendedBy3 & from_sq(m)))
-                          || ((attackedBy2 & from_sq(m)) && !(defendedBy2 & from_sq(m)))
-                          || ((attackedBy1 & from_sq(m)) && !(defendedBy1 & from_sq(m))) ?
-                             PieceValue[MG][pos.moved_piece(m)] * 8 : 0)
-                   -     (    (attackedBy3 & to_sq(m))
-                          || ((attackedBy2 & to_sq(m)) && !(defendedBy3 & to_sq(m)) && !((defendedBy2 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN))
-                          || ((attackedBy1 & to_sq(m)) && !(defendedBy2 & to_sq(m)) && !((defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ?
-                             PieceValue[MG][pos.moved_piece(m)] * 8 : 0);
+                   +     (   !(defendedBy1 & from_sq(m)) 
+                          && (    (defendedBy2 & to_sq(m))
+                              || ((defendedBy1 & to_sq(m)) && type_of(pos.moved_piece(m)) == PAWN)) ? PieceValue[MG][pos.moved_piece(m)] / 4 : 0);
 
       else // Type == EVASIONS
       {
