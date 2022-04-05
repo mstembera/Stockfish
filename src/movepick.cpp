@@ -106,16 +106,14 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook;
+  Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedByQueen;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
-      // squares threatened by pawns
       threatenedByPawn  = pos.attacks_by<PAWN>(~us);
-      // squares threatened by minors or pawns
       threatenedByMinor = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
-      // squares threatened by rooks, minors or pawns
-      threatenedByRook  = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+      threatenedByRook  = pos.attacks_by<ROOK>(~us)   | threatenedByMinor;
+      threatenedByQueen = pos.attacks_by<QUEEN>(~us)  | threatenedByRook;
 
       // pieces threatened by pieces of lesser material value
       threatened =  (pos.pieces(us, QUEEN) & threatenedByRook)
@@ -129,6 +127,7 @@ void MovePicker::score() {
       (void) threatenedByPawn;
       (void) threatenedByMinor;
       (void) threatenedByRook;
+      (void) threatenedByQueen;
   }
 
   for (auto& m : *this)
@@ -142,15 +141,20 @@ void MovePicker::score() {
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   +     (threatened & from_sq(m) ?
-                            (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
-                          :  type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
-                          :                                          !(to_sq(m) & threatenedByPawn)  ? 15000
-                          :  0)
-                          : (type_of(pos.moved_piece(m)) == QUEEN &&  (to_sq(m) & threatenedByRook)  ? -25000
-                          :  type_of(pos.moved_piece(m)) == ROOK  &&  (to_sq(m) & threatenedByMinor) ? -12500
-                          :  type_of(pos.moved_piece(m)) != PAWN  &&  (to_sq(m) & threatenedByPawn)  ? -7500
-                          :  0));
+                   +     (threatened & from_sq(m)
+                             ? (type_of(pos.moved_piece(m)) == QUEEN ? 50000 :
+                                type_of(pos.moved_piece(m)) == ROOK  ? 25000 :
+                                                                       15000)
+                             : 0)
+                  -      (to_sq(m) & threatenedByQueen
+                             ? (type_of(pos.moved_piece(m)) == KING  ? (1<<28) :
+                         (to_sq(m) & threatenedByRook
+                             ? (type_of(pos.moved_piece(m)) == QUEEN ? 50000   :
+                         (to_sq(m) & threatenedByMinor
+                             ? (type_of(pos.moved_piece(m)) == ROOK  ? 25000   :
+                         (to_sq(m) & threatenedByPawn
+                             ? (type_of(pos.moved_piece(m)) != PAWN  ? 15000   :
+                         0) : 0)) : 0)) : 0)) : 0);
 
       else // Type == EVASIONS
       {
