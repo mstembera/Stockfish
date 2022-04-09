@@ -209,7 +209,8 @@ namespace {
             b &= ~attacks_bb<QUEEN>(pos.square<KING>(~Us));
 
         if (b)
-            b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
+            b &= ~(  pos.attacks_by<BISHOP>(~Us) | pos.attacks_by<ROOK>(~Us)   | pos.attacks_by<QUEEN>(~Us)
+                   | pos.attacks_by<PAWN>(~Us)   | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
 
         while (b)
             *moveList++ = make_move(ksq, pop_lsb(b));
