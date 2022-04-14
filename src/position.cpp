@@ -489,6 +489,15 @@ Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
 }
 
 
+bool Position::any_attackers_to(Color c, Square s, Bitboard occupied) const {
+
+  return   (pawn_attacks_bb(~c, s)          & pieces(c, PAWN))
+        || (attacks_bb<KNIGHT>(s)           & pieces(c, KNIGHT))
+        || (attacks_bb<KING>(s)             & pieces(c, KING))
+        || (attacks_bb<ROOK>(s, occupied)   & pieces(c, ROOK, QUEEN))
+        || (attacks_bb<BISHOP>(s, occupied) & pieces(c, BISHOP, QUEEN));
+}
+
 /// Position::legal() tests whether a pseudo-legal move is legal
 
 bool Position::legal(Move m) const {
@@ -530,7 +539,7 @@ bool Position::legal(Move m) const {
       Direction step = to > from ? WEST : EAST;
 
       for (Square s = to; s != from; s += step)
-          if (attackers_to(s) & pieces(~us))
+          if (any_attackers_to(~us, s, pieces()))
               return false;
 
       // In case of Chess960, verify if the Rook blocks some checks
@@ -541,7 +550,7 @@ bool Position::legal(Move m) const {
   // If the moving piece is a king, check whether the destination square is
   // attacked by the opponent.
   if (type_of(piece_on(from)) == KING)
-      return !(attackers_to(to, pieces() ^ from) & pieces(~us));
+      return !any_attackers_to(~us, to, pieces() ^ from);
 
   // A non-king move is legal if and only if it is not pinned or it
   // is moving along the ray towards or away from the king.
@@ -616,7 +625,7 @@ bool Position::pseudo_legal(const Move m) const {
       }
       // In case of king moves under check we have to remove king so as to catch
       // invalid moves like b1a1 when opposite queen is on c1.
-      else if (attackers_to(to, pieces() ^ from) & pieces(~us))
+      else if (any_attackers_to(~us, to, pieces() ^ from))
           return false;
   }
 
