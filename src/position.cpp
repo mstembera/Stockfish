@@ -620,6 +620,11 @@ bool Position::pseudo_legal(const Move m) const {
           return false;
   }
 
+  // Pinned piece
+  if (   (from & blockers_for_king(us))
+      && !aligned(from, to, square<KING>(us)))
+      return false;
+
   return true;
 }
 

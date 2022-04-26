@@ -166,10 +166,6 @@ namespace {
         Square from = pop_lsb(bb);
         Bitboard b = attacks_bb<Pt>(from, pos.pieces()) & target;
 
-        // Filter pinned pieces
-        if (pos.blockers_for_king(Us) & from)
-            b &= line_bb(pos.square<KING>(Us), from);
-
         // To check, you either move freely a blocker or make a direct check.
         if (Checks && (Pt == QUEEN || !(pos.blockers_for_king(~Us) & from)))
             b &= pos.check_squares(Pt);
