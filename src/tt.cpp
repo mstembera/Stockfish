@@ -101,8 +101,8 @@ void TranspositionTable::clear() {
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;
 
-          auto c_init = [](Cluster& c){ std::for_each_n(c.entry, ClusterSize, [](TTEntry& e){ e.init(); }); };
-          std::for_each_n(&table[start], len, c_init);
+          auto c_init = [](Cluster& c){ std::for_each(c.entry, c.entry + ClusterSize, [](TTEntry& e){ e.init(); }); };
+          std::for_each(&table[start], &table[start] + len, c_init);
       });
   }
 
