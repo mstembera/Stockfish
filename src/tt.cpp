@@ -127,13 +127,11 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
       if (tte[i].key16 == key16)
       {
           tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
-          return found = true, &tte[i]; 
+          return found = (bool)tte[i].depth8, &tte[i];
       }
       else if (!tte[i].depth8)
       {
-          // Reserve entry
-          tte[i].key16 = key16;
-          tte[i].depth8 = DEPTH_NONE - DEPTH_OFFSET;
+          tte[i].key16 = key16; // Reserve entry
           return found = false, &tte[i];
       }
 
