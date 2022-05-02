@@ -101,7 +101,8 @@ void TranspositionTable::clear() {
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;
 
-          std::memset(&table[start], 0, len * sizeof(Cluster));
+          auto c_init = [](Cluster& c){ std::for_each_n(c.entry, ClusterSize, [](TTEntry& e){ e.init(); }); };
+          std::for_each_n(&table[start], len, c_init);
       });
   }
 
@@ -123,11 +124,17 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
 
   for (int i = 0; i < ClusterSize; ++i)
-      if (tte[i].key16 == key16 || !tte[i].depth8)
+      if (tte[i].key16 == key16)
       {
           tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
-
-          return found = (bool)tte[i].depth8, &tte[i];
+          return found = true, &tte[i]; 
+      }
+      else if (!tte[i].depth8)
+      {
+          // Reserve entry
+          tte[i].key16 = key16;
+          tte[i].depth8 = DEPTH_NONE - DEPTH_OFFSET;
+          return found = false, &tte[i];
       }
 
   // Find an entry to be replaced according to the replacement strategy
