@@ -130,17 +130,23 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
           return found = (bool)tte[i].depth8, &tte[i];
       }
 
-  // Find an entry to be replaced according to the replacement strategy
-  TTEntry* replace = tte;
+  // Find an entry to be replaced according to the replacement strategy.
+  // Due to our packed storage format for generation and its cyclic
+  // nature we add GENERATION_CYCLE (256 is the modulus, plus what
+  // is needed to keep the unrelated lowest n bits from affecting
+  // the result) to calculate the entry age correctly even after
+  // generation8 overflows into the next cycle.
+  TTEntry* replace = &tte[0];
+  int minV = tte[0].depth8 - tte[0].age_x8() * 6 / 8;
   for (int i = 1; i < ClusterSize; ++i)
-      // Due to our packed storage format for generation and its cyclic
-      // nature we add GENERATION_CYCLE (256 is the modulus, plus what
-      // is needed to keep the unrelated lowest n bits from affecting
-      // the result) to calculate the entry age correctly even after
-      // generation8 overflows into the next cycle.
-      if (  replace->depth8 - ((GENERATION_CYCLE + generation8 - replace->genBound8) & GENERATION_MASK)
-          >   tte[i].depth8 - ((GENERATION_CYCLE + generation8 -   tte[i].genBound8) & GENERATION_MASK))
+  {
+      int v = tte[i].depth8 - tte[i].age_x8() * 6 / 8;
+      if (v < minV)
+      {
           replace = &tte[i];
+          minV = v;
+      }
+  }
 
   return found = false, replace;
 }

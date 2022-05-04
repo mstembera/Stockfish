@@ -44,6 +44,7 @@ struct TTEntry {
   bool is_pv()  const { return (bool)(genBound8 & 0x4); }
   Bound bound() const { return (Bound)(genBound8 & 0x3); }
   void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev);
+  inline int age_x8() const;
 
 private:
   friend class TranspositionTable;
@@ -101,6 +102,11 @@ private:
 };
 
 extern TranspositionTable TT;
+
+inline int TTEntry::age_x8() const
+{
+  return (TranspositionTable::GENERATION_CYCLE + TT.generation8 - genBound8) & TranspositionTable::GENERATION_MASK;
+}
 
 } // namespace Stockfish
 
