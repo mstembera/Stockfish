@@ -35,23 +35,39 @@ TranspositionTable TT; // Our global transposition table
 
 void TTEntry::save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev) {
 
-  // Preserve any existing move for the same position
-  if (m || (uint16_t)k != key16)
-      move16 = (uint16_t)m;
+  assert(d > DEPTH_OFFSET);
+  assert(d < 256 + DEPTH_OFFSET);
 
-  // Overwrite less valuable entries (cheapest checks first)
-  if (   b == BOUND_EXACT
-      || (uint16_t)k != key16
-      || d - DEPTH_OFFSET + 2 * pv > depth8 - 4)
+  if ((uint16_t)k != key16)
   {
-      assert(d > DEPTH_OFFSET);
-      assert(d < 256 + DEPTH_OFFSET);
+      if (   d - DEPTH_OFFSET + 2 * pv > depth8 - 4 - age_x8()
+          || b == BOUND_EXACT)
+      {
+          key16     = (uint16_t)k;
+          depth8    = (uint8_t)(d - DEPTH_OFFSET);
+          genBound8 = (uint8_t)(TT.generation8 | uint8_t(pv) << 2 | b);
+          move16    = (uint16_t)m;
+          value16   = (int16_t)v;
+          eval16    = (int16_t)ev;
+      }
+  }
+  else
+  {
+      // Preserve any existing move for the same position
+      if (m)
+          move16 = (uint16_t)m;
 
-      key16     = (uint16_t)k;
-      depth8    = (uint8_t)(d - DEPTH_OFFSET);
-      genBound8 = (uint8_t)(TT.generation8 | uint8_t(pv) << 2 | b);
-      value16   = (int16_t)v;
-      eval16    = (int16_t)ev;
+      // Overwrite less valuable entries
+      if (   d - DEPTH_OFFSET + 2 * pv > depth8 - 4
+          || b == BOUND_EXACT)
+      {
+          depth8    = (uint8_t)(d - DEPTH_OFFSET);
+          genBound8 = (uint8_t)(TT.generation8 | uint8_t(pv) << 2 | b);
+          if (v != VALUE_NONE)
+              value16 = (int16_t)v;
+          if (ev != VALUE_NONE)
+              eval16  = (int16_t)ev;
+      }
   }
 }
 
@@ -101,7 +117,8 @@ void TranspositionTable::clear() {
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;
 
-          std::memset(&table[start], 0, len * sizeof(Cluster));
+          auto c_init = [](Cluster& c) { std::for_each(c.entry, c.entry + ClusterSize, [](TTEntry& e) { e.init(); }); };
+          std::for_each(&table[start], &table[start] + len, c_init);
       });
   }
 
