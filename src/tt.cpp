@@ -137,10 +137,10 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   // the result) to calculate the entry age correctly even after
   // generation8 overflows into the next cycle.
   TTEntry* replace = &tte[0];
-  int minV = tte[0].depth8 - tte[0].age_x8() * 10 / 8;
+  int minV = tte[0].depth8 - tte[0].age_x8() * 9 / 8;
   for (int i = 1; i < ClusterSize; ++i)
   {
-      int v = tte[i].depth8 - tte[i].age_x8() * 10 / 8;
+      int v = tte[i].depth8 - tte[i].age_x8() * 9 / 8;
       if (v < minV)
       {
           replace = &tte[i];
