@@ -60,7 +60,7 @@ void Thread::clear() {
   counterMoves.fill(MOVE_NONE);
   mainHistory.fill(0);
   captureHistory.fill(0);
-  previousDepth = 0;
+  previousDepth = DEPTH_NONE;
   
   for (bool inCheck : { false, true })
       for (StatsType c : { NoCaptures, Captures })
@@ -204,7 +204,7 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
   for (Thread* th : *this)
   {
       th->nodes = th->tbHits = th->nmpMinPly = th->bestMoveChanges = 0;
-      th->rootDepth = th->completedDepth = 0;
+      th->rootDepth = th->completedDepth = DEPTH_NONE;
       th->rootMoves = rootMoves;
       th->rootPos.set(pos.fen(), pos.is_chess960(), &th->rootState, th);
       th->rootState = setupStates->back();
