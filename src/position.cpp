@@ -566,19 +566,17 @@ bool Position::pseudo_legal(const Move m) const {
   if (pc == NO_PIECE || color_of(pc) != us)
       return false;
 
-  // Use a slower but simpler function for uncommon cases
-  // yet we skip the legality check of MoveList<LEGAL>().
   if (type_of(m) != NORMAL)
+  {
+      if (   type_of(m) == CASTLING
+          && piece_on(to) != make_piece(us, ROOK))
+              return false;
+
+      // Use a slower but simpler function for uncommon cases
+      // yet we skip the legality check of MoveList<LEGAL>().
       return checkers() ? MoveList<    EVASIONS>(*this).contains(m)
                         : MoveList<NON_EVASIONS>(*this).contains(m);
-
-  // Is not a promotion, so promotion piece must be empty
-  if (promotion_type(m) - KNIGHT != NO_PIECE_TYPE)
-      return false;
-
-  // The destination square cannot be occupied by a friendly piece
-  if (pieces(us) & to)
-      return false;
+  }
 
   // Handle the special case of a pawn move
   if (type_of(pc) == PAWN)
@@ -597,6 +595,14 @@ bool Position::pseudo_legal(const Move m) const {
           return false;
   }
   else if (!(attacks_bb(type_of(pc), from, pieces()) & to))
+      return false;
+
+  // Is not a promotion, so promotion piece must be empty
+  if (promotion_type(m) - KNIGHT != NO_PIECE_TYPE)
+      return false;
+
+  // The destination square cannot be occupied by a friendly piece
+  if (pieces(us) & to)
       return false;
 
   // Evasions generator already takes care to avoid some kind of illegal moves
