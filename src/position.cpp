@@ -568,14 +568,13 @@ bool Position::pseudo_legal(const Move m) const {
 
   assert(   (type_of(m) == PROMOTION && promotion_type(m) >= KNIGHT && promotion_type(m) <= QUEEN)
          || (type_of(m) != PROMOTION && promotion_type(m) - KNIGHT == NO_PIECE_TYPE));
+
   // Use a slower but simpler function for uncommon cases
   // yet we skip the legality check of MoveList<LEGAL>().
   if (type_of(m) != NORMAL)
       return checkers() ? MoveList<EVASIONS>(*this).contains(m)
-                        : (  type_of(m) == CASTLING   ? MoveList<QUIETS>(*this).contains(m)
-                           : type_of(m) == EN_PASSANT ? MoveList<CAPTURES>(*this).contains(m)
-                           : (promotion_type(m) == QUEEN ? MoveList<CAPTURES>(*this).contains(m)
-                                                         : MoveList<QUIETS>(*this).contains(m)));
+                        : ((type_of(m) == CASTLING) ? MoveList<NON_EVASIONS, KING>(*this).contains(m)
+                                                    : MoveList<NON_EVASIONS, PAWN>(*this).contains(m));
 
   // The destination square cannot be occupied by a friendly piece
   if (pieces(us) & to)
