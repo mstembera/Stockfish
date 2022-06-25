@@ -1087,7 +1087,7 @@ bool Position::see_ge(Move m, Value threshold) const {
     Bitboard stmAttackers, bb;
     int res = 1;
     PieceType startPt[COLOR_NB] = { PAWN, PAWN };
-    bool resetStart[COLOR_NB] = { false, false };
+    bool resetStartPt[COLOR_NB] = { false, false };
 
     while (true)
     {
@@ -1110,11 +1110,11 @@ continue_while:
             if (!stmAttackers)
                 break;
 
-            resetStart[stm] = stmAttackers != oldAttackers;
+            resetStartPt[stm] = stmAttackers != oldAttackers;
         }
-        else if (resetStart[stm])
+        else if (resetStartPt[stm])
         {
-            resetStart[stm] = false;
+            resetStartPt[stm] = false;
             startPt[stm] = PAWN;
         }
 
@@ -1144,16 +1144,10 @@ continue_while:
                     goto continue_while;
 
                 case QUEEN:
-                {
-                    Bitboard oldAttackers = attackers;
                     attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
                                 | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK,   QUEEN));
-                    if (attackers != oldAttackers)
-                        startPt[stm] = BISHOP;
+                    startPt[stm] = BISHOP;
                     goto continue_while;
-                }
-                default:
-                    static_assert(true, "Wrong PieceType.");
                 }
             }
         }
