@@ -1064,109 +1064,107 @@ Key Position::key_after(Move m) const {
 
 bool Position::see_ge(Move m, Value threshold) const {
 
-  assert(is_ok(m));
+    assert(is_ok(m));
 
-  if (type_of(m) == CASTLING)
-      return VALUE_ZERO >= threshold;
+    // Only deal with normal moves, assume others pass a simple SEE
+    if (type_of(m) != NORMAL)
+        return VALUE_ZERO >= threshold;
 
-  Square from = from_sq(m), to = to_sq(m);
+    Square from = from_sq(m), to = to_sq(m);
 
-  int swap =   PieceValue[MG][piece_on(to)] - threshold
-             + (type_of(m) == EN_PASSANT ? PawnValueMg : 0);
+    int swap = PieceValue[MG][piece_on(to)] - threshold;
+    if (swap < 0)
+        return false;
 
-  if (swap < 0)
-      return false;
+    swap = PieceValue[MG][piece_on(from)] - swap;
+    if (swap <= 0)
+        return true;
 
-  if (type_of(m) == PROMOTION)
-      swap = (PieceValue[MG][promotion_type(m)] - PawnValueMg) - swap;
-  else
-      swap = PieceValue[MG][piece_on(from)] - swap;
+    assert(color_of(piece_on(from)) == sideToMove);
+    Bitboard occupied = pieces() ^ from ^ to;
+    Color stm = sideToMove;
+    Bitboard attackers = attackers_to(to, occupied);
+    Bitboard stmAttackers, bb;
+    int res = 1;
+    PieceType startPt[COLOR_NB] = { PAWN, PAWN };
+    bool resetStart[COLOR_NB] = { false, false };
 
-  if (swap <= 0)
-      return true;
+    while (true)
+    {
+continue_while:
 
-  assert(color_of(piece_on(from)) == sideToMove);
-  Bitboard occupied = pieces() ^ from ^ to;
-  if (type_of(m) == EN_PASSANT)
-      occupied ^= to - pawn_push(sideToMove);
-  Color stm = sideToMove;
-  Bitboard attackers = attackers_to(to, occupied);
-  Bitboard stmAttackers, bb;
-  int res = 1;
+        stm = ~stm;
+        attackers &= occupied;
 
-  while (true)
-  {
-      stm = ~stm;
-      attackers &= occupied;
+        // If stm has no more attackers then give up: stm loses
+        if (!(stmAttackers = attackers & pieces(stm)))
+            break;
 
-      // If stm has no more attackers then give up: stm loses
-      if (!(stmAttackers = attackers & pieces(stm)))
-          break;
+        // Don't allow pinned pieces to attack as long as there are
+        // pinners on their original square.
+        if (pinners(~stm) & occupied)
+        {
+            Bitboard oldAttackers = stmAttackers;
+            stmAttackers &= ~blockers_for_king(stm);
 
-      // Don't allow pinned pieces to attack as long as there are
-      // pinners on their original square.
-      if (pinners(~stm) & occupied)
-          stmAttackers &= ~blockers_for_king(stm);
+            if (!stmAttackers)
+                break;
 
-      if (!stmAttackers)
-          break;
+            resetStart[stm] = stmAttackers != oldAttackers;
+        }
+        else if (resetStart[stm])
+        {
+            resetStart[stm] = false;
+            startPt[stm] = PAWN;
+        }
 
-      res ^= 1;
+        res ^= 1;
 
-      // Locate and remove the next least valuable attacker, and add to
-      // the bitboard 'attackers' any X-ray attackers behind it.
-      if ((bb = stmAttackers & pieces(PAWN)))
-      {
-          if ((swap = PawnValueMg - swap) < res)
-              break;
+        for (PieceType pt = startPt[stm]; pt <= QUEEN; startPt[stm] = ++pt)
+        {
+            if ((bb = stmAttackers & pieces(pt)))
+            {
+                if ((swap = PieceValue[MG][pt] - swap) < res)
+                    return bool(res);
 
-          occupied ^= least_significant_square_bb(bb);
-          attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-      }
+                occupied ^= least_significant_square_bb(bb);
 
-      else if ((bb = stmAttackers & pieces(KNIGHT)))
-      {
-          if ((swap = KnightValueMg - swap) < res)
-              break;
+                switch (pt)
+                {
+                case PAWN:
+                case BISHOP:
+                    attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
+                    goto continue_while;
 
-          occupied ^= least_significant_square_bb(bb);
-      }
+                case KNIGHT:
+                    goto continue_while;
 
-      else if ((bb = stmAttackers & pieces(BISHOP)))
-      {
-          if ((swap = BishopValueMg - swap) < res)
-              break;
+                case ROOK:
+                    attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
+                    goto continue_while;
 
-          occupied ^= least_significant_square_bb(bb);
-          attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-      }
+                case QUEEN:
+                {
+                    Bitboard oldAttackers = attackers;
+                    attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
+                                | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK,   QUEEN));
+                    if (attackers != oldAttackers)
+                        startPt[stm] = BISHOP;
+                    goto continue_while;
+                }
+                default:
+                    static_assert(true, "Wrong PieceType.");
+                }
+            }
+        }
 
-      else if ((bb = stmAttackers & pieces(ROOK)))
-      {
-          if ((swap = RookValueMg - swap) < res)
-              break;
+        assert(startPt[stm] == KING);
+        // If we "capture" with the king but opponent still has attackers,
+        // reverse the result.
+        return res ^ bool(attackers & ~pieces(stm));
+    }
 
-          occupied ^= least_significant_square_bb(bb);
-          attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
-      }
-
-      else if ((bb = stmAttackers & pieces(QUEEN)))
-      {
-          if ((swap = QueenValueMg - swap) < res)
-              break;
-
-          occupied ^= least_significant_square_bb(bb);
-          attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
-                      | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK  , QUEEN));
-      }
-
-      else // KING
-           // If we "capture" with the king but opponent still has attackers,
-           // reverse the result.
-          return (attackers & ~pieces(stm)) ? res ^ 1 : res;
-  }
-
-  return bool(res);
+    return bool(res);
 }
 
 
