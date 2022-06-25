@@ -1148,6 +1148,8 @@ continue_while:
                                 | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK,   QUEEN));
                     startPt[stm] = BISHOP;
                     goto continue_while;
+                default:
+                    static_assert(true, "Wrong PieceType.");
                 }
             }
         }
