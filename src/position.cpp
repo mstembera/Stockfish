@@ -1066,28 +1066,29 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
-  // Only deal with normal moves, assume others pass a simple SEE
   if (type_of(m) == CASTLING)
       return VALUE_ZERO >= threshold;
 
-  if (type_of(m) == PROMOTION)
-      return PieceValue[MG][promotion_type(m)] - PawnValueMg >= threshold;
-
-  if (type_of(m) == EN_PASSANT)
-      return PawnValueMg >= threshold;
-             
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
+  int swap =   PieceValue[MG][piece_on(to)] - threshold
+             + (type_of(m) == EN_PASSANT ? PawnValueMg : 0);
+
   if (swap < 0)
       return false;
 
-  swap = PieceValue[MG][piece_on(from)] - swap;
+  if (type_of(m) == PROMOTION)
+      swap = (PieceValue[MG][promotion_type(m)] - PawnValueMg) - swap;
+  else
+      swap = PieceValue[MG][piece_on(from)] - swap;
+
   if (swap <= 0)
       return true;
 
   assert(color_of(piece_on(from)) == sideToMove);
   Bitboard occupied = pieces() ^ from ^ to;
+  if (type_of(m) == EN_PASSANT)
+      occupied ^= to - pawn_push(sideToMove);
   Color stm = sideToMove;
   Bitboard attackers = attackers_to(to, occupied);
   Bitboard stmAttackers, bb;
