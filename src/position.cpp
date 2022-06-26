@@ -1101,11 +1101,11 @@ bool Position::see_ge(Move m, Value threshold) const {
       Bitboard occupiedPinners = pinners(~stm) & occupied;
       if (occupiedPinners)
       {
+          Square ksq = square<KING>(stm);
           if (occupiedPinners == pinners(~stm))
-              stmAttackers &= ~blockers_for_king(stm);
+              stmAttackers &= ~(blockers_for_king(stm) & ~line_bb(to, ksq));
           else
           {
-              Square ksq = square<KING>(stm);
               Bitboard blockers = 0;
               do 
               {
