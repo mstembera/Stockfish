@@ -1098,23 +1098,22 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       // Don't allow pinned pieces to attack as long as there are
       // pinners on their original square.
-      Bitboard occupiedPinners = pinners(~stm) & occupied;
-      if (occupiedPinners)
+      Bitboard remainingPinners = pinners(~stm) & occupied;
+      if (remainingPinners)
       {
           Square ksq = square<KING>(stm);
-          if (occupiedPinners == pinners(~stm))
-              stmAttackers &= ~(blockers_for_king(stm) & ~line_bb(to, ksq));
+          Bitboard fixedBlockers = blockers_for_king(stm) & ~line_bb(to, ksq);
+
+          if (remainingPinners == pinners(~stm))
+              stmAttackers &= ~fixedBlockers;
           else
           {
-              Bitboard blockers = 0;
-              do 
+              do
               {
-                  Square p = pop_lsb(occupiedPinners);
-                  blockers |= blockers_for_king(stm) & line_bb(ksq, p);
+                  Square p = pop_lsb(remainingPinners);
+                  stmAttackers &= ~(fixedBlockers & line_bb(ksq, p));
 
-              } while (occupiedPinners);
-
-              stmAttackers &= ~blockers;
+              } while (remainingPinners);
           }
 
           if (!stmAttackers)
