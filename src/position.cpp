@@ -1126,10 +1126,8 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          if (pawn_attacks_bb(stm, to) & square<KING>(~stm))
-              swap += PawnValueMg;
-
-          if ((swap = PawnValueMg - swap) < res)
+          int cBonus = (pawn_attacks_bb(stm, to) & square<KING>(~stm)) ? PawnValueMg : 0;
+          if ((swap = PawnValueMg - swap) - cBonus < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1138,10 +1136,8 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
-          if (attacks_bb<KNIGHT>(to, occupied) & square<KING>(~stm))
-              swap += PawnValueMg;
-
-          if ((swap = KnightValueMg - swap) < res)
+          int cBonus = (attacks_bb<KNIGHT>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
+          if ((swap = KnightValueMg - swap) - cBonus < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1149,10 +1145,8 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          if (attacks_bb<BISHOP>(to, occupied) & square<KING>(~stm))
-              swap += PawnValueMg;
-
-          if ((swap = BishopValueMg - swap) < res)
+          int cBonus = (attacks_bb<BISHOP>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
+          if ((swap = BishopValueMg - swap) - cBonus < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1161,10 +1155,8 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
-          if (attacks_bb<ROOK>(to, occupied) & square<KING>(~stm))
-              swap += PawnValueMg;
-
-          if ((swap = RookValueMg - swap) < res)
+          int cBonus = (attacks_bb<ROOK>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
+          if ((swap = RookValueMg - swap) - cBonus < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1173,10 +1165,8 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
-          if (attacks_bb<QUEEN>(to, occupied) & square<KING>(~stm))
-              swap += PawnValueMg;
-
-          if ((swap = QueenValueMg - swap) < res)
+          int cBonus = (attacks_bb<QUEEN>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
+          if ((swap = QueenValueMg - swap) - cBonus < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
