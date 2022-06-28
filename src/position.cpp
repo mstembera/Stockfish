@@ -36,6 +36,12 @@ using std::string;
 
 namespace Stockfish {
 
+int SEEValues[5] = { PawnValueMg, KnightValueMg, BishopValueMg, RookValueMg, QueenValueMg };
+
+auto rangeFunc = [](int v) { return std::pair<int, int>(v / 2, v * 3 / 2); };
+TUNE(SetRange(rangeFunc), SEEValues);
+UPDATE_ON_LAST();
+
 namespace Zobrist {
 
   Key psq[PIECE_NB][SQUARE_NB];
@@ -1072,11 +1078,11 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
+  int swap = SEEValues[type_of(piece_on(to)) - 1] - threshold;
   if (swap < 0)
       return false;
 
-  swap = PieceValue[MG][piece_on(from)] - swap;
+  swap = SEEValues[type_of(piece_on(from)) - 1] - swap;
   if (swap <= 0)
       return true;
 
@@ -1110,7 +1116,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          if ((swap = PawnValueMg - swap) < res)
+          if ((swap = SEEValues[PAWN - 1] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1119,7 +1125,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
-          if ((swap = KnightValueMg - swap) < res)
+          if ((swap = SEEValues[KNIGHT - 1] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1127,7 +1133,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          if ((swap = BishopValueMg - swap) < res)
+          if ((swap = SEEValues[BISHOP - 1] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1136,7 +1142,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
-          if ((swap = RookValueMg - swap) < res)
+          if ((swap = SEEValues[ROOK - 1] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1145,7 +1151,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
-          if ((swap = QueenValueMg - swap) < res)
+          if ((swap = SEEValues[QUEEN - 1] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
