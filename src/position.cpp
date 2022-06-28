@@ -1126,8 +1126,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          int cBonus = (pawn_attacks_bb(stm, to) & square<KING>(~stm)) ? PawnValueMg : 0;
-          if ((swap = PawnValueMg - swap) - cBonus < res)
+          if ((swap = PawnValueMg - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1136,8 +1135,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
-          int cBonus = (attacks_bb<KNIGHT>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
-          if ((swap = KnightValueMg - swap) - cBonus < res)
+          if ((swap = (KnightValueMg + BishopValueMg) / 2 - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1145,8 +1143,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          int cBonus = (attacks_bb<BISHOP>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
-          if ((swap = BishopValueMg - swap) - cBonus < res)
+          if ((swap = (KnightValueMg + BishopValueMg) / 2 - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1155,8 +1152,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
-          int cBonus = (attacks_bb<ROOK>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
-          if ((swap = RookValueMg - swap) - cBonus < res)
+          if ((swap = RookValueMg - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1165,8 +1161,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
-          int cBonus = (attacks_bb<QUEEN>(to, occupied) & square<KING>(~stm)) ? PawnValueMg : 0;
-          if ((swap = QueenValueMg - swap) - cBonus < res)
+          if ((swap = QueenValueMg - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
