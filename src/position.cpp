@@ -1066,17 +1066,19 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
+  constexpr int Values[PIECE_TYPE_NB] = { 0, 127, 774, 824, 1266, 2510, 0, 0 };
+
   // Only deal with normal moves, assume others pass a simple SEE
   if (type_of(m) != NORMAL)
       return VALUE_ZERO >= threshold;
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
+  int swap = Values[type_of(piece_on(to))] - threshold;
   if (swap < 0)
       return false;
 
-  swap = PieceValue[MG][piece_on(from)] - swap;
+  swap = Values[type_of(piece_on(from))] - swap;
   if (swap <= 0)
       return true;
 
@@ -1110,7 +1112,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          if ((swap = PawnValueMg - swap) < res)
+          if ((swap = Values[PAWN] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1119,7 +1121,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
-          if ((swap = KnightValueMg - swap) < res)
+          if ((swap = Values[KNIGHT] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1127,7 +1129,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          if ((swap = BishopValueMg - swap) < res)
+          if ((swap = Values[BISHOP] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1136,7 +1138,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
-          if ((swap = RookValueMg - swap) < res)
+          if ((swap = Values[ROOK] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
@@ -1145,7 +1147,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
-          if ((swap = QueenValueMg - swap) < res)
+          if ((swap = Values[QUEEN] - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
