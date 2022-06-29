@@ -1066,7 +1066,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
-  constexpr int Values[PIECE_TYPE_NB] = { 0, 127, 774, 824, 1266, 2510, 0, 0 };
+  constexpr int Values[PIECE_TYPE_NB] = { 0, 126, 769, 820, 1269, 2476, 0, 0 };
 
   // Only deal with normal moves, assume others pass a simple SEE
   if (type_of(m) != NORMAL)
