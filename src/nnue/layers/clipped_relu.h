@@ -92,7 +92,8 @@ namespace Stockfish::Eval::NNUE::Layers {
               _mm_load_si128(&in[i * 4 + 2]),
               _mm_load_si128(&in[i * 4 + 3])), WeightScaleBits);
           const __m128i packedbytes = _mm_packs_epi16(words0, words1);
-          _mm_store_si128(&out[i], _mm_max_epi8(packedbytes, Zero));
+          // must use unaligned store here
+          _mm_storeu_si128(&out[i], _mm_max_epi8(packedbytes, Zero));
         }
       }
       constexpr IndexType Start =
