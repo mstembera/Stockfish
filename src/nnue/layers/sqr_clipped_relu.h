@@ -88,7 +88,8 @@ namespace Stockfish::Eval::NNUE::Layers {
 
         const __m128i packedbytes = _mm_packs_epi16(words0, words1);
 
-        _mm_store_si128(&out[i],
+        // must use unaligned store here
+        _mm_storeu_si128(&out[i],
 
   #ifdef USE_SSE41
           _mm_max_epi8(packedbytes, Zero)
