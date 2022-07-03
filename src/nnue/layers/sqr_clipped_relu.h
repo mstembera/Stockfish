@@ -60,7 +60,7 @@ namespace Stockfish::Eval::NNUE::Layers {
 
     // Forward propagation
     const OutputType* propagate(
-        const InputType* input, OutputType* output_sqr, OutputType* output) const {
+        const InputType* input, OutputType* output) const {
 
   #if defined(USE_SSE2)
       constexpr IndexType NumChunks = InputDimensions / 16;
@@ -73,7 +73,6 @@ namespace Stockfish::Eval::NNUE::Layers {
 
       static_assert(WeightScaleBits == 6);
       const auto in = reinterpret_cast<const __m128i*>(input);
-      const auto out_sqr = reinterpret_cast<__m128i*>(output_sqr);
       const auto out = reinterpret_cast<__m128i*>(output);
       for (IndexType i = 0; i < NumChunks; ++i) {
         __m128i words0 = _mm_packs_epi32(
@@ -83,26 +82,20 @@ namespace Stockfish::Eval::NNUE::Layers {
             _mm_load_si128(&in[i * 4 + 2]),
             _mm_load_si128(&in[i * 4 + 3]));
 
-        __m128i words0_sqr = _mm_srli_epi16(_mm_mulhi_epi16(words0, words0), 3);
-        __m128i words1_sqr = _mm_srli_epi16(_mm_mulhi_epi16(words1, words1), 3);
-        __m128i packedbytes_sqr = _mm_packs_epi16(words0_sqr, words1_sqr);
-        _mm_store_si128(&out_sqr[i],
-  #ifdef USE_SSE41
-          _mm_max_epi8(packedbytes_sqr, Zero)
-  #else
-          _mm_subs_epi8(_mm_adds_epi8(packedbytes_sqr, k0x80s), k0x80s)
-  #endif
-        );
+        // Not sure if
+        words0 = _mm_srli_epi16(_mm_mulhi_epi16(words0, words0), 3);
+        words1 = _mm_srli_epi16(_mm_mulhi_epi16(words1, words1), 3);
 
-        words0 = _mm_srai_epi16(words0, WeightScaleBits);
-        words1 = _mm_srai_epi16(words1, WeightScaleBits);
-        __m128i packedbytes = _mm_packs_epi16(words0, words1);
-        _mm_storeu_si128(&out[i], // must use unaligned store here
+        const __m128i packedbytes = _mm_packs_epi16(words0, words1);
+
+        _mm_store_si128(&out[i],
+
   #ifdef USE_SSE41
           _mm_max_epi8(packedbytes, Zero)
   #else
           _mm_subs_epi8(_mm_adds_epi8(packedbytes, k0x80s), k0x80s)
   #endif
+
         );
       }
       constexpr IndexType Start = NumChunks * 16;
@@ -111,17 +104,14 @@ namespace Stockfish::Eval::NNUE::Layers {
       constexpr IndexType Start = 0;
   #endif
 
-      for (IndexType i = Start; i < InputDimensions; ++i)
-        output_sqr[i] = static_cast<OutputType>(
-            // really should be /127 but we need to make it fast so add 7 bits to the shift
-            // needs to be accounted for in the trainer
-            std::max(0ll, std::min(127ll, ((long long)input[i] * input[i]) >> (2 * WeightScaleBits + 7))));
-            
-      for (IndexType i = Start; i < InputDimensions; ++i)
+      for (IndexType i = Start; i < InputDimensions; ++i) {
         output[i] = static_cast<OutputType>(
-            std::max(0, std::min(127, input[i] >> WeightScaleBits)));
+            // realy should be /127 but we need to make it fast
+            // needs to be accounted for in the trainer
+            std::max(0ll, std::min(127ll, (((long long)input[i] * input[i]) >> (2 * WeightScaleBits)) / 128)));
+      }
 
-      return output_sqr;
+      return output;
     }
   };
 
