@@ -117,8 +117,8 @@ struct Network
 
     fc_0.propagate(transformedFeatures, buffer.fc_0_out);
     ac_sqr_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out);
-    ac_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out + FC_0_OUTPUTS + 2);
-    std::memmove(buffer.ac_sqr_0_out + FC_0_OUTPUTS, buffer.ac_sqr_0_out + FC_0_OUTPUTS + 2, (FC_0_OUTPUTS + 1) * sizeof(decltype(ac_0)::OutputType));
+    ac_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out + FC_0_OUTPUTS + 1);
+    std::memmove(buffer.ac_sqr_0_out + FC_0_OUTPUTS, buffer.ac_sqr_0_out + FC_0_OUTPUTS + 1, (FC_0_OUTPUTS + 1) * sizeof(decltype(ac_0)::OutputType));
     fc_1.propagate(buffer.ac_sqr_0_out, buffer.fc_1_out);
     ac_1.propagate(buffer.fc_1_out, buffer.ac_1_out);
     fc_2.propagate(buffer.ac_1_out, buffer.fc_2_out);
