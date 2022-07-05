@@ -169,7 +169,7 @@ Move MovePicker::select(Pred filter) {
   while (cur < endMoves)
   {
       if (T == Best)
-          std::swap(*cur, *std::max_element(cur, endMoves));
+          fast_swap(*cur, *std::max_element(cur, endMoves));
 
       if (*cur != ttMove && filter())
           return *cur++;

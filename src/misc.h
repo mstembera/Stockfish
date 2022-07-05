@@ -125,14 +125,6 @@ public:
   const T* begin() const { return values_; }
   const T* end() const { return values_ + size_; }
 
-  void swap(ValueList& other) {
-    const std::size_t maxSize = std::max(size_, other.size_);
-    for (std::size_t i = 0; i < maxSize; ++i) {
-      std::swap(values_[i], other.values_[i]);
-    }
-    std::swap(size_, other.size_);
-  }
-
 private:
   T values_[MaxSize];
   std::size_t size_ = 0;
@@ -214,6 +206,40 @@ inline uint64_t mul_hi64(uint64_t a, uint64_t b) {
     uint64_t c3 = aL * bH + (uint32_t)c2;
     return aH * bH + (c2 >> 32) + (c3 >> 32);
 #endif
+}
+
+template<class T>
+inline void fast_swap(T& lhs, T& rhs) {
+
+  if (&lhs == &rhs)
+      return;
+
+  if constexpr (sizeof(T) == 8)
+  {
+      (uint64_t&)lhs ^= (uint64_t&)rhs;
+      (uint64_t&)rhs ^= (uint64_t&)lhs;
+      (uint64_t&)lhs ^= (uint64_t&)rhs;
+  }
+  else if constexpr (sizeof(T) == 4)
+  {
+      (uint32_t&)lhs ^= (uint32_t&)rhs;
+      (uint32_t&)rhs ^= (uint32_t&)lhs;
+      (uint32_t&)lhs ^= (uint32_t&)rhs;
+  }
+  else if constexpr (sizeof(T) == 2)
+  {
+      (uint16_t&)lhs ^= (uint16_t&)rhs;
+      (uint16_t&)rhs ^= (uint16_t&)lhs;
+      (uint16_t&)lhs ^= (uint16_t&)rhs;
+  }
+  else if constexpr (sizeof(T) == 1)
+  {
+      (uint8_t&)lhs ^= (uint8_t&)rhs;
+      (uint8_t&)rhs ^= (uint8_t&)lhs;
+      (uint8_t&)lhs ^= (uint8_t&)rhs;
+  }
+  else
+      std::swap(lhs, rhs);
 }
 
 /// Under Windows it is not possible for a process to run on more than one
