@@ -542,7 +542,7 @@ namespace {
 
     // Dive into quiescence search when the depth reaches zero
     if (depth <= 0)
-        return qsearch<PvNode ? PV : NonPV>(pos, ss, alpha, beta, std::max(depth / 2, (int)DEPTH_QS_RECAPTURES));
+        return qsearch<PvNode ? PV : NonPV>(pos, ss, alpha, beta, std::max(depth, DEPTH_QS_RECAPTURES + 2));
 
     assert(-VALUE_INFINITE <= alpha && alpha < beta && beta <= VALUE_INFINITE);
     assert(PvNode || (alpha == beta - 1));
