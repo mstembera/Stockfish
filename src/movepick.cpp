@@ -34,15 +34,12 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove** sortList) {
+  void insertion_sort(ExtMove* begin, ExtMove* end) {
 
-    ExtMove* sortedEnd = begin;
-    for (int i = 0; sortList[i] != nullptr; ++i)
+    for (ExtMove* p = begin + 1; p < end; ++p)
     {
-        ExtMove* p = sortList[i];
         ExtMove tmp = *p, *q;
-        *p = *sortedEnd;
-        for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
+        for (q = p; q != begin && *(q - 1) < tmp; --q)
             *q = *(q - 1);
         *q = tmp;
     }
@@ -103,7 +100,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, Depth d, const Cap
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the histories.
 template<GenType Type>
-void MovePicker::score(ExtMove** sortList, int sortLimit) {
+ExtMove* MovePicker::score(int sortLimit) {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -132,7 +129,7 @@ void MovePicker::score(ExtMove** sortList, int sortLimit) {
       (void) threatenedByRook;
   }
 
-  int sortCnt = 0;
+  ExtMove* sortEnd = begin();
   for (ExtMove* mp = begin(); mp != end(); ++mp)
   {
       ExtMove& m = *mp;
@@ -141,8 +138,8 @@ void MovePicker::score(ExtMove** sortList, int sortLimit) {
           m.value =  6 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
                    +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
-          sortList[sortCnt] = mp;
-          sortCnt += m.value >= sortLimit;
+          if (m.value >= sortLimit)
+              std::swap(*mp, *sortEnd++);
       }
       else if constexpr (Type == QUIETS)
       {
@@ -158,8 +155,8 @@ void MovePicker::score(ExtMove** sortList, int sortLimit) {
                           :                                                                           0)
                           :                                                                           0);
 
-          sortList[sortCnt] = mp;
-          sortCnt += m.value >= sortLimit;
+          if (m.value >= sortLimit)
+              std::swap(*mp, *sortEnd++);
       }
       else // Type == EVASIONS
       {
@@ -173,8 +170,7 @@ void MovePicker::score(ExtMove** sortList, int sortLimit) {
       }
   }
 
-  if (sortList)
-      sortList[sortCnt] = nullptr;
+  return sortEnd;
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
@@ -215,11 +211,9 @@ top:
   case QCAPTURE_INIT:
       cur = endBadCaptures = moves;
       endMoves = generate<CAPTURES>(pos, cur);
-
       {
-          ExtMove* sortList[MAX_MOVES];
-          score<CAPTURES>(sortList, -3000 * depth);
-          partial_insertion_sort(cur, sortList);
+          ExtMove* sortEnd = score<CAPTURES>(-3000 * depth);
+          insertion_sort(cur, sortEnd);
       }
       ++stage;
       goto top;
@@ -256,11 +250,9 @@ top:
       {
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
-
           {
-              ExtMove* sortList[MAX_MOVES];
-              score<QUIETS>(sortList, -3000 * depth);
-              partial_insertion_sort(cur, sortList);
+              ExtMove* sortEnd = score<QUIETS>(-3000 * depth);
+              insertion_sort(cur, sortEnd);
           }
       }
 
@@ -288,7 +280,7 @@ top:
       cur = moves;
       endMoves = generate<EVASIONS>(pos, cur);
 
-      score<EVASIONS>(nullptr, 0);
+      score<EVASIONS>();
       ++stage;
       [[fallthrough]];
 
