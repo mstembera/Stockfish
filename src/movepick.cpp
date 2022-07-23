@@ -37,12 +37,12 @@ namespace {
   void partial_insertion_sort(ExtMove* begin, ExtMove** sortList) {
 
     ExtMove* sortedEnd = begin;
-    for (int i = sortList[0] == begin ? 1 : 0; sortList[i] != nullptr; ++i)
+    for (int i = 0; sortList[i] != nullptr; ++i)
     {
         ExtMove* p = sortList[i];
         ExtMove tmp = *p, *q;
-        *p = *++sortedEnd;
-        for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+        *p = *sortedEnd;
+        for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
             *q = *(q - 1);
         *q = tmp;
     }
