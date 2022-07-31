@@ -1052,7 +1052,15 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
 
   Value v;
   Color stm = pos.side_to_move();
-  Value psq = pos.psq_eg_stm();
+  Value psq =   (pos.count(W_PAWN)   - pos.count(B_PAWN))   * PawnValueEg
+              + (pos.count(W_KNIGHT) - pos.count(B_KNIGHT)) * KnightValueEg
+              + (pos.count(W_BISHOP) - pos.count(B_BISHOP)) * BishopValueEg
+              + (pos.count(W_ROOK)   - pos.count(B_ROOK))   * RookValueEg
+              + (pos.count(W_QUEEN)  - pos.count(B_QUEEN))  * QueenValueEg;
+
+  if (pos.side_to_move() == BLACK)
+      psq = -psq;
+
   // Deciding between classical and NNUE eval (~10 Elo): for high PSQ imbalance we use classical,
   // but we switch to NNUE during long shuffling or with high material on the board.
   bool useClassical =    (pos.count<ALL_PIECES>() > 7)
