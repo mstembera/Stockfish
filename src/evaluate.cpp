@@ -1052,12 +1052,8 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
 
   Value v;
   Color stm = pos.side_to_move();
-  Value psq =   (pos.count(W_PAWN)   - pos.count(B_PAWN))   * PawnValueEg
-              + (pos.count(W_KNIGHT) - pos.count(B_KNIGHT)) * KnightValueEg
-              + (pos.count(W_BISHOP) - pos.count(B_BISHOP)) * BishopValueEg
-              + (pos.count(W_ROOK)   - pos.count(B_ROOK))   * RookValueEg
-              + (pos.count(W_QUEEN)  - pos.count(B_QUEEN))  * QueenValueEg;
-
+  Value psq =  pos.non_pawn_material(WHITE) - pos.non_pawn_material(BLACK)
+             + (pos.count(W_PAWN) - pos.count(B_PAWN)) * PawnValueEg;
   if (pos.side_to_move() == BLACK)
       psq = -psq;
 
