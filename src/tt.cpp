@@ -123,19 +123,25 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   TTEntry* const tte = first_entry(key);
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
 
-  for (int i = 0; i < ClusterSize; ++i)
+  constexpr int idx[3][4] = { { 0, 1, 2 }, { 1, 2, 0 }, { 2, 0, 1 } };
+  const int start = (3 * key16) >> 16;
+
+  for (int j = 0; j < ClusterSize; ++j)
+  {
+      const int i = idx[j][start];
       if (tte[i].key16 == key16 || !tte[i].depth8)
       {
           tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
-
           return found = (bool)tte[i].depth8, &tte[i];
       }
+  }
 
   // Find an entry to be replaced according to the replacement strategy
   auto replace_value = [&](int i) {
-      return  (tte[i].depth8 - ((GENERATION_CYCLE + generation8 - tte[i].genBound8) & GENERATION_MASK));
+      return tte[i].depth8 - ((GENERATION_CYCLE + generation8 - tte[i].genBound8) & GENERATION_MASK);
   };
 
+  TTEntry* replace = tte;
   int minV = replace_value(0);
   for (int i = 1; i < ClusterSize; ++i)
   {
@@ -148,12 +154,13 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
       int v = replace_value(i);
       if (v < minV)
       {
-          std::swap(tte[0], tte[i]);
+          replace = &tte[i];
           minV = v;
       }
   }
 
-  return found = false, &tte[0];
+  std::swap(tte[start], *replace);
+  return found = false, &tte[start];
 }
 
 
