@@ -313,7 +313,7 @@ void Thread::search() {
   optimism[ us] = Value(39);
   optimism[~us] = -optimism[us];
 
-  searchAgainCounter = 0;
+  int searchAgainCounter = 0;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
