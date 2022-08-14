@@ -160,28 +160,22 @@ void MovePicker::score() {
   };
 
   ExtMove* m = begin();
-  for ( ; m < end() - 3; m += 4)
+  for ( ; m < end() - 1; m += 2)
   {  
       if constexpr (Type == CAPTURES)
       {
           m[0].value = capture_score(m[0]);
           m[1].value = capture_score(m[1]);
-          m[2].value = capture_score(m[2]);
-          m[3].value = capture_score(m[3]);
       }
       else if constexpr (Type == QUIETS)
       {
           m[0].value = quiet_score(m[0]);
           m[1].value = quiet_score(m[1]);
-          m[2].value = quiet_score(m[2]);
-          m[3].value = quiet_score(m[3]);
       }
       else // Type == EVASIONS
       {
           m[0].value = evasion_score(m[0]);
           m[1].value = evasion_score(m[1]);
-          m[2].value = evasion_score(m[2]);
-          m[3].value = evasion_score(m[3]);
       }
   }
   for ( ; m < end(); ++m)
