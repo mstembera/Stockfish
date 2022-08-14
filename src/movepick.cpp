@@ -131,34 +131,68 @@ void MovePicker::score() {
       (void) threatenedByRook;
   }
 
-  for (auto& m : *this)
+
+  auto capture_score = [&](Move m) {
+      return  6 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
+            + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
+  };
+
+  auto quiet_score = [&](Move m) {
+      return   2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
+             + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
+             +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
+             +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
+             +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
+             +     (threatened & from_sq(m) ?
+                     (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
+                    : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
+                    :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
+                    :                                                                           0)
+                    :                                                                           0);
+  };
+
+  auto evasion_score = [&](Move m) {
+      return pos.capture(m) ?  PieceValue[MG][pos.piece_on(to_sq(m))]
+                             - Value(type_of(pos.moved_piece(m)))
+                            :  2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
+                             + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
+                             - (1 << 28);
+  };
+
+  ExtMove* m = begin();
+  for ( ; m < end() - 3; m += 4)
+  {  
       if constexpr (Type == CAPTURES)
-          m.value =  6 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
-                   +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
-
+      {
+          m[0].value = capture_score(m[0]);
+          m[1].value = capture_score(m[1]);
+          m[2].value = capture_score(m[2]);
+          m[3].value = capture_score(m[3]);
+      }
       else if constexpr (Type == QUIETS)
-          m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
-                   + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-                   +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
-                   +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
-                   +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   +     (threatened & from_sq(m) ?
-                           (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
-                          : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
-                          :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
-                          :                                                                           0)
-                          :                                                                           0);
-
+      {
+          m[0].value = quiet_score(m[0]);
+          m[1].value = quiet_score(m[1]);
+          m[2].value = quiet_score(m[2]);
+          m[3].value = quiet_score(m[3]);
+      }
       else // Type == EVASIONS
       {
-          if (pos.capture(m))
-              m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                       - Value(type_of(pos.moved_piece(m)));
-          else
-              m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
-                       + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
-                       - (1 << 28);
+          m[0].value = evasion_score(m[0]);
+          m[1].value = evasion_score(m[1]);
+          m[2].value = evasion_score(m[2]);
+          m[3].value = evasion_score(m[3]);
       }
+  }
+  for ( ; m < end(); ++m)
+  {
+      if constexpr (Type == CAPTURES)
+          m[0].value = capture_score(m[0]);
+      else if constexpr (Type == QUIETS)
+          m[0].value = quiet_score(m[0]);
+      else // Type == EVASIONS
+          m[0].value = evasion_score(m[0]);
+  }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
