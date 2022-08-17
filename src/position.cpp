@@ -1041,7 +1041,8 @@ void Position::undo_null_move() {
 
 /// Position::key_after() computes the new hash key after the given move. Needed
 /// for speculative prefetch. It doesn't recognize special moves like castling,
-/// en passant and promotions.
+/// en passant and promotions. Normal moves that affect castling rights or the
+/// en passant square are also not handled.
 
 Key Position::key_after(Move m) const {
 
