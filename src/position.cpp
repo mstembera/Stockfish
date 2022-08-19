@@ -771,8 +771,6 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
       // Update material hash key and prefetch access to materialTable
       k ^= Zobrist::psq[captured][capsq];
       st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
-      if (!Eval::useNNUE)
-          prefetch(thisThread->materialTable[st->materialKey]);
 
       // Reset rule 50 counter
       st->rule50 = 0;
