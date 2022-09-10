@@ -101,8 +101,7 @@ void TranspositionTable::clear() {
                        len    = idx != Options["Threads"] - 1 ?
                                 stride : clusterCount - start;
 
-          auto c_init = [](Cluster& c) { std::for_each_n(c.entry, ClusterSize, [](TTEntry& e) { e.init(); }); };
-          std::for_each_n(&table[start], len, c_init);
+          std::memset(&table[start], 0, len * sizeof(Cluster));
       });
   }
 
@@ -123,35 +122,38 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   TTEntry* const tte = first_entry(key);
   const uint16_t key16 = (uint16_t)key;  // Use the low 16 bits as key inside the cluster
 
-  constexpr int idx[3][4] = { { 0, 1, 2 }, { 1, 2, 0 }, { 2, 0, 1 } };
-  const int start = (3 * key16) >> 16;
+  constexpr int sequence[9] = { 0, 1, 2, 3, 4, 5, 0, 1, 2 };
+  const int start = (key16 * ClusterSize) >> 16;
 
-  for (int j = 0; j < ClusterSize; ++j)
+  for (int j = 0; j < 4; ++j)
   {
-      const int i = idx[j][start];
+      int i = sequence[start + j];
+
       if (tte[i].key16 == key16 || !tte[i].depth8)
       {
           tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
+
           return found = (bool)tte[i].depth8, &tte[i];
       }
   }
 
-  // Find an entry to be replaced according to the replacement strategy
+  // Find an entry to be replaced according to the replacement strategy.
+  // Due to our packed storage format for generation and its cyclic
+  // nature we add GENERATION_CYCLE (256 is the modulus, plus what
+  // is needed to keep the unrelated lowest n bits from affecting
+  // the result) to calculate the entry age correctly even after
+  // generation8 overflows into the next cycle.
   auto replace_value = [&](int i) {
       return tte[i].depth8 - ((GENERATION_CYCLE + generation8 - tte[i].genBound8) & GENERATION_MASK);
   };
 
-  TTEntry* replace = tte;
-  int minV = replace_value(0);
-  for (int i = 1; i < ClusterSize; ++i)
+  TTEntry* replace = &tte[sequence[start]];
+  int minV = replace_value(sequence[start]);
+  for (int j = 1; j < 4; ++j)
   {
-      // Due to our packed storage format for generation and its cyclic
-      // nature we add GENERATION_CYCLE (256 is the modulus, plus what
-      // is needed to keep the unrelated lowest n bits from affecting
-      // the result) to calculate the entry age correctly even after
-      // generation8 overflows into the next cycle.
-      
+      int i = sequence[start + j];
       int v = replace_value(i);
+
       if (v < minV)
       {
           replace = &tte[i];
@@ -159,8 +161,7 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
       }
   }
 
-  std::swap(tte[start], *replace);
-  return found = false, &tte[start];
+  return found = false, replace;
 }
 
 
@@ -170,11 +171,11 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 int TranspositionTable::hashfull() const {
 
   int cnt = 0;
-  for (int i = 0; i < 1000; ++i)
-      for (int j = 0; j < ClusterSize; ++j)
+  for (size_t i = 0, n = 0; i < clusterCount && n < 1000; ++i)
+      for (int j = 0; j < ClusterSize && n < 1000; ++j, ++n)
           cnt += table[i].entry[j].depth8 && (table[i].entry[j].genBound8 & GENERATION_MASK) == generation8;
 
-  return cnt / ClusterSize;
+  return cnt;
 }
 
 } // namespace Stockfish
