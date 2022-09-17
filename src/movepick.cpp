@@ -34,16 +34,21 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit, int partitionLimit) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
+    for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
         if (p->value >= limit)
         {
             ExtMove tmp = *p, *q;
-            *p = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            *p = *sortedEnd;
+            for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
+        }
+        else if (p->value < partitionLimit)
+        {
+            while ((--end)->value < partitionLimit && end > p);
+            std::swap(*p--, *end);
         }
   }
 
@@ -193,7 +198,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
+      partial_insertion_sort(cur, endMoves, -3000 * depth, -3000 * depth - 2000);
       ++stage;
       goto top;
 
@@ -231,7 +236,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          partial_insertion_sort(cur, endMoves, -3000 * depth, -3000 * depth - 2000);
       }
 
       ++stage;
