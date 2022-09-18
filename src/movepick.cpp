@@ -106,7 +106,7 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  [[maybe_unused]] Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook;
+  [[maybe_unused]] Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook, checkSquares[PIECE_TYPE_NB];
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -121,6 +121,14 @@ void MovePicker::score() {
       threatened =  (pos.pieces(us, QUEEN) & threatenedByRook)
                   | (pos.pieces(us, ROOK)  & threatenedByMinor)
                   | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+      Bitboard kingRing    = attacks_bb<KING>(pos.square<KING>(~us));
+      checkSquares[PAWN]   = pos.check_squares(PAWN)   & ~kingRing;
+      checkSquares[KNIGHT] = pos.check_squares(KNIGHT) & ~kingRing;
+      checkSquares[BISHOP] = pos.check_squares(BISHOP) & ~kingRing;
+      checkSquares[ROOK]   = pos.check_squares(ROOK)   & ~kingRing;
+      checkSquares[QUEEN]  = pos.check_squares(QUEEN)  & ~kingRing;
+      checkSquares[KING]   = 0;   
   }
 
   for (auto& m : *this)
@@ -140,7 +148,7 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+                   +     bool(checkSquares[type_of(pos.moved_piece(m))] & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
           if (pos.capture(m))
