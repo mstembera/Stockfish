@@ -109,7 +109,7 @@ void MovePicker::score() {
   [[maybe_unused]] Bitboard threatened, threatenedByPawn, threatenedByMinor, threatenedByRook;
   if constexpr (Type == QUIETS)
   {
-      if (endMoves - cur > 3 || depth > 2)
+      if (endMoves - cur + 2 * depth > 11)
       {
           Color us = pos.side_to_move();
           // squares threatened by pawns
