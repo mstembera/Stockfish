@@ -230,8 +230,11 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          if (endMoves - cur > std::max(3 - depth, 1))
+          {
+              score<QUIETS>();
+              partial_insertion_sort(cur, endMoves, -3000 * depth);
+          }
       }
 
       ++stage;
