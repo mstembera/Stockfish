@@ -230,7 +230,7 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          if (endMoves - cur > 1 + (depth < 2))
+          if (endMoves - cur > std::max(5 - depth, 1))
           {
               score<QUIETS>();
               partial_insertion_sort(cur, endMoves, -3000 * depth);
