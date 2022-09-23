@@ -141,7 +141,7 @@ void MovePicker::score() {
                           :                                                                           0)
                           :                                                                           0)
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384
-                   -     (type_of(pos.moved_piece(m)) == KING);
+                   - 8 * (type_of(pos.moved_piece(m)) == KING);
       else // Type == EVASIONS
       {
           if (pos.capture(m))
