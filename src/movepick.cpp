@@ -284,13 +284,17 @@ top:
       cur = moves;
       endMoves = generate<QUIET_CHECKS>(pos, cur);
 
-      score<QUIET_CHECKS>();
+      if (endMoves - cur > 1)
+      {
+          score<QUIET_CHECKS>();
+          partial_insertion_sort(cur, endMoves, 0);
+      }
 
       ++stage;
       [[fallthrough]];
 
   case QCHECK:
-      return select<Best>([](){ return true; });
+      return select<Next>([](){ return true; });
   }
 
   assert(false);
