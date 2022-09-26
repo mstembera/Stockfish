@@ -129,6 +129,7 @@ void MovePicker::score() {
                    +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
 
       else if constexpr (Type == QUIETS || Type == QUIET_CHECKS)
+      {
           m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
@@ -139,8 +140,10 @@ void MovePicker::score() {
                           : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
-                          :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+                          :                                                                           0);
+          if constexpr (Type == QUIETS)
+              m.value +=  bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+      }
       else // Type == EVASIONS
       {
           if (pos.capture(m))
@@ -287,7 +290,7 @@ top:
       if (endMoves - cur > 1)
       {
           score<QUIET_CHECKS>();
-          partial_insertion_sort(cur, endMoves, 0);
+          partial_insertion_sort(cur, endMoves, INT_MIN);
       }
 
       ++stage;
