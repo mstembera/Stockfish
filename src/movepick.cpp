@@ -285,13 +285,12 @@ top:
       endMoves = generate<QUIET_CHECKS>(pos, cur);
 
       score<QUIET_CHECKS>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
 
       ++stage;
       [[fallthrough]];
 
   case QCHECK:
-      return select<Next>([](){ return true; });
+      return select<Best>([](){ return true; });
   }
 
   assert(false);
