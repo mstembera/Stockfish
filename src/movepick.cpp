@@ -290,7 +290,7 @@ top:
       if (endMoves - cur > 1)
       {
           score<QUIET_CHECKS>();
-          partial_insertion_sort(cur, endMoves, INT_MIN);
+          partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
       }
 
       ++stage;
