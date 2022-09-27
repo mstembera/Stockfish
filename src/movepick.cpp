@@ -194,7 +194,7 @@ top:
 
       score<CAPTURES>();
 
-      if (endMoves - cur > 3)
+      if (endMoves - cur > 2)
       {
           partial_insertion_sort(cur, endMoves, -3000 * depth);
           pickType = Next;
