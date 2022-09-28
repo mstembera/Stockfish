@@ -213,7 +213,7 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
 Thread* ThreadPool::get_best_thread() const {
 
     Thread* bestThread = front();
-    std::map<Move, int64_t> votes;
+    std::unordered_map<Move, int64_t> votes(2 * std::min(size(), bestThread->rootMoves.size()));
     Value minScore = VALUE_NONE;
 
     // Find minimum score of all threads
@@ -221,11 +221,59 @@ Thread* ThreadPool::get_best_thread() const {
         minScore = std::min(minScore, th->rootMoves[0].score);
 
     // Vote according to score and depth, and select the best thread
+    auto vote_fn = [&](const Thread* th) { return (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth); };
+
+    for (size_t i = 0; i < size(); ++i)
+    {
+        Thread* th1 = (*this)[i];
+
+        // Primary vote
+        votes[th1->rootMoves[0].pv[0]] += 8 * vote_fn(th1);
+
+        if (th1->rootMoves[0].pv.size() < 3)
+            continue;
+        
+        Square fs10 = from_sq(th1->rootMoves[0].pv[0]), ts10 = to_sq(th1->rootMoves[0].pv[0]);
+        Square fs12 = from_sq(th1->rootMoves[0].pv[2]), ts12 = to_sq(th1->rootMoves[0].pv[2]);
+
+        // Different capture order
+        if (ts10 == ts12)
+            continue;
+
+        // Bonus 3-ply transpositions
+        for (size_t j = i + 1; j < size(); ++j)
+        {
+            Thread* th2 = (*this)[j];
+            if (th2->rootMoves[0].pv.size() < 3)
+                continue;
+
+            // Same move
+            if (th1->rootMoves[0].pv[0] == th2->rootMoves[0].pv[0])
+                continue;
+
+            // Different opponent reply
+            if (th1->rootMoves[0].pv[1] != th2->rootMoves[0].pv[1])
+                continue;
+
+            Square fs20 = from_sq(th2->rootMoves[0].pv[0]), ts20 = to_sq(th2->rootMoves[0].pv[0]);
+            Square fs22 = from_sq(th2->rootMoves[0].pv[2]), ts22 = to_sq(th2->rootMoves[0].pv[2]);
+
+            // Different capture order
+            if (ts20 == ts22)
+                continue;
+
+            if (   (   th1->rootMoves[0].pv[0] == th2->rootMoves[0].pv[2]
+                    && th1->rootMoves[0].pv[2] == th2->rootMoves[0].pv[0])
+                || (ts10 == fs12 && ts20 == fs22 && fs10 == fs20 && ts12 == ts22))
+            {
+                votes[th1->rootMoves[0].pv[0]] += vote_fn(th2);
+                votes[th2->rootMoves[0].pv[0]] += vote_fn(th1);
+            }
+        }
+    }
+
     for (Thread* th : *this)
     {
-        votes[th->rootMoves[0].pv[0]] +=
-            (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth);
-
         if (abs(bestThread->rootMoves[0].score) >= VALUE_TB_WIN_IN_MAX_PLY)
         {
             // Make sure we pick the shortest mate / TB conversion or stave off mate the longest
