@@ -238,9 +238,7 @@ Thread* ThreadPool::get_best_thread() const {
             th->rootPos.do_move(th->rootMoves[0].pv[0], st[0]);
             th->rootPos.do_move(th->rootMoves[0].pv[1], st[1]);
             th->rootPos.do_move(th->rootMoves[0].pv[2], st[2]);
-                
             keys3Ply[th->id()] = th->rootPos.key();
-
             th->rootPos.undo_move(th->rootMoves[0].pv[2]);
             th->rootPos.undo_move(th->rootMoves[0].pv[1]);
             th->rootPos.undo_move(th->rootMoves[0].pv[0]);
@@ -258,7 +256,7 @@ Thread* ThreadPool::get_best_thread() const {
     for (Thread* th : *this)
     {
         std::pair<int64_t, bool>& v = votes[th->rootMoves[0].pv[0]];
-        v.first += 8 * vote_fn(th);
+        v.first += 4 * vote_fn(th);
         v.second = false;
     }
 
@@ -266,7 +264,6 @@ Thread* ThreadPool::get_best_thread() const {
     for (size_t i = 0; i < size(); ++i)
     {
         Thread* th1 = (*this)[i];
-
         if (th1->rootMoves[0].pv.size() < 3)
             continue;
 
@@ -284,6 +281,7 @@ Thread* ThreadPool::get_best_thread() const {
                 v.first += vote_fn(th2);
         }
 
+        // don't bonus the same move twice
         v.second = true;
     }
 
