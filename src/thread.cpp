@@ -213,63 +213,78 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
 Thread* ThreadPool::get_best_thread() const {
 
     Thread* bestThread = front();
-    std::unordered_map<Move, int64_t> votes(2 * std::min(size(), bestThread->rootMoves.size()));
+    std::unordered_map<Move, std::pair<int64_t, bool>> votes(2 * std::min(size(), bestThread->rootMoves.size()));
+    std::multimap<Key, Thread*> keyMap;
+    std::vector<Key> keys3Ply(size());
     Value minScore = VALUE_NONE;
 
     // Find minimum score of all threads
-    for (Thread* th: *this)
+    Thread* previous = nullptr;
+    for (Thread* th : *this)
+    {
         minScore = std::min(minScore, th->rootMoves[0].score);
+
+        if (th->rootMoves[0].pv.size() < 3)
+            continue;
+
+        if (   previous
+            && previous->rootMoves[0].pv[0] == th->rootMoves[0].pv[0]
+            && previous->rootMoves[0].pv[1] == th->rootMoves[0].pv[1]
+            && previous->rootMoves[0].pv[2] == th->rootMoves[0].pv[2])
+            keys3Ply[th->id()] = keys3Ply[previous->id()];
+        else
+        {
+            StateInfo st[3];
+            th->rootPos.do_move(th->rootMoves[0].pv[0], st[0]);
+            th->rootPos.do_move(th->rootMoves[0].pv[1], st[1]);
+            th->rootPos.do_move(th->rootMoves[0].pv[2], st[2]);
+                
+            keys3Ply[th->id()] = th->rootPos.key();
+
+            th->rootPos.undo_move(th->rootMoves[0].pv[2]);
+            th->rootPos.undo_move(th->rootMoves[0].pv[1]);
+            th->rootPos.undo_move(th->rootMoves[0].pv[0]);
+
+            previous = th;
+        }
+
+        keyMap.insert({ keys3Ply[th->id()], th });
+    }
 
     // Vote according to score and depth, and select the best thread
     auto vote_fn = [&](const Thread* th) { return (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth); };
 
+    // Primary vote
+    for (Thread* th : *this)
+    {
+        std::pair<int64_t, bool>& v = votes[th->rootMoves[0].pv[0]];
+        v.first += 8 * vote_fn(th);
+        v.second = false;
+    }
+
+    // Bonus 3-ply transpositions
     for (size_t i = 0; i < size(); ++i)
     {
         Thread* th1 = (*this)[i];
 
-        // Primary vote
-        votes[th1->rootMoves[0].pv[0]] += 8 * vote_fn(th1);
-
         if (th1->rootMoves[0].pv.size() < 3)
             continue;
-        
-        Square fs10 = from_sq(th1->rootMoves[0].pv[0]), ts10 = to_sq(th1->rootMoves[0].pv[0]);
-        Square fs12 = from_sq(th1->rootMoves[0].pv[2]), ts12 = to_sq(th1->rootMoves[0].pv[2]);
 
-        // Different capture order
-        if (ts10 == ts12)
+        std::pair<int64_t, bool>& v = votes[th1->rootMoves[0].pv[0]];
+        if (v.second)
             continue;
 
-        // Bonus 3-ply transpositions
-        for (size_t j = i + 1; j < size(); ++j)
+        std::pair range = keyMap.equal_range(keys3Ply[th1->id()]);
+        for (auto it = range.first; it != range.second; ++it)
         {
-            Thread* th2 = (*this)[j];
-            if (th2->rootMoves[0].pv.size() < 3)
-                continue;
+            Thread* th2 = it->second;
+            assert(th2->rootMoves[0].pv.size() >= 3);
 
-            // Same move
-            if (th1->rootMoves[0].pv[0] == th2->rootMoves[0].pv[0])
-                continue;
-
-            // Different opponent reply
-            if (th1->rootMoves[0].pv[1] != th2->rootMoves[0].pv[1])
-                continue;
-
-            Square fs20 = from_sq(th2->rootMoves[0].pv[0]), ts20 = to_sq(th2->rootMoves[0].pv[0]);
-            Square fs22 = from_sq(th2->rootMoves[0].pv[2]), ts22 = to_sq(th2->rootMoves[0].pv[2]);
-
-            // Different capture order
-            if (ts20 == ts22)
-                continue;
-
-            if (   (   th1->rootMoves[0].pv[0] == th2->rootMoves[0].pv[2]
-                    && th1->rootMoves[0].pv[2] == th2->rootMoves[0].pv[0])
-                || (ts10 == fs12 && ts20 == fs22 && fs10 == fs20 && ts12 == ts22))
-            {
-                votes[th1->rootMoves[0].pv[0]] += vote_fn(th2);
-                votes[th2->rootMoves[0].pv[0]] += vote_fn(th1);
-            }
+            if (th1->rootMoves[0].pv[0] != th2->rootMoves[0].pv[0])
+                v.first += vote_fn(th2);
         }
+
+        v.second = true;
     }
 
     for (Thread* th : *this)
@@ -282,8 +297,8 @@ Thread* ThreadPool::get_best_thread() const {
         }
         else if (   th->rootMoves[0].score >= VALUE_TB_WIN_IN_MAX_PLY
                  || (   th->rootMoves[0].score > VALUE_TB_LOSS_IN_MAX_PLY
-                     && (   votes[th->rootMoves[0].pv[0]] > votes[bestThread->rootMoves[0].pv[0]]
-                         || (   votes[th->rootMoves[0].pv[0]] == votes[bestThread->rootMoves[0].pv[0]]
+                     && (   votes[th->rootMoves[0].pv[0]].first > votes[bestThread->rootMoves[0].pv[0]].first
+                         || (   votes[th->rootMoves[0].pv[0]].first == votes[bestThread->rootMoves[0].pv[0]].first
                              && th->rootMoves[0].pv.size() > bestThread->rootMoves[0].pv.size()))))
             bestThread = th;
     }
