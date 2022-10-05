@@ -107,7 +107,7 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedByAny;
+  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedByAny, enPrise;
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
@@ -122,11 +122,15 @@ void MovePicker::score() {
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
 
-      Bitboard undefended = ~(  pos.attacks_by<PAWN>(us)   | pos.attacks_by<KNIGHT>(us)
-                              | pos.attacks_by<BISHOP>(us) | pos.attacks_by<ROOK>(us)
-                              | pos.attacks_by<QUEEN>(us)  | pos.attacks_by<KING>(us));
+      enPrise = ~(  pos.attacks_by<PAWN>(us)   | pos.attacks_by<KNIGHT>(us)
+                  | pos.attacks_by<BISHOP>(us) | pos.attacks_by<ROOK>(us)
+                  | pos.attacks_by<QUEEN>(us)  | pos.attacks_by<KING>(us))
+               & threatenedByAny;
 
-      threatenedPieces |= undefended & threatenedByAny & (pos.pieces(us) ^ pos.pieces(us, PAWN, KING));
+      threatenedPieces  |= enPrise & pos.pieces(us);
+      threatenedByPawn  |= enPrise;
+      threatenedByMinor |= enPrise;
+      threatenedByRook  |= enPrise;
   }
 
   for (auto& m : *this)
