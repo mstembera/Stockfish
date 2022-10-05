@@ -122,11 +122,11 @@ void MovePicker::score() {
                        | (pos.pieces(us, ROOK)  & threatenedByMinor)
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
 
-      Bitboard undefended =  pos.attacks_by<PAWN>(us)   | pos.attacks_by<KNIGHT>(us)
-                           | pos.attacks_by<BISHOP>(us) | pos.attacks_by<ROOK>(us)
-                           | pos.attacks_by<QUEEN>(us)  | pos.attacks_by<KING>(us);
-      undefended = ~undefended & pos.pieces(us) & threatenedByAny;
-      threatenedPieces |= undefended; 
+      Bitboard undefended = ~(  pos.attacks_by<PAWN>(us)   | pos.attacks_by<KNIGHT>(us)
+                              | pos.attacks_by<BISHOP>(us) | pos.attacks_by<ROOK>(us)
+                              | pos.attacks_by<QUEEN>(us)  | pos.attacks_by<KING>(us));
+
+      threatenedPieces |= undefended & threatenedByAny & (pos.pieces(us) ^ pos.pieces(us, PAWN, KING));
   }
 
   for (auto& m : *this)
