@@ -107,19 +107,19 @@ void MovePicker::score() {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-  [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook;
+  [[maybe_unused]] Bitboard threatenedBy[PIECE_TYPE_NB];
   if constexpr (Type == QUIETS)
   {
       Color us = pos.side_to_move();
 
-      threatenedByPawn  = pos.attacks_by<PAWN>(~us);
-      threatenedByMinor = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
-      threatenedByRook  = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+      threatenedBy[KNIGHT] = threatenedBy[BISHOP] = pos.attacks_by<PAWN>(~us);
+      threatenedBy[ROOK]   = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedBy[KNIGHT];
+      threatenedBy[QUEEN]  = pos.attacks_by<ROOK>(~us) | threatenedBy[ROOK];
 
       // Pieces threatened by pieces of lesser material value
-      threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
-                       | (pos.pieces(us, ROOK)  & threatenedByMinor)
-                       | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+      threatenedPieces = (pos.pieces(us, QUEEN) & threatenedBy[QUEEN])
+                       | (pos.pieces(us, ROOK)  & threatenedBy[ROOK])
+                       | (pos.pieces(us, KNIGHT, BISHOP) & threatenedBy[KNIGHT]);
   }
 
   for (auto& m : *this)
@@ -133,12 +133,8 @@ void MovePicker::score() {
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   +     (threatenedPieces & from_sq(m) ?
-                           (type_of(pos.moved_piece(m)) == QUEEN && !(to_sq(m) & threatenedByRook)  ? 50000
-                          : type_of(pos.moved_piece(m)) == ROOK  && !(to_sq(m) & threatenedByMinor) ? 25000
-                          :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
-                          :                                                                           0)
-                          :                                                                           0)
+                   +     ((threatenedPieces & from_sq(m)) && !(to_sq(m) & threatenedBy[type_of(pos.moved_piece(m))])
+                              ? 20 * PieceValue[MG][type_of(pos.moved_piece(m))] : 0)
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
