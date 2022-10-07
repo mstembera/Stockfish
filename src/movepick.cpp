@@ -112,14 +112,17 @@ void MovePicker::score() {
   {
       Color us = pos.side_to_move();
 
-      threatenedBy[KNIGHT] = threatenedBy[BISHOP] = pos.attacks_by<PAWN>(~us);
+      threatenedBy[PAWN]   = 0;
+      threatenedBy[KNIGHT] =
+      threatenedBy[BISHOP] = pos.attacks_by<PAWN>(~us);
       threatenedBy[ROOK]   = pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedBy[KNIGHT];
       threatenedBy[QUEEN]  = pos.attacks_by<ROOK>(~us) | threatenedBy[ROOK];
+      threatenedBy[KING]   = 0;
 
       // Pieces threatened by pieces of lesser material value
-      threatenedPieces = (pos.pieces(us, QUEEN) & threatenedBy[QUEEN])
-                       | (pos.pieces(us, ROOK)  & threatenedBy[ROOK])
-                       | (pos.pieces(us, KNIGHT, BISHOP) & threatenedBy[KNIGHT]);
+      threatenedPieces =  (pos.pieces(us, KNIGHT, BISHOP) & threatenedBy[KNIGHT])
+                        | (pos.pieces(us, ROOK)  & threatenedBy[ROOK])
+                        | (pos.pieces(us, QUEEN) & threatenedBy[QUEEN]);
   }
 
   for (auto& m : *this)
@@ -133,8 +136,8 @@ void MovePicker::score() {
                    +     (*continuationHistory[1])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
-                   +     ((threatenedPieces & from_sq(m)) && !(to_sq(m) & threatenedBy[type_of(pos.moved_piece(m))])
-                              ? 20 * PieceValue[MG][type_of(pos.moved_piece(m))] : 0)
+                   +     (bool(threatenedPieces & from_sq(m)) - bool(to_sq(m) & threatenedBy[type_of(pos.moved_piece(m))]))
+                              * 20 * PieceValue[MG][type_of(pos.moved_piece(m))]
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
