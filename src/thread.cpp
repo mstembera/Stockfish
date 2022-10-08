@@ -213,40 +213,40 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
 Thread* ThreadPool::get_best_thread() const {
 
     Thread* bestThread = front();
-    std::unordered_map<Move, std::pair<int64_t, bool>> votes(2 * std::min(size(), bestThread->rootMoves.size()));
-    std::multimap<Key, Thread*> keyMap;
+    std::unordered_map<Move, int64_t> votes(2 * std::min(size(), bestThread->rootMoves.size()));
     std::vector<Key> keys3Ply(size());
     Value minScore = VALUE_NONE;
-
-    // Find minimum score of all threads
+    
     Thread* previous = nullptr;
     for (Thread* th : *this)
     {
+        // Find minimum score of all threads
         minScore = std::min(minScore, th->rootMoves[0].score);
 
+        // Calculate position key after 3 ply
         if (th->rootMoves[0].pv.size() < 3)
             continue;
 
-        if (   previous
-            && previous->rootMoves[0].pv[0] == th->rootMoves[0].pv[0]
-            && previous->rootMoves[0].pv[1] == th->rootMoves[0].pv[1]
-            && previous->rootMoves[0].pv[2] == th->rootMoves[0].pv[2])
-            keys3Ply[th->id()] = keys3Ply[previous->id()];
-        else
+        if (   !previous
+            || previous->rootMoves[0].pv[0] != th->rootMoves[0].pv[0]
+            || previous->rootMoves[0].pv[1] != th->rootMoves[0].pv[1]
+            || previous->rootMoves[0].pv[2] != th->rootMoves[0].pv[2])
         {
             StateInfo st[3];
             th->rootPos.do_move(th->rootMoves[0].pv[0], st[0]);
             th->rootPos.do_move(th->rootMoves[0].pv[1], st[1]);
             th->rootPos.do_move(th->rootMoves[0].pv[2], st[2]);
+
             keys3Ply[th->id()] = th->rootPos.key();
+
             th->rootPos.undo_move(th->rootMoves[0].pv[2]);
             th->rootPos.undo_move(th->rootMoves[0].pv[1]);
             th->rootPos.undo_move(th->rootMoves[0].pv[0]);
 
             previous = th;
         }
-
-        keyMap.insert({ keys3Ply[th->id()], th });
+        else
+            keys3Ply[th->id()] = keys3Ply[previous->id()];
     }
 
     // Vote according to score and depth, and select the best thread
@@ -254,35 +254,28 @@ Thread* ThreadPool::get_best_thread() const {
 
     // Primary vote
     for (Thread* th : *this)
-    {
-        std::pair<int64_t, bool>& v = votes[th->rootMoves[0].pv[0]];
-        v.first += 4 * vote_fn(th);
-        v.second = false;
-    }
+        votes[th->rootMoves[0].pv[0]] += 10 * vote_fn(th);
 
     // Bonus 3-ply transpositions
-    for (size_t i = 0; i < size(); ++i)
+    for (size_t i = 0; i < size() - 1; ++i)
     {
         Thread* th1 = (*this)[i];
         if (th1->rootMoves[0].pv.size() < 3)
             continue;
 
-        std::pair<int64_t, bool>& v = votes[th1->rootMoves[0].pv[0]];
-        if (v.second)
-            continue;
-
-        std::pair range = keyMap.equal_range(keys3Ply[th1->id()]);
-        for (auto it = range.first; it != range.second; ++it)
+        for (size_t j = i + 1; j < size(); ++j)
         {
-            Thread* th2 = it->second;
-            assert(th2->rootMoves[0].pv.size() >= 3);
+            Thread* th2 = (*this)[j];
+            if (th2->rootMoves[0].pv.size() < 3)
+                continue;
 
-            if (th1->rootMoves[0].pv[0] != th2->rootMoves[0].pv[0])
-                v.first += vote_fn(th2);
+            if (   keys3Ply[th1->id()] == keys3Ply[th2->id()]
+                && th1->rootMoves[0].pv[0] != th2->rootMoves[0].pv[0])
+            {
+                votes[th1->rootMoves[0].pv[0]] += vote_fn(th2);
+                votes[th2->rootMoves[0].pv[0]] += vote_fn(th1);
+            }
         }
-
-        // don't bonus the same move twice
-        v.second = true;
     }
 
     for (Thread* th : *this)
@@ -295,8 +288,8 @@ Thread* ThreadPool::get_best_thread() const {
         }
         else if (   th->rootMoves[0].score >= VALUE_TB_WIN_IN_MAX_PLY
                  || (   th->rootMoves[0].score > VALUE_TB_LOSS_IN_MAX_PLY
-                     && (   votes[th->rootMoves[0].pv[0]].first > votes[bestThread->rootMoves[0].pv[0]].first
-                         || (   votes[th->rootMoves[0].pv[0]].first == votes[bestThread->rootMoves[0].pv[0]].first
+                     && (   votes[th->rootMoves[0].pv[0]] > votes[bestThread->rootMoves[0].pv[0]]
+                         || (   votes[th->rootMoves[0].pv[0]] == votes[bestThread->rootMoves[0].pv[0]]
                              && th->rootMoves[0].pv.size() > bestThread->rootMoves[0].pv.size()))))
             bestThread = th;
     }
