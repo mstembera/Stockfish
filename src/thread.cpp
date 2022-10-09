@@ -213,10 +213,13 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
 Thread* ThreadPool::get_best_thread() const {
 
     Thread* bestThread = front();
-    std::unordered_map<Move, int64_t> votes(2 * std::min(size(), bestThread->rootMoves.size()));
+    size_t bucketCount = 2 * std::min(size(), bestThread->rootMoves.size());
+    std::unordered_map<Move, int64_t> votes(bucketCount);
+    std::unordered_multimap<Key, Move> key2Move(bucketCount);
+    std::unordered_multimap<Move, Thread*> move2Thread(bucketCount);
     std::vector<Key> keys3Ply(size());
     Value minScore = VALUE_NONE;
-    
+
     Thread* previous = nullptr;
     for (Thread* th : *this)
     {
@@ -237,6 +240,14 @@ Thread* ThreadPool::get_best_thread() const {
             th->rootPos.do_move(th->rootMoves[0].pv[1], st[1]);
             th->rootPos.do_move(th->rootMoves[0].pv[2], st[2]);
 
+            // Collect all unique moves that lead to the same key
+            std::pair range = key2Move.equal_range(th->rootPos.key());
+            bool uniqueMove = true;
+            for (auto it = range.first; it != range.second && uniqueMove; ++it)
+                uniqueMove = th->rootMoves[0].pv[0] != it->second;
+            if (uniqueMove)
+                key2Move.insert({ th->rootPos.key(), th->rootMoves[0].pv[0] });
+
             keys3Ply[th->id()] = th->rootPos.key();
 
             th->rootPos.undo_move(th->rootMoves[0].pv[2]);
@@ -247,6 +258,8 @@ Thread* ThreadPool::get_best_thread() const {
         }
         else
             keys3Ply[th->id()] = keys3Ply[previous->id()];
+
+        move2Thread.insert({ th->rootMoves[0].pv[0], th });
     }
 
     // Vote according to score and depth, and select the best thread
@@ -257,25 +270,44 @@ Thread* ThreadPool::get_best_thread() const {
         votes[th->rootMoves[0].pv[0]] += 10 * vote_fn(th);
 
     // Bonus 3-ply transpositions
-    for (size_t i = 0; i < size() - 1; ++i)
+    while (!key2Move.empty())
     {
-        Thread* th1 = (*this)[i];
-        if (th1->rootMoves[0].pv.size() < 3)
-            continue;
+        Key key = key2Move.begin()->first;
+        std::pair mRange = key2Move.equal_range(key);
 
-        for (size_t j = i + 1; j < size(); ++j)
+        for (auto mIt1 = mRange.first; mIt1 != mRange.second; ++mIt1)
         {
-            Thread* th2 = (*this)[j];
-            if (th2->rootMoves[0].pv.size() < 3)
-                continue;
+            Move m1 = mIt1->second;
 
-            if (   keys3Ply[th1->id()] == keys3Ply[th2->id()]
-                && th1->rootMoves[0].pv[0] != th2->rootMoves[0].pv[0])
+            for (auto mIt2 = mIt1; ++mIt2 != mRange.second; )
             {
-                votes[th1->rootMoves[0].pv[0]] += vote_fn(th2);
-                votes[th2->rootMoves[0].pv[0]] += vote_fn(th1);
+                Move m2 = mIt2->second;
+                assert(m1 != m2);
+
+                // Cross bonus m1 w/ m2's threads and m2 w/ m1's threads
+                std::pair tRange1 = move2Thread.equal_range(m1);
+                for (auto tIt = tRange1.first; tIt != tRange1.second; ++tIt)
+                {
+                    Thread* th = tIt->second;
+                    assert(th->rootMoves[0].pv[0] == m1);
+
+                    if (keys3Ply[th->id()] == key)
+                        votes[m2] += vote_fn(th);
+                }
+
+                std::pair tRange2 = move2Thread.equal_range(m2);
+                for (auto tIt = tRange2.first; tIt != tRange2.second; ++tIt)
+                {
+                    Thread* th = tIt->second;
+                    assert(th->rootMoves[0].pv[0] == m2);
+
+                    if (keys3Ply[th->id()] == key)
+                        votes[m1] += vote_fn(th);
+                }
             }
         }
+
+        key2Move.erase(mRange.first, mRange.second);
     }
 
     for (Thread* th : *this)
