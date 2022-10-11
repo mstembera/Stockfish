@@ -137,7 +137,7 @@ void MovePicker::score() {
                    +     (*continuationHistory[3])[pos.moved_piece(m)][to_sq(m)]
                    +     (*continuationHistory[5])[pos.moved_piece(m)][to_sq(m)]
                    +     (bool(threatenedPieces & from_sq(m)) - bool(to_sq(m) & threatenedBy[type_of(pos.moved_piece(m))]))
-                              * 32 * PieceValue[MG][type_of(pos.moved_piece(m))]
+                              * 256 * PieceValue[MG][type_of(pos.moved_piece(m))]
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
       else // Type == EVASIONS
       {
