@@ -25,14 +25,9 @@
 namespace Stockfish::Eval::NNUE::Features {
 
   // Index of a feature for a given king position and another piece on some square
-  template<>
-  inline IndexType HalfKAv2_hm::make_index<WHITE>(Square s, Piece pc, Square ksq) {
-    return IndexType((int(s) ^ ((file_of(ksq) < FILE_E) * SQ_H1)) + PieceSquareIndex[WHITE][pc] + KingBuckets[WHITE][ksq]);
-  }
-
-  template<>
-  inline IndexType HalfKAv2_hm::make_index<BLACK>(Square s, Piece pc, Square ksq) {
-    return IndexType((int(s) ^ ((file_of(ksq) < FILE_E) * SQ_H1) ^ int(SQ_A8)) + PieceSquareIndex[BLACK][pc] + KingBuckets[BLACK][ksq]);
+  template<Color Perspective>
+  inline IndexType HalfKAv2_hm::make_index(Square s, Piece pc, Square ksq) {
+    return IndexType((int(s) ^ OrientTBL[Perspective][ksq]) + PieceSquareIndex[Perspective][pc] + KingBuckets[Perspective][ksq]);
   }
 
   // Explicit template instantiations
