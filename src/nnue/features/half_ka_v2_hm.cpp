@@ -24,15 +24,17 @@
 
 namespace Stockfish::Eval::NNUE::Features {
 
-  // Orient a square according to perspective (rotates by 180 for black)
-  inline Square HalfKAv2_hm::orient(Color perspective, Square s, Square ksq) {
-    return Square(int(s) ^ (bool(perspective) * SQ_A8) ^ ((file_of(ksq) < FILE_E) * SQ_H1));
-  }
-
   // Index of a feature for a given king position and another piece on some square
   inline IndexType HalfKAv2_hm::make_index(Color perspective, Square s, Piece pc, Square ksq) {
-    Square o_ksq = orient(perspective, ksq, ksq);
-    return IndexType(orient(perspective, s, ksq) + PieceSquareIndex[perspective][pc] + PS_NB * KingBuckets[o_ksq]);
+    return IndexType((int(s) ^ OrientTBL[perspective][ksq]) + PieceSquareIndex[perspective][pc] + KingBuckets[perspective][ksq]);
+  }
+
+  inline std::pair<IndexType, IndexType> HalfKAv2_hm::make_index_parts(Color perspective, Piece pc, Square ksq) {
+    return std::pair(OrientTBL[perspective][ksq], PieceSquareIndex[perspective][pc] + KingBuckets[perspective][ksq]);
+  }
+
+  inline IndexType HalfKAv2_hm::finalize_index(Square s, const std::pair<IndexType, IndexType>& pIdx) {
+    return IndexType((int(s) ^ pIdx.first) + pIdx.second);
   }
 
   // Get a list of indices for active features
@@ -61,10 +63,14 @@ namespace Stockfish::Eval::NNUE::Features {
     IndexList& added
   ) {
     for (int i = 0; i < dp.dirty_num; ++i) {
+      assert(dp.from[i] != SQ_NONE || dp.to[i] != SQ_NONE);
+      std::pair<IndexType, IndexType> pi = make_index_parts(perspective, dp.piece[i], ksq);
+
       if (dp.from[i] != SQ_NONE)
-        removed.push_back(make_index(perspective, dp.from[i], dp.piece[i], ksq));
+        removed.push_back(finalize_index(dp.from[i], pi));
+
       if (dp.to[i] != SQ_NONE)
-        added.push_back(make_index(perspective, dp.to[i], dp.piece[i], ksq));
+        added.push_back(finalize_index(dp.to[i], pi));
     }
   }
 
