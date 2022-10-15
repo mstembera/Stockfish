@@ -24,8 +24,24 @@
 
 namespace Stockfish::Eval::NNUE::Features {
 
+  struct IndexTable {
+
+    alignas(CacheLineSize) uint16_t idx[COLOR_NB][SQUARE_NB][PIECE_NB][SQUARE_NB];
+
+    IndexTable()
+    {
+        for (Color c : { WHITE, BLACK })
+            for (Square ks = SQ_A1; ks < SQUARE_NB; ++ks)
+                for (Piece pc : { W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
+                                  B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING })
+                    for (Square s = SQ_A1; s < SQUARE_NB; ++s)
+                        idx[c][ks][pc][s] = HalfKAv2_hm::make_index(c, s, pc, ks);
+    }
+
+  } indexTable;
+
   // Orient a square according to perspective (rotates by 180 for black)
-  inline Square HalfKAv2_hm::orient(Color perspective, Square s, Square ksq) {
+  inline Square orient(Color perspective, Square s, Square ksq) {
     return Square(int(s) ^ (bool(perspective) * SQ_A8) ^ ((file_of(ksq) < FILE_E) * SQ_H1));
   }
 
@@ -42,11 +58,12 @@ namespace Stockfish::Eval::NNUE::Features {
     IndexList& active
   ) {
     Square ksq = pos.square<KING>(perspective);
+    const uint16_t (&idx2D)[PIECE_NB][SQUARE_NB] = indexTable.idx[perspective][ksq];
     Bitboard bb = pos.pieces();
     while (bb)
     {
       Square s = pop_lsb(bb);
-      active.push_back(make_index(perspective, s, pos.piece_on(s), ksq));
+      active.push_back(idx2D[pos.piece_on(s)][s]);
     }
   }
 
@@ -60,11 +77,14 @@ namespace Stockfish::Eval::NNUE::Features {
     IndexList& removed,
     IndexList& added
   ) {
+
+    const uint16_t (&idx2D)[PIECE_NB][SQUARE_NB] = indexTable.idx[perspective][ksq];
+
     for (int i = 0; i < dp.dirty_num; ++i) {
       if (dp.from[i] != SQ_NONE)
-        removed.push_back(make_index(perspective, dp.from[i], dp.piece[i], ksq));
+        removed.push_back(idx2D[dp.piece[i]][dp.from[i]]);
       if (dp.to[i] != SQ_NONE)
-        added.push_back(make_index(perspective, dp.to[i], dp.piece[i], ksq));
+        added.push_back(idx2D[dp.piece[i]][dp.to[i]]);
     }
   }
 

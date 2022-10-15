@@ -49,8 +49,8 @@ namespace Stockfish::Eval::NNUE::Features {
       PS_B_ROOK   =  7 * SQUARE_NB,
       PS_W_QUEEN  =  8 * SQUARE_NB,
       PS_B_QUEEN  =  9 * SQUARE_NB,
-      PS_KING     =  10 * SQUARE_NB,
-      PS_NB       =  11 * SQUARE_NB
+      PS_KING     = 10 * SQUARE_NB,
+      PS_NB       = 11 * SQUARE_NB
     };
 
     static constexpr IndexType PieceSquareIndex[COLOR_NB][PIECE_NB] = {
@@ -62,11 +62,10 @@ namespace Stockfish::Eval::NNUE::Features {
         PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE }
     };
 
-    // Orient a square according to perspective (rotates by 180 for black)
-    static Square orient(Color perspective, Square s, Square ksq);
-
     // Index of a feature for a given king position and another piece on some square
     static IndexType make_index(Color perspective, Square s, Piece pc, Square ksq);
+
+    friend struct IndexTable;
 
    public:
     // Feature name
