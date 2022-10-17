@@ -57,12 +57,29 @@ namespace Stockfish::Eval::NNUE::Features {
     IndexList& removed,
     IndexList& added
   ) {
-    for (int i = 0; i < std::min(dp.dirty_num, 3); ++i) {
-      if (dp.from[i] != SQ_NONE)
-        removed.push_back(make_index<Perspective>(dp.from[i], dp.piece[i], ksq));
-      if (dp.to[i] != SQ_NONE)
-        added.push_back(make_index<Perspective>(dp.to[i], dp.piece[i], ksq));
-    }
+      if (dp.dirty_num > 0)
+      {
+          if (dp.from[0] != SQ_NONE)
+              removed.push_back(make_index<Perspective>(dp.from[0], dp.piece[0], ksq));
+          if (dp.to[0] != SQ_NONE)
+              added.push_back(make_index<Perspective>(dp.to[0], dp.piece[0], ksq));
+
+          if (dp.dirty_num > 1)
+          {
+              if (dp.from[1] != SQ_NONE)
+                  removed.push_back(make_index<Perspective>(dp.from[1], dp.piece[1], ksq));
+              if (dp.to[1] != SQ_NONE)
+                  added.push_back(make_index<Perspective>(dp.to[1], dp.piece[1], ksq));
+
+              if (dp.dirty_num > 2)
+              {
+                  if (dp.from[2] != SQ_NONE)
+                      removed.push_back(make_index<Perspective>(dp.from[2], dp.piece[2], ksq));
+                  if (dp.to[2] != SQ_NONE)
+                      added.push_back(make_index<Perspective>(dp.to[2], dp.piece[2], ksq));
+              }
+          }
+      }
   }
 
   // Explicit template instantiations
