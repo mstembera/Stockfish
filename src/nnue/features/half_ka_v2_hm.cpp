@@ -57,7 +57,7 @@ namespace Stockfish::Eval::NNUE::Features {
     IndexList& removed,
     IndexList& added
   ) {
-    for (int i = 0; i < dp.dirty_num; ++i) {
+    for (int i = 0; i < std::min(dp.dirty_num, 3); ++i) {
       if (dp.from[i] != SQ_NONE)
         removed.push_back(make_index<Perspective>(dp.from[i], dp.piece[i], ksq));
       if (dp.to[i] != SQ_NONE)
