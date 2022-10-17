@@ -379,11 +379,39 @@ namespace Stockfish::Eval::NNUE {
         // Gather all features to be updated.
         const Square ksq = pos.square<KING>(Perspective);
         FeatureSet::IndexList removed[2], added[2];
-        FeatureSet::append_changed_indices<Perspective>(
-          ksq, next->dirtyPiece, removed[0], added[0]);
+
+        switch (next->dirtyPiece.dirty_num)
+        {
+        case 1:
+            FeatureSet::append_changed_indices<Perspective, 1>(
+                ksq, next->dirtyPiece, removed[0], added[0]);
+            break;
+        case 2:
+            FeatureSet::append_changed_indices<Perspective, 2>(
+                ksq, next->dirtyPiece, removed[0], added[0]);
+            break;
+        case 3:
+            FeatureSet::append_changed_indices<Perspective, 3>(
+                ksq, next->dirtyPiece, removed[0], added[0]);
+        }
+
         for (StateInfo *st2 = pos.state(); st2 != next; st2 = st2->previous)
-          FeatureSet::append_changed_indices<Perspective>(
-            ksq, st2->dirtyPiece, removed[1], added[1]);
+        {
+            switch (st2->dirtyPiece.dirty_num)
+            {
+            case 1:
+                FeatureSet::append_changed_indices<Perspective, 1>(
+                    ksq, st2->dirtyPiece, removed[1], added[1]);
+                break;
+            case 2:
+                FeatureSet::append_changed_indices<Perspective, 2>(
+                    ksq, st2->dirtyPiece, removed[1], added[1]);
+                break;
+            case 3:
+                FeatureSet::append_changed_indices<Perspective, 3>(
+                    ksq, st2->dirtyPiece, removed[1], added[1]);
+            }
+        }
 
         // Mark the accumulators as computed.
         next->accumulator.computed[Perspective] = true;

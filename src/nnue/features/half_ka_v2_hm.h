@@ -129,7 +129,7 @@ namespace Stockfish::Eval::NNUE::Features {
       IndexList& active);
 
     // Get a list of indices for recently changed features
-    template<Color Perspective>
+    template<Color Perspective, int DN>
     static void append_changed_indices(
       Square ksq,
       const DirtyPiece& dp,
