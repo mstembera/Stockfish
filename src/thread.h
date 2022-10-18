@@ -61,7 +61,7 @@ public:
   Material::Table materialTable;
   size_t pvIdx, pvLast;
   RunningAverage complexityAverage;
-  std::atomic<uint64_t> nodes, tbHits, bestMoveChanges;
+  std::atomic<uint64_t> nodes, tbHits, bestMoveChanges, key3Ply;
   int selDepth, nmpMinPly;
   Color nmpColor;
   Value bestValue, optimism[COLOR_NB];

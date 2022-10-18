@@ -1251,12 +1251,32 @@ moves_loop: // When in check, search starts here
               for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                   rm.pv.push_back(*m);
 
+              // Initialize 3-ply key
+              if (   moveCount == 1
+                  && !thisThread->pvIdx)
+              {
+                  Key key3Ply = rm.key_3ply(pos);
+                  if (key3Ply != 0)
+                      thisThread->key3Ply = key3Ply;
+              }
+
               // We record how often the best move has been changed in each iteration.
               // This information is used for time management. In MultiPV mode,
               // we must take care to only do this for the first PV line.
               if (   moveCount > 1
                   && !thisThread->pvIdx)
-                  ++thisThread->bestMoveChanges;
+              {
+                  Key key3Ply = rm.key_3ply(pos);
+
+                  if (   key3Ply != thisThread->key3Ply
+                      || key3Ply == 0)
+                  {
+                      ++thisThread->bestMoveChanges;
+
+                      if (key3Ply != 0)
+                         thisThread->key3Ply = key3Ply;
+                  }
+              }
           }
           else
               // All other moves but the PV are set to the lowest value: this
@@ -1906,6 +1926,29 @@ bool RootMove::extract_ponder_from_tt(Position& pos) {
 
     pos.undo_move(pv[0]);
     return pv.size() > 1;
+}
+
+
+Key RootMove::key_3ply(Position& pos) const {
+
+    if (   pv.size() < 3
+        || pv[0] == MOVE_NONE
+        || pv[1] == MOVE_NONE
+        || pv[2] == MOVE_NONE)
+        return 0;
+
+    StateInfo st[3];
+    ASSERT_ALIGNED(st, Eval::NNUE::CacheLineSize);
+
+    pos.do_move(pv[0], st[0]);
+    pos.do_move(pv[1], st[1]);
+    pos.do_move(pv[2], st[2]);
+    Key key3Ply = pos.key();
+    pos.undo_move(pv[2]);
+    pos.undo_move(pv[1]);
+    pos.undo_move(pv[0]);
+
+    return key3Ply;
 }
 
 void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
