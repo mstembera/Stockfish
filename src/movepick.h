@@ -114,7 +114,7 @@ typedef Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB> ContinuationHistory
 /// likely to get a cut-off first.
 class MovePicker {
 
-  enum PickType { Next, Best };
+  enum PickType { Next, Best, Top };
 
 public:
   MovePicker(const MovePicker&) = delete;
@@ -144,13 +144,92 @@ private:
   const CapturePieceToHistory* captureHistory;
   const PieceToHistory** continuationHistory;
   Move ttMove;
-  ExtMove refutations[3], *cur, *endMoves, *endBadCaptures;
-  int stage;
+  ExtMove refutations[3], *cur, *endMoves, *beginBadCaptures, *endBadCaptures;
+  int stage, size;
   Square recaptureSquare;
   Value threshold;
   Depth depth;
   ExtMove moves[MAX_MOVES];
+  bool dirtyHeap;
+
+  friend class Heap;
 };
+
+
+class Heap
+{
+public:
+    static void heapify(MovePicker& mp)
+    {
+        mp.size = 0;
+        size_t count = mp.endMoves - mp.cur;
+        for (size_t i = 0; i < count; ++i)
+        {
+            ++mp.size;
+            heap_up(mp);
+        }
+        mp.dirtyHeap = false;
+    }
+
+    static void pop(MovePicker& mp)
+    {
+        assert(mp.size == mp.endMoves - mp.cur);
+        mp.cur[0] = mp.cur[--mp.size];
+        heap_down(mp);
+    }
+
+private:
+    static void heap_up(MovePicker& mp)
+    {
+        int id = mp.size - 1;
+        int pid = parent(id);
+
+        while (pid >= 0 && mp.cur[id].value > mp.cur[pid].value)
+        {
+            std::swap(mp.cur[pid], mp.cur[id]);
+            id = pid;
+            pid = parent(pid);
+        }
+    }
+
+    static void heap_down(MovePicker& mp)
+    {
+        int id = 0;
+        int cid = left(id);
+
+        while (cid < mp.size)
+        {
+            // pick bigger child
+            if (cid + 1 < mp.size && mp.cur[cid] < mp.cur[cid + 1])
+                cid = cid + 1;
+
+            if (mp.cur[id].value >= mp.cur[cid].value)
+                break;
+            else
+            {
+                std::swap(mp.cur[id], mp.cur[cid]);
+                id = cid;
+                cid = left(cid);
+            }
+        }
+    }
+
+    static constexpr int left(int id)
+    {
+        return 2 * id + 1;
+    }
+
+    static constexpr int right(int id)
+    {
+        return left(id) + 1;
+    }
+
+    static constexpr int parent(int id)
+    {
+        return (id - 1) / 2 - !id;
+    }
+};
+
 
 } // namespace Stockfish
 

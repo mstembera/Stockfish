@@ -156,15 +156,36 @@ void MovePicker::score() {
 template<MovePicker::PickType T, typename Pred>
 Move MovePicker::select(Pred filter) {
 
+  if (T == Top && dirtyHeap)
+  {
+      Heap::pop(*this);
+      --endMoves;
+      dirtyHeap = false;
+  }
+
   while (cur < endMoves)
   {
       if (T == Best)
           std::swap(*cur, *std::max_element(cur, endMoves));
 
       if (*cur != ttMove && filter())
-          return *cur++;
+      {
+          if (T == Top)
+          {
+              dirtyHeap = true;
+              return *cur;
+          }
+          else
+              return *cur++;
+      }
 
-      cur++;
+      if (T == Top)
+      {
+          Heap::pop(*this);
+          --endMoves;
+      }
+      else
+          cur++;
   }
   return MOVE_NONE;
 }
@@ -187,20 +208,22 @@ top:
   case CAPTURE_INIT:
   case PROBCUT_INIT:
   case QCAPTURE_INIT:
-      cur = endBadCaptures = moves;
-      endMoves = generate<CAPTURES>(pos, cur);
+      cur = moves;
+      endMoves = beginBadCaptures = endBadCaptures = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
+      Heap::heapify(*this);
       ++stage;
       goto top;
 
   case GOOD_CAPTURE:
-      if (select<Next>([&](){
-                       return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
-                              // Move losing capture to endBadCaptures to be tried later
-                              true : (*endBadCaptures++ = *cur, false); }))
-          return *(cur - 1);
+  {
+      Move m = select<Top>([&]() {
+                           return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
+                                  // Move losing capture to endBadCaptures to be tried later
+                                  true : (*endBadCaptures++ = *cur, false); });
+      if (m)
+          return m;
 
       // Prepare the pointers to loop over the refutations array
       cur = std::begin(refutations);
@@ -213,7 +236,7 @@ top:
 
       ++stage;
       [[fallthrough]];
-
+  }
   case REFUTATION:
       if (select<Next>([&](){ return    *cur != MOVE_NONE
                                     && !pos.capture(*cur)
@@ -243,7 +266,7 @@ top:
           return *(cur - 1);
 
       // Prepare the pointers to loop over the bad captures
-      cur = moves;
+      cur = beginBadCaptures;
       endMoves = endBadCaptures;
 
       ++stage;
