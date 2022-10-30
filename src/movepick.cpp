@@ -156,11 +156,11 @@ void MovePicker::score() {
 template<MovePicker::PickType T, typename Pred>
 Move MovePicker::select(Pred filter) {
 
-  if (T == Top && dirtyHeap)
+  if (T == Top && heapState == Refresh)
   {
       Heap::pop(*this);
       --endMoves;
-      dirtyHeap = false;
+      heapState = cur->value >= sortLimit ? Ready : Skip;
   }
 
   while (cur < endMoves)
@@ -170,19 +170,20 @@ Move MovePicker::select(Pred filter) {
 
       if (*cur != ttMove && filter())
       {
-          if (T == Top)
+          if (T == Top && heapState == Ready)
           {
-              dirtyHeap = true;
+              heapState = Refresh;
               return *cur;
           }
-          else
+          else          
               return *cur++;
       }
 
-      if (T == Top)
+      if (T == Top && heapState != Skip)
       {
           Heap::pop(*this);
           --endMoves;
+          heapState = cur->value >= sortLimit ? Ready : Skip;
       }
       else
           cur++;
@@ -212,6 +213,7 @@ top:
       endMoves = beginBadCaptures = endBadCaptures = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
+      sortLimit = -3000 * depth;
       Heap::heapify(*this);
       ++stage;
       goto top;

@@ -105,6 +105,7 @@ typedef Stats<int16_t, 29952, PIECE_NB, SQUARE_NB> PieceToHistory;
 /// (~63 elo)
 typedef Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB> ContinuationHistory;
 
+enum HeapState { Ready, Refresh, Skip };
 
 /// MovePicker class is used to pick one pseudo-legal move at a time from the
 /// current position. The most important method is next_move(), which returns a
@@ -150,7 +151,8 @@ private:
   Value threshold;
   Depth depth;
   ExtMove moves[MAX_MOVES];
-  bool dirtyHeap;
+  HeapState heapState;
+  int sortLimit;
 
   friend class Heap;
 };
@@ -168,7 +170,7 @@ public:
             ++mp.size;
             heap_up(mp);
         }
-        mp.dirtyHeap = false;
+        mp.heapState = Ready;
     }
 
     static void pop(MovePicker& mp)
