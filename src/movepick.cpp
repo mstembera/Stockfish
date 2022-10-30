@@ -213,7 +213,7 @@ top:
       endMoves = beginBadCaptures = endBadCaptures = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      sortLimit = -3000 * depth;
+      sortLimit = -3500 * depth;
       Heap::heapify(*this);
       ++stage;
       goto top;
