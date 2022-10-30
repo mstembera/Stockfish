@@ -105,6 +105,7 @@ typedef Stats<int16_t, 29952, PIECE_NB, SQUARE_NB> PieceToHistory;
 /// (~63 elo)
 typedef Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB> ContinuationHistory;
 
+enum HeapState { Ready, Refresh, Skip };
 
 /// MovePicker class is used to pick one pseudo-legal move at a time from the
 /// current position. The most important method is next_move(), which returns a
@@ -114,7 +115,7 @@ typedef Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB> ContinuationHistory
 /// likely to get a cut-off first.
 class MovePicker {
 
-  enum PickType { Next, Best };
+  enum PickType { Next, Best, Top };
 
 public:
   MovePicker(const MovePicker&) = delete;
@@ -145,12 +146,93 @@ private:
   const PieceToHistory** continuationHistory;
   Move ttMove;
   ExtMove refutations[3], *cur, *endMoves, *endBadCaptures;
-  int stage;
+  int stage, size;
   Square recaptureSquare;
   Value threshold;
   Depth depth;
   ExtMove moves[MAX_MOVES];
+  HeapState heapState;
+  int sortLimit;
+
+  friend class Heap;
 };
+
+class Heap
+{
+public:
+    static void heapify(MovePicker& mp)
+    {
+        mp.size = 0;
+        size_t count = mp.endMoves - mp.cur;
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (mp.cur[mp.size++].value >= mp.sortLimit)
+                heap_up(mp);
+        }
+
+        mp.heapState = mp.cur->value >= mp.sortLimit ? Ready : Skip;
+    }
+
+    static void pop(MovePicker& mp)
+    {
+        assert(mp.size == mp.endMoves - mp.cur);
+        mp.cur[0] = mp.cur[--mp.size];
+        heap_down(mp);
+    }
+
+private:
+    static void heap_up(MovePicker& mp)
+    {
+        int id = mp.size - 1;
+        int pid = parent(id);
+
+        while (pid >= 0 && mp.cur[id].value > mp.cur[pid].value)
+        {
+            std::swap(mp.cur[pid], mp.cur[id]);
+            id = pid;
+            pid = parent(pid);
+        }
+    }
+
+    static void heap_down(MovePicker& mp)
+    {
+        int id = 0;
+        int cid = left(id);
+
+        while (cid < mp.size)
+        {
+            // pick bigger child
+            if (cid + 1 < mp.size && mp.cur[cid] < mp.cur[cid + 1])
+                cid = cid + 1;
+
+            if (   mp.cur[id].value >= mp.cur[cid].value
+                || mp.cur[cid].value < mp.sortLimit)
+                break;
+            else
+            {
+                std::swap(mp.cur[id], mp.cur[cid]);
+                id = cid;
+                cid = left(cid);
+            }
+        }
+    }
+
+    static constexpr int left(int id)
+    {
+        return 2 * id + 1;
+    }
+
+    static constexpr int right(int id)
+    {
+        return left(id) + 1;
+    }
+
+    static constexpr int parent(int id)
+    {
+        return (id - 1) / 2 - !id;
+    }
+};
+
 
 } // namespace Stockfish
 

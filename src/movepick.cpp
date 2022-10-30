@@ -156,15 +156,37 @@ void MovePicker::score() {
 template<MovePicker::PickType T, typename Pred>
 Move MovePicker::select(Pred filter) {
 
+  if (T == Top && heapState == Refresh)
+  {
+      Heap::pop(*this);
+      --endMoves;
+      heapState = cur->value >= sortLimit ? Ready : Skip;
+  }
+
   while (cur < endMoves)
   {
       if (T == Best)
           std::swap(*cur, *std::max_element(cur, endMoves));
 
       if (*cur != ttMove && filter())
-          return *cur++;
+      {
+          if (T == Top && heapState == Ready)
+          {
+              heapState = Refresh;
+              return *cur;
+          }
+          else          
+              return *cur++;
+      }
 
-      cur++;
+      if (T == Top && heapState != Skip)
+      {
+          Heap::pop(*this);
+          --endMoves;
+          heapState = cur->value >= sortLimit ? Ready : Skip;
+      }
+      else
+          cur++;
   }
   return MOVE_NONE;
 }
@@ -229,18 +251,21 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          sortLimit = -3000 * depth;
+          Heap::heapify(*this);
       }
 
       ++stage;
       [[fallthrough]];
 
   case QUIET:
+  {
+      Move m;
       if (   !skipQuiets
-          && select<Next>([&](){return   *cur != refutations[0].move
-                                      && *cur != refutations[1].move
-                                      && *cur != refutations[2].move;}))
-          return *(cur - 1);
+          && (m = select<Top>([&](){return   *cur != refutations[0].move
+                                          && *cur != refutations[1].move
+                                          && *cur != refutations[2].move;})))
+          return m;
 
       // Prepare the pointers to loop over the bad captures
       cur = moves;
@@ -248,7 +273,7 @@ top:
 
       ++stage;
       [[fallthrough]];
-
+  }
   case BAD_CAPTURE:
       return select<Next>([](){ return true; });
 
