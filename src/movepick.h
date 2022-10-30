@@ -167,10 +167,11 @@ public:
         size_t count = mp.endMoves - mp.cur;
         for (size_t i = 0; i < count; ++i)
         {
-            ++mp.size;
-            heap_up(mp);
+            if (mp.cur[mp.size++].value >= mp.sortLimit)
+                heap_up(mp);
         }
-        mp.heapState = Ready;
+
+        mp.heapState = mp.cur->value >= mp.sortLimit ? Ready : Skip;
     }
 
     static void pop(MovePicker& mp)
@@ -205,7 +206,8 @@ private:
             if (cid + 1 < mp.size && mp.cur[cid] < mp.cur[cid + 1])
                 cid = cid + 1;
 
-            if (mp.cur[id].value >= mp.cur[cid].value)
+            if (   mp.cur[id].value >= mp.cur[cid].value
+                || mp.cur[cid].value < mp.sortLimit)
                 break;
             else
             {
