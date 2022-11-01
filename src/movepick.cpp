@@ -23,6 +23,21 @@
 
 namespace Stockfish {
 
+int C1 = -250, C2= -250;
+int M1 = 3000, M2 = 3000;
+int T1 = 500, T2 = 500;
+
+auto rfC = [](int v) { return std::pair<int, int>(-3000, 1000); };
+TUNE(SetRange(rfC), C1, C2);
+
+auto rfM = [](int v) { return std::pair<int, int>(1500, 5000); };
+TUNE(SetRange(rfM), M1, M2);
+
+auto rfT = [](int v) { return std::pair<int, int>(0, 4000); };
+TUNE(SetRange(rfT), T1, T2);
+
+UPDATE_ON_LAST();
+
 namespace {
 
   enum Stages {
@@ -34,17 +49,22 @@ namespace {
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit, int maxTolerance) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
-        {
-            ExtMove tmp = *p, *q;
-            *p = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
-                *q = *(q - 1);
-            *q = tmp;
-        }
+      for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
+      {
+          int delta = p->value - limit;
+          if (delta >= 0)
+          {
+              int tolerance = std::max(maxTolerance - delta, 0);
+
+              ExtMove tmp = *p, *q;
+              *p = *sortedEnd;
+              for (q = sortedEnd++; q != begin && (q - 1)->value < tmp.value - tolerance; --q)
+                  *q = *(q - 1);
+              *q = tmp;
+          }
+      }
   }
 
 } // namespace
@@ -191,7 +211,8 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
+      //partial_insertion_sort(cur, endMoves, -500 - 3000 * depth, 1000);
+      partial_insertion_sort(cur, endMoves, C1 - M1 * depth, T1);
       ++stage;
       goto top;
 
@@ -229,7 +250,8 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          //partial_insertion_sort(cur, endMoves, -500 - 3000 * depth, 1000);
+          partial_insertion_sort(cur, endMoves, C2 - M2 * depth, T2);
       }
 
       ++stage;
