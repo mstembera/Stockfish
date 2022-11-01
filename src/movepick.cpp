@@ -26,25 +26,30 @@ namespace Stockfish {
 namespace {
 
   enum Stages {
-    MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
-    EVASION_TT, EVASION_INIT, EVASION,
-    PROBCUT_TT, PROBCUT_INIT, PROBCUT,
-    QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
+      MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
+      EVASION_TT, EVASION_INIT, EVASION,
+      PROBCUT_TT, PROBCUT_INIT, PROBCUT,
+      QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit, int maxTolerance) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
-        {
-            ExtMove tmp = *p, *q;
-            *p = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
-                *q = *(q - 1);
-            *q = tmp;
-        }
+      for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
+      {
+          int delta = p->value - limit;
+          if (delta >= 0)
+          {
+              int tolerance = std::max(maxTolerance - delta, 0);
+
+              ExtMove tmp = *p, *q;
+              *p = *sortedEnd;
+              for (q = sortedEnd++; q != begin && (q - 1)->value < tmp.value - tolerance; --q)
+                  *q = *(q - 1);
+              *q = tmp;
+          }
+      }
   }
 
 } // namespace
@@ -191,7 +196,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -3000 * depth);
+      partial_insertion_sort(cur, endMoves, -250 - 3000 * depth, 500);
       ++stage;
       goto top;
 
@@ -229,7 +234,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          partial_insertion_sort(cur, endMoves, -250 - 3000 * depth, 500);
       }
 
       ++stage;
