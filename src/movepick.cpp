@@ -42,7 +42,6 @@ namespace {
           if (delta >= 0)
           {
               int tolerance = std::max(maxTolerance - delta, 0);
-
               ExtMove tmp = *p, *q;
               *p = *sortedEnd;
               for (q = sortedEnd++; q != begin && (q - 1)->value < tmp.value - tolerance; --q)
@@ -196,7 +195,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, -150 - 3000 * depth, 200);
+      partial_insertion_sort(cur, endMoves, -265 - 2825 * depth, 628);
       ++stage;
       goto top;
 
@@ -234,7 +233,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -150 - 3000 * depth, 200);
+          partial_insertion_sort(cur, endMoves, -297 - 3066 * depth, 385);
       }
 
       ++stage;
