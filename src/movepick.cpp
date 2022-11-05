@@ -46,7 +46,7 @@ namespace {
               *q = tmp;			  
           }
           else
-              limit -= 100;
+              limit -= 20;
   }
 
 } // namespace
@@ -193,7 +193,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, 300 - 3000 * depth);
+      partial_insertion_sort(cur, endMoves, 60 - 3000 * depth);
       ++stage;
       goto top;
 
@@ -231,7 +231,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, 300 - 3000 * depth);
+          partial_insertion_sort(cur, endMoves, 60 - 3000 * depth);
       }
 
       ++stage;
