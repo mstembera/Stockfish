@@ -102,7 +102,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, Depth d, const Cap
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the histories.
 template<GenType Type>
-void MovePicker::score() {
+void MovePicker::score(int sortLimit) {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -111,7 +111,7 @@ void MovePicker::score() {
 
   if constexpr (Type == QUIETS || Type == CAPTURES)
   {
-      sortBias = (end() - begin()) / 2;
+      sortBias = (end() - begin()) * 2;
 
       if constexpr (Type == QUIETS)
       {
@@ -132,9 +132,13 @@ void MovePicker::score() {
       if constexpr (Type == CAPTURES)
       {
           m.value =  6 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
-                   +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]
-                   + sortBias;
-          --sortBias;
+                   +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))];
+
+          if (sortLimit && m.value >= sortLimit)
+          {
+              m.value += sortBias;
+              sortBias -= 20;
+          }
       }
       else if constexpr (Type == QUIETS)
       {
@@ -149,9 +153,13 @@ void MovePicker::score() {
                           :                                         !(to_sq(m) & threatenedByPawn)  ? 15000
                           :                                                                           0)
                           :                                                                           0)
-                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384
-                   +     sortBias;
-          --sortBias;
+                   +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384;
+
+          if (sortLimit && m.value >= sortLimit)
+          {
+              m.value += sortBias;
+              sortBias -= 20;
+          }
       }
       else // Type == EVASIONS
       {
@@ -204,7 +212,7 @@ top:
       cur = endBadCaptures = moves;
       endMoves = generate<CAPTURES>(pos, cur);
 
-      score<CAPTURES>();
+      score<CAPTURES>(depth < 3 ? -3000 * depth : 0);
       partial_insertion_sort(cur, endMoves, -3000 * depth);
       ++stage;
       goto top;
@@ -242,7 +250,7 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          score<QUIETS>();
+          score<QUIETS>(depth < 3 ? -3000 * depth : 0);
           partial_insertion_sort(cur, endMoves, -3000 * depth);
       }
 

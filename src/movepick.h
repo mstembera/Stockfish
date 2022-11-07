@@ -135,9 +135,9 @@ public:
 
 private:
   template<PickType T, typename Pred> Move select(Pred);
-  template<GenType> void score();
-  ExtMove* begin() { return cur; }
-  ExtMove* end() { return endMoves; }
+  template<GenType> void score(int sortLimit = 0);
+  ExtMove* begin() const { return cur; }
+  ExtMove* end() const { return endMoves; }
 
   const Position& pos;
   const ButterflyHistory* mainHistory;
