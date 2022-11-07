@@ -111,7 +111,7 @@ void MovePicker::score() {
 
   if constexpr (Type == QUIETS || Type == CAPTURES)
   {
-      sortBias = (end() - begin()) * 5;
+      sortBias = (end() - begin()) / 2;
 
       if constexpr (Type == QUIETS)
       {
@@ -134,7 +134,7 @@ void MovePicker::score() {
           m.value =  6 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
                    +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]
                    + sortBias;
-          sortBias -= 10;
+          --sortBias;
       }
       else if constexpr (Type == QUIETS)
       {
@@ -151,7 +151,7 @@ void MovePicker::score() {
                           :                                                                           0)
                    +     bool(pos.check_squares(type_of(pos.moved_piece(m))) & to_sq(m)) * 16384
                    +     sortBias;
-          sortBias -= 10;
+          --sortBias;
       }
       else // Type == EVASIONS
       {
