@@ -1010,9 +1010,9 @@ moves_loop: // When in check, search starts here
           }
           else
           {
-              int history =   (*contHist[0])[movedPiece][to_sq(move)]
-                            + (*contHist[1])[movedPiece][to_sq(move)]
-                            + (*contHist[3])[movedPiece][to_sq(move)];
+              int history =   (*contHist[0])[to_sq(move)][movedPiece]
+                            + (*contHist[1])[to_sq(move)][movedPiece]
+                            + (*contHist[3])[to_sq(move)][movedPiece];
 
               // Continuation history based pruning (~2 Elo)
               if (   lmrDepth < 5
@@ -1097,7 +1097,7 @@ moves_loop: // When in check, search starts here
           else if (   PvNode
                    && move == ttMove
                    && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5177)
+                   && (*contHist[0])[to_sq(move)][movedPiece] >= 5177)
               extension = 1;
       }
 
@@ -1166,9 +1166,9 @@ moves_loop: // When in check, search starts here
               r++;
 
           ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                         + (*contHist[0])[movedPiece][to_sq(move)]
-                         + (*contHist[1])[movedPiece][to_sq(move)]
-                         + (*contHist[3])[movedPiece][to_sq(move)]
+                         + (*contHist[0])[to_sq(move)][movedPiece]
+                         + (*contHist[1])[to_sq(move)][movedPiece]
+                         + (*contHist[3])[to_sq(move)][movedPiece]
                          - 4433;
 
           // Decrease/increase reduction for moves with a good/bad history (~30 Elo)
@@ -1543,8 +1543,8 @@ moves_loop: // When in check, search starts here
       // Continuation history based pruning (~2 Elo)
       if (   !capture
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY
-          && (*contHist[0])[pos.moved_piece(move)][to_sq(move)] < 0
-          && (*contHist[1])[pos.moved_piece(move)][to_sq(move)] < 0)
+          && (*contHist[0])[to_sq(move)][pos.moved_piece(move)] < 0
+          && (*contHist[1])[to_sq(move)][pos.moved_piece(move)] < 0)
           continue;
 
       // movecount pruning for quiet check evasions
@@ -1715,7 +1715,7 @@ moves_loop: // When in check, search starts here
         if (ss->inCheck && i > 2)
             break;
         if (is_ok((ss-i)->currentMove))
-            (*(ss-i)->continuationHistory)[pc][to] << bonus;
+            (*(ss-i)->continuationHistory)[to][pc] << bonus;
     }
   }
 
