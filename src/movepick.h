@@ -60,7 +60,7 @@ public:
 /// values with the << operator, while the last parameters (Size and Sizes)
 /// encode the dimensions of the array.
 template <typename T, int D, int Size, int... Sizes>
-struct Stats : public std::array<Stats<T, D, Sizes...>, Size>
+struct alignas(64) Stats : public std::array<Stats<T, D, Sizes...>, Size>
 {
   typedef Stats<T, D, Size, Sizes...> stats;
 
@@ -76,7 +76,7 @@ struct Stats : public std::array<Stats<T, D, Sizes...>, Size>
 };
 
 template <typename T, int D, int Size>
-struct Stats<T, D, Size> : public std::array<StatsEntry<T, D>, Size> {};
+struct alignas(64) Stats<T, D, Size> : public std::array<StatsEntry<T, D>, Size> {};
 
 /// In stats table, D=0 means that the template parameter is not used
 enum StatsParams { NOT_USED = 0 };
@@ -93,8 +93,8 @@ typedef Stats<int16_t, 7183, COLOR_NB, int(SQUARE_NB) * int(SQUARE_NB)> Butterfl
 /// move, see www.chessprogramming.org/Countermove_Heuristic
 typedef Stats<Move, NOT_USED, PIECE_NB, SQUARE_NB> CounterMoveHistory;
 
-/// CapturePieceToHistory is addressed by a move's [captured piece type][piece][to]
-typedef Stats<int16_t, 10692, PIECE_TYPE_NB, PIECE_NB, SQUARE_NB> CapturePieceToHistory;
+/// CapturePieceToHistory is addressed by a move's [piece][captured piece type][to]
+typedef Stats<int16_t, 10692, PIECE_NB, PIECE_TYPE_NB, SQUARE_NB> CapturePieceToHistory;
 
 /// PieceToHistory is like ButterflyHistory but is addressed by a move's [piece][to]
 typedef Stats<int16_t, 29952, PIECE_NB, SQUARE_NB> PieceToHistory;
