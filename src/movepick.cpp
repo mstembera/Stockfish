@@ -228,8 +228,11 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          if (endMoves - cur > 2 - (depth > 2))
+          {
+              score<QUIETS>();
+              partial_insertion_sort(cur, endMoves, -3000 * depth);
+          }
       }
 
       ++stage;
@@ -257,11 +260,13 @@ top:
       endMoves = generate<EVASIONS>(pos, cur);
 
       score<EVASIONS>();
+      partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+
       ++stage;
       [[fallthrough]];
 
   case EVASION:
-      return select<Best>([](){ return true; });
+      return select<Next>([](){ return true; });
 
   case PROBCUT:
       return select<Next>([&](){ return pos.see_ge(*cur, threshold); });
