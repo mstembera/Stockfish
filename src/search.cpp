@@ -312,6 +312,7 @@ void Thread::search() {
   optimism[us] = optimism[~us] = VALUE_ZERO;
 
   int searchAgainCounter = 0;
+  int skipMainInc = 0;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
@@ -320,7 +321,17 @@ void Thread::search() {
   {
       // Age out PV variability metric
       if (mainThread)
+      {
           totBestMoveChanges /= 2;
+
+          if (skipMainInc == 3 && Threads.increaseDepth && Threads.size() >= 6 && Limits.use_time_management())
+          {
+              ++searchAgainCounter;   
+              skipMainInc = 0;
+          }
+          else
+              ++skipMainInc;
+      }
 
       // Save the last iteration's scores before first PV line is searched and
       // all the move scores except the (new) PV are set to -VALUE_INFINITE.
@@ -331,7 +342,7 @@ void Thread::search() {
       pvLast = 0;
 
       if (!Threads.increaseDepth)
-         searchAgainCounter++;
+         ++searchAgainCounter;
 
       // MultiPV loop. We perform a full root search for each PV line
       for (pvIdx = 0; pvIdx < multiPV && !Threads.stop; ++pvIdx)
