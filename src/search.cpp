@@ -326,7 +326,7 @@ void Thread::search() {
           // Age out PV variability metric
           totBestMoveChanges /= 2;
 
-          if (   Threads.depthCount[rootDepth - searchAgainCounter] * 2 < (int)Threads.size() - 1
+          if (   Threads.depthCount[rootDepth - searchAgainCounter] * 3 < (int)Threads.size() - 1
               && Threads.increaseDepth
               && Threads.size() >= 6
               && Limits.use_time_management())
