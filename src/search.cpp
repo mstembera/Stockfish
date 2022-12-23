@@ -191,9 +191,6 @@ void MainThread::search() {
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
 
-  for (int i = 0; i < MAX_PLY; ++i)
-      Threads.depthCount[i] = 0;
-
   Eval::NNUE::verify();
 
   if (rootMoves.empty())
@@ -321,19 +318,9 @@ void Thread::search() {
          && !Threads.stop
          && !(Limits.depth && mainThread && rootDepth > Limits.depth))
   {
+      // Age out PV variability metric
       if (mainThread)
-      {
-          // Age out PV variability metric
           totBestMoveChanges /= 2;
-
-          if (   Threads.depthCount[rootDepth - searchAgainCounter] * 3 < (int)Threads.size() - 1
-              && Threads.increaseDepth
-              && Threads.size() >= 6
-              && Limits.use_time_management())
-              searchAgainCounter++;
-      }
-      else
-          Threads.depthCount[rootDepth - searchAgainCounter]++;
 
       // Save the last iteration's scores before first PV line is searched and
       // all the move scores except the (new) PV are set to -VALUE_INFINITE.
@@ -343,8 +330,9 @@ void Thread::search() {
       size_t pvFirst = 0;
       pvLast = 0;
 
-      if (!Threads.increaseDepth)
-         searchAgainCounter++;
+      if (   ( mainThread && !mainThread->increaseDepth)
+          || (!mainThread && !Threads.increaseDepth))
+          searchAgainCounter++;
 
       // MultiPV loop. We perform a full root search for each PV line
       for (pvIdx = 0; pvIdx < multiPV && !Threads.stop; ++pvIdx)
@@ -501,10 +489,13 @@ void Thread::search() {
                   Threads.stop = true;
           }
           else if (   !mainThread->ponder
-                   && Time.elapsed() > totalTime * 0.53)
-              Threads.increaseDepth = false;
-          else
-              Threads.increaseDepth = true;
+                   && Time.elapsed() > totalTime * 0.50)
+          {
+              mainThread->increaseDepth = false;
+
+              if (Time.elapsed() > totalTime * 0.60)
+                  Threads.increaseDepth = false;
+          }
       }
 
       mainThread->iterValue[iterIdx] = bestValue;
