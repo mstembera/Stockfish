@@ -854,7 +854,7 @@ namespace {
     {
         assert(probCutBeta < VALUE_INFINITE);
 
-        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory, (ss-1)->currentMove ? to_sq((ss-1)->currentMove) : SQ_NONE);
+        MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory, priorCapture && (ss-1)->currentMove ? to_sq((ss-1)->currentMove) : SQ_NONE);
 
         while ((move = mp.next_move()) != MOVE_NONE)
             if (move != excludedMove && pos.legal(move))
@@ -929,7 +929,7 @@ moves_loop: // When in check, search starts here
                                       contHist,
                                       countermove,
                                       ss->killers,
-                                      (ss-1)->currentMove ? to_sq((ss-1)->currentMove) : SQ_NONE);
+                                      priorCapture && (ss-1)->currentMove ? to_sq((ss-1)->currentMove) : SQ_NONE);
 
     value = bestValue;
     moveCountPruning = singularQuietLMR = false;
