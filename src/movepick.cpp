@@ -61,9 +61,10 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const ButterflyHist
                                                              const CapturePieceToHistory* cph,
                                                              const PieceToHistory** ch,
                                                              Move cm,
-                                                             const Move* killers)
+                                                             const Move* killers,
+                                                             Square rs)
            : pos(p), mainHistory(mh), captureHistory(cph), continuationHistory(ch),
-             ttMove(ttm), refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}}, depth(d)
+             ttMove(ttm), refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}}, recaptureSquare(rs), depth(d)
 {
   assert(d > 0);
 
@@ -123,9 +124,9 @@ void MovePicker::score() {
 
   for (auto& m : *this)
       if constexpr (Type == CAPTURES)
-          m.value =  (7 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
-                   +     (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
-
+          m.value = (      7 * int(PieceValue[MG][pos.piece_on(to_sq(m))])
+                     +         (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]
+                     +  1024 * (recaptureSquare == to_sq(m))) / 16;
       else if constexpr (Type == QUIETS)
           m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)]
                    + 2 * (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
