@@ -63,8 +63,10 @@ namespace Stockfish::Eval::NNUE::Features {
     };
 
     // Index of a feature for a given king position and another piece on some square
-    template<Color Perspective>
-    static IndexType make_index(Square s, Piece pc, Square ksq);
+    static IndexType make_index(Color perspective, Square s, Piece pc, Square ksq)
+    {
+        return IndexType((int(s) ^ OrientTBL[perspective][ksq]) + PieceSquareIndex[perspective][pc] + KingBuckets[perspective][ksq]);
+    }
 
    public:
     // Feature name
@@ -118,23 +120,34 @@ namespace Stockfish::Eval::NNUE::Features {
         SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8 }
     };
 
+    struct LazyIndex {
+        Color perspective;
+        Square s;
+        Piece pc;
+        Square ksq;
+
+        IndexType index() const
+        {
+            return make_index(perspective, s, pc, ksq);
+        };
+    };
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
-    using IndexList = ValueList<IndexType, MaxActiveDimensions>;
+    using LazyIndexList = ValueList<LazyIndex, MaxActiveDimensions>;
 
     // Get a list of indices for active features
     template<Color Perspective>
     static void append_active_indices(
       const Position& pos,
-      IndexList& active);
+      LazyIndexList& active);
 
     // Get a list of indices for recently changed features
     template<Color Perspective>
     static void append_changed_indices(
       Square ksq,
       const DirtyPiece& dp,
-      IndexList& removed,
-      IndexList& added
+      LazyIndexList& removed,
+      LazyIndexList& added
     );
 
     // Returns the cost of updating one perspective, the most costly one.

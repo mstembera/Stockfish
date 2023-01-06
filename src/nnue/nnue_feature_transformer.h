@@ -378,7 +378,7 @@ namespace Stockfish::Eval::NNUE {
 
         // Gather all features to be updated.
         const Square ksq = pos.square<KING>(Perspective);
-        FeatureSet::IndexList removed[2], added[2];
+        FeatureSet::LazyIndexList removed[2], added[2];
         FeatureSet::append_changed_indices<Perspective>(
           ksq, next->dirtyPiece, removed[0], added[0]);
         for (StateInfo *st2 = pos.state(); st2 != next; st2 = st2->previous)
@@ -406,7 +406,7 @@ namespace Stockfish::Eval::NNUE {
             // Difference calculation for the deactivated features
             for (const auto index : removed[i])
             {
-              const IndexType offset = HalfDimensions * index + j * TileHeight;
+              const IndexType offset = HalfDimensions * index.index() + j * TileHeight;
               auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
               for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = vec_sub_16(acc[k], column[k]);
@@ -415,7 +415,7 @@ namespace Stockfish::Eval::NNUE {
             // Difference calculation for the activated features
             for (const auto index : added[i])
             {
-              const IndexType offset = HalfDimensions * index + j * TileHeight;
+              const IndexType offset = HalfDimensions * index.index() + j * TileHeight;
               auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
               for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = vec_add_16(acc[k], column[k]);
@@ -442,7 +442,7 @@ namespace Stockfish::Eval::NNUE {
             // Difference calculation for the deactivated features
             for (const auto index : removed[i])
             {
-              const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
+              const IndexType offset = PSQTBuckets * index.index() + j * PsqtTileHeight;
               auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
               for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                 psqt[k] = vec_sub_psqt_32(psqt[k], columnPsqt[k]);
@@ -451,7 +451,7 @@ namespace Stockfish::Eval::NNUE {
             // Difference calculation for the activated features
             for (const auto index : added[i])
             {
-              const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
+              const IndexType offset = PSQTBuckets * index.index() + j * PsqtTileHeight;
               auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
               for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                 psqt[k] = vec_add_psqt_32(psqt[k], columnPsqt[k]);
@@ -508,7 +508,7 @@ namespace Stockfish::Eval::NNUE {
         // Refresh the accumulator
         auto& accumulator = pos.state()->accumulator;
         accumulator.computed[Perspective] = true;
-        FeatureSet::IndexList active;
+        FeatureSet::LazyIndexList active;
         FeatureSet::append_active_indices<Perspective>(pos, active);
 
   #ifdef VECTOR
@@ -521,7 +521,7 @@ namespace Stockfish::Eval::NNUE {
 
           for (const auto index : active)
           {
-            const IndexType offset = HalfDimensions * index + j * TileHeight;
+            const IndexType offset = HalfDimensions * index.index() + j * TileHeight;
             auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
 
             for (unsigned k = 0; k < NumRegs; ++k)
@@ -541,7 +541,7 @@ namespace Stockfish::Eval::NNUE {
 
           for (const auto index : active)
           {
-            const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
+            const IndexType offset = PSQTBuckets * index.index() + j * PsqtTileHeight;
             auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
 
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
