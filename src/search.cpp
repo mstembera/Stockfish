@@ -1094,7 +1094,7 @@ moves_loop: // When in check, search starts here
 
           // Promotion extension
           else if (type_of(move) == PROMOTION)
-              extension = 2;
+              extension = 1 + (pos.piece_on(to_sq(move)) != NO_PIECE);
 
           // Check extensions (~1 Elo)
           else if (   givesCheck
