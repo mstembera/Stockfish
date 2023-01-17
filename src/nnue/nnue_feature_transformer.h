@@ -269,6 +269,11 @@ namespace Stockfish::Eval::NNUE {
       return !stream.fail();
     }
 
+    friend Stockfish::Eval::NNUE::Features::IndexTable;
+    void init() {
+        Stockfish::Eval::NNUE::Features::indexTable.init(*this);
+    }
+
     // Convert input features
     std::int32_t transform(const Position& pos, OutputType* output, int bucket) const {
       update_accumulator<WHITE>(pos);
@@ -378,19 +383,19 @@ namespace Stockfish::Eval::NNUE {
 
         // Gather all features to be updated.
         const Square ksq = pos.square<KING>(Perspective);
-        FeatureSet::IndexList removed[2], added[2];
+        FeatureSet::IndexList removed[2], added[2], changed[2];
         FeatureSet::append_changed_indices<Perspective>(
-          ksq, next->dirtyPiece, removed[0], added[0]);
+          ksq, next->dirtyPiece, removed[0], added[0], changed[0]);
         for (StateInfo *st2 = pos.state(); st2 != next; st2 = st2->previous)
           FeatureSet::append_changed_indices<Perspective>(
-            ksq, st2->dirtyPiece, removed[1], added[1]);
+            ksq, st2->dirtyPiece, removed[1], added[1], changed[1]);
 
         // Mark the accumulators as computed.
         next->accumulator.computed[Perspective] = true;
         pos.state()->accumulator.computed[Perspective] = true;
 
         // Now update the accumulators listed in states_to_update[], where the last element is a sentinel.
-        StateInfo *states_to_update[3] =
+        StateInfo* states_to_update[3] =
           { next, next == pos.state() ? nullptr : pos.state(), nullptr };
   #ifdef VECTOR
         for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
@@ -403,6 +408,20 @@ namespace Stockfish::Eval::NNUE {
 
           for (IndexType i = 0; states_to_update[i]; ++i)
           {
+            // Difference calculation for the changed features
+            for (const auto index : changed[i])
+            {
+              const IndexType offset = HalfDimensions * (index & ~(1U << 31)) + j * TileHeight;
+              auto column = reinterpret_cast<const vec_t*>(&weights2[offset]);
+
+              if (index & (1U << 31))
+                  for (IndexType k = 0; k < NumRegs; ++k)
+                      acc[k] = vec_sub_16(acc[k], column[k]);
+              else
+                  for (IndexType k = 0; k < NumRegs; ++k)
+                      acc[k] = vec_add_16(acc[k], column[k]);
+            }
+
             // Difference calculation for the deactivated features
             for (const auto index : removed[i])
             {
@@ -411,6 +430,9 @@ namespace Stockfish::Eval::NNUE {
               for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = vec_sub_16(acc[k], column[k]);
             }
+//TODO double regular weights and make corresponding negative vectors. 
+//     then removed and added can combine.
+//     then index and NumRegs loops can be inverted
 
             // Difference calculation for the activated features
             for (const auto index : added[i])
@@ -439,6 +461,20 @@ namespace Stockfish::Eval::NNUE {
 
           for (IndexType i = 0; states_to_update[i]; ++i)
           {
+            // Difference calculation for the changed features
+            for (const auto index : changed[i])
+            {
+              const IndexType offset = PSQTBuckets * (index & ~(1U << 31)) + j * PsqtTileHeight;
+              auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights2[offset]);
+
+              if (index & (1U << 31))
+                for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                  psqt[k] = vec_sub_psqt_32(psqt[k], columnPsqt[k]);
+              else
+                for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                  psqt[k] = vec_add_psqt_32(psqt[k], columnPsqt[k]);
+            }
+
             // Difference calculation for the deactivated features
             for (const auto index : removed[i])
             {
@@ -476,7 +512,7 @@ namespace Stockfish::Eval::NNUE {
             states_to_update[i]->accumulator.psqtAccumulation[Perspective][k] = st->accumulator.psqtAccumulation[Perspective][k];
 
           st = states_to_update[i];
-
+//TODO implement changed
           // Difference calculation for the deactivated features
           for (const auto index : removed[i])
           {
@@ -580,8 +616,10 @@ namespace Stockfish::Eval::NNUE {
     }
 
     alignas(CacheLineSize) BiasType biases[HalfDimensions];
-    alignas(CacheLineSize) WeightType weights[HalfDimensions * InputDimensions];
-    alignas(CacheLineSize) PSQTWeightType psqtWeights[InputDimensions * PSQTBuckets];
+    alignas(CacheLineSize) WeightType  weights[HalfDimensions * InputDimensions]; // ~50MB
+    alignas(CacheLineSize) WeightType weights2[HalfDimensions * 507392]; // ~1GB
+    alignas(CacheLineSize) PSQTWeightType  psqtWeights[PSQTBuckets * InputDimensions];
+    alignas(CacheLineSize) PSQTWeightType psqtWeights2[PSQTBuckets * 507392];
   };
 
 }  // namespace Stockfish::Eval::NNUE

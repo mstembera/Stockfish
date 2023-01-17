@@ -30,6 +30,10 @@ namespace Stockfish {
   struct StateInfo;
 }
 
+namespace Stockfish::Eval::NNUE {
+  class FeatureTransformer;
+}
+
 namespace Stockfish::Eval::NNUE::Features {
 
   // Feature HalfKAv2_hm: Combination of the position of own king
@@ -65,6 +69,8 @@ namespace Stockfish::Eval::NNUE::Features {
     // Index of a feature for a given king position and another piece on some square
     template<Color Perspective>
     static IndexType make_index(Square s, Piece pc, Square ksq);
+
+    friend struct IndexTable;
 
    public:
     // Feature name
@@ -134,7 +140,8 @@ namespace Stockfish::Eval::NNUE::Features {
       Square ksq,
       const DirtyPiece& dp,
       IndexList& removed,
-      IndexList& added
+      IndexList& added,
+      IndexList& changed
     );
 
     // Returns the cost of updating one perspective, the most costly one.
@@ -146,6 +153,14 @@ namespace Stockfish::Eval::NNUE::Features {
     // a full accumulator refresh is required.
     static bool requires_refresh(const StateInfo* st, Color perspective);
   };
+
+  struct IndexTable {
+      void init(FeatureTransformer& ft);
+      alignas(CacheLineSize) uint16_t  idx[COLOR_NB][SQUARE_NB][PIECE_NB][SQUARE_NB];
+      alignas(CacheLineSize) uint32_t idxE[COLOR_NB][SQUARE_NB][PIECE_NB][SQUARE_NB][SQUARE_NB];
+  };
+
+  extern IndexTable indexTable;
 
 }  // namespace Stockfish::Eval::NNUE::Features
 
