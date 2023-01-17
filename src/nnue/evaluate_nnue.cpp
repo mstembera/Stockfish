@@ -354,7 +354,11 @@ namespace Stockfish::Eval::NNUE {
 
     initialize();
     fileName = name;
-    return read_parameters(stream);
+    bool result = read_parameters(stream);
+    if (result)
+        featureTransformer->init();
+
+    return result;
   }
 
   // Save eval, to a file stream or a memory stream

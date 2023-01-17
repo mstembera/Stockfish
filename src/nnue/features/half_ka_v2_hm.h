@@ -119,7 +119,7 @@ namespace Stockfish::Eval::NNUE::Features {
     };
 
     // Maximum number of simultaneously active features.
-    static constexpr IndexType MaxActiveDimensions = 32;
+    static constexpr IndexType MaxActiveDimensions = 64;
     using IndexList = ValueList<IndexType, MaxActiveDimensions>;
 
     // Get a list of indices for active features
@@ -133,8 +133,7 @@ namespace Stockfish::Eval::NNUE::Features {
     static void append_changed_indices(
       Square ksq,
       const DirtyPiece& dp,
-      IndexList& removed,
-      IndexList& added
+      IndexList& changed
     );
 
     // Returns the cost of updating one perspective, the most costly one.
