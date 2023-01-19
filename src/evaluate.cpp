@@ -1059,7 +1059,13 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
   bool useClassical = !useNNUE || (pos.count<ALL_PIECES>() > 7 && abs(psq) > 1781);
 
   if (useClassical)
+  {
       v = Evaluation<NO_TRACE>(pos).value();
+
+      // When not using NNUE, return classical complexity to caller
+      if (complexity)
+          *complexity = abs(v - psq);
+  }
   else
   {
       int nnueComplexity;
@@ -1089,10 +1095,6 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
-
-  // When not using NNUE, return classical complexity to caller
-  if (complexity && useClassical)
-      *complexity = abs(v - psq);
 
   return v;
 }
