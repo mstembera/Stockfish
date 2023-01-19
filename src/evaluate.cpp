@@ -1056,7 +1056,8 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
   // We use the much less accurate but faster Classical eval when the NNUE
   // option is set to false. Otherwise we use the NNUE eval unless the
   // PSQ advantage is decisive and several pieces remain. (~3 Elo)
-  bool useClassical = !useNNUE || ((pos.count<PAWN>() > 2 || (pos.count<ALL_PIECES>() - pos.count<PAWN>()) > 5) && abs(psq) > 1781);
+  bool useClassical = !useNNUE || (   pos.count<ALL_PIECES>() > 7
+                                   && abs(psq) + std::min(std::max(pos.count<ALL_PIECES>() - 7, 0), 9) * 24 > 1781);
 
   if (useClassical)
       v = Evaluation<NO_TRACE>(pos).value();
