@@ -473,7 +473,14 @@ void Thread::search() {
           int complexity = mainThread->complexityAverage.value();
           double complexPosition = std::min(1.0 + (complexity - 261) / 1738.7, 1.5);
 
-          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * complexPosition;
+          auto interpolate = [](double x, double x0, double x1, double y0, double y1) {
+              return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
+          };
+
+          double valueScale = interpolate(std::min(std::max(abs(abs(bestValue) - UCI::NormalizeToPawnValue), 0), UCI::NormalizeToPawnValue / 2),
+              0, UCI::NormalizeToPawnValue / 2, 1.1, 0.95);  
+
+          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * complexPosition * valueScale;
 
           // Cap used time in case of a single legal move for a better viewer experience in tournaments
           // yielding correct scores and sufficiently fast moves.
