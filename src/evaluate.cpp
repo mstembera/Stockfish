@@ -193,8 +193,8 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1    =  Value(3631);
-  constexpr Value LazyThreshold2    =  Value(2084);
+  constexpr Value LazyThreshold1    =  Value(3631 * 103 / 100);
+  constexpr Value LazyThreshold2    =  Value(2084 * 103 / 100);
   constexpr Value SpaceThreshold    =  Value(11551);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
