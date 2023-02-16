@@ -1133,7 +1133,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          if ((swap = BishopValueMg + 64 * more_than_one(pieces(stm, BISHOP)) - swap) < res)
+          if ((swap = BishopValueMg + 32 * more_than_one(pieces(stm, BISHOP)) - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
