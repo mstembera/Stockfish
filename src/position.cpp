@@ -1077,10 +1077,14 @@ bool Position::see_ge(Move m, Value threshold) const {
   Square from = from_sq(m), to = to_sq(m);
 
   int swap = PieceValue[MG][piece_on(to)] - threshold;
+  if (type_of(piece_on(to)) == BISHOP && more_than_one(pieces(~sideToMove, BISHOP)))
+      swap += 50;
   if (swap < 0)
       return false;
 
   swap = PieceValue[MG][piece_on(from)] - swap;
+  if (type_of(piece_on(from)) == BISHOP && more_than_one(pieces(sideToMove, BISHOP)))
+      swap += 50;
   if (swap <= 0)
       return true;
 
@@ -1133,7 +1137,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
-          if ((swap = BishopValueMg + 32 * more_than_one(pieces(stm, BISHOP)) - swap) < res)
+          if ((swap = BishopValueMg + 50 * more_than_one(pieces(stm, BISHOP)) - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
