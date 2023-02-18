@@ -1076,13 +1076,40 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
-  if (swap < 0)
+  const int firstSwap = PieceValue[MG][piece_on(to)] - threshold;
+  if (firstSwap < 0)
       return false;
 
-  swap = PieceValue[MG][piece_on(from)] - swap;
+  int swap = PieceValue[MG][piece_on(from)] - firstSwap;
   if (swap <= 0)
       return true;
+
+  // See if any clearly better (re)captures can be interposed.
+  if (   firstSwap < QueenValueMg - PawnValueMg
+      && (pieces(~sideToMove, PAWN) & ~square_bb(to)))
+  {
+      Bitboard pa = ~sideToMove == WHITE ? pawn_attacks_bb<WHITE>(pieces(WHITE, PAWN) & ~square_bb(to))
+                                         : pawn_attacks_bb<BLACK>(pieces(BLACK, PAWN) & ~square_bb(to));
+
+      if (pa & pieces(sideToMove) & (pieces() ^ pieces(PAWN)) & ~square_bb(from))
+      {
+          Bitboard otherTargets = pieces(QUEEN);
+          if (firstSwap < RookValueMg - PawnValueMg)
+          {
+              otherTargets |= pieces(ROOK);
+              if (firstSwap < BishopValueMg - PawnValueMg)
+              {
+                  otherTargets |= pieces(BISHOP);
+                  if (firstSwap < KnightValueMg - PawnValueMg)
+                      otherTargets |= pieces(KNIGHT);
+              }
+          }
+          otherTargets &= pieces(sideToMove) & ~square_bb(from);
+
+          if (otherTargets & pa)
+              return false;
+      }
+  }
 
   assert(color_of(piece_on(from)) == sideToMove);
   Bitboard occupied = pieces() ^ from ^ to;
