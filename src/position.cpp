@@ -1076,7 +1076,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  const int firstSwap = PieceValue[MG][piece_on(to)] - threshold;
+  int firstSwap = PieceValue[MG][piece_on(to)] - threshold;
   if (firstSwap < 0)
       return false;
 
@@ -1085,6 +1085,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       return true;
 
   // See if any clearly better (re)captures can be interposed.
+  firstSwap *= 2;
   if (   firstSwap < QueenValueMg - PawnValueMg
       && (pieces(~sideToMove, PAWN) & ~square_bb(to)))
   {
