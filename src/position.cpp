@@ -1084,6 +1084,11 @@ bool Position::see_ge(Move m, Value threshold) const {
   if (swap <= 0)
       return true;
 
+  // Discovered check
+  if (   (blockers_for_king(~sideToMove) & from)
+      && !aligned(from, to, square<KING>(~sideToMove)))
+      return true;
+
   assert(color_of(piece_on(from)) == sideToMove);
   Bitboard occupied = pieces() ^ from ^ to;
   Color stm = sideToMove;
