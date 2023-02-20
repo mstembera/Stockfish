@@ -1168,6 +1168,16 @@ bool Position::see_ge(Move m, Value threshold) const {
            // If we "capture" with the king but opponent still has attackers,
            // reverse the result.
           return (attackers & ~pieces(stm)) ? res ^ 1 : res;
+
+
+      // Discovered checks
+      if (stm == sideToMove)
+      {
+          Bitboard lastFrom = least_significant_square_bb(bb);
+          if (   (blockers_for_king(~sideToMove) & lastFrom)
+			  && !(line_bb(to, square<KING>(~sideToMove)) & lastFrom))
+              return true;
+      }
   }
 
   return bool(res);
