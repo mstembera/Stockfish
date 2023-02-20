@@ -1086,7 +1086,7 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   // Discovered check
   if (   (blockers_for_king(~sideToMove) & from)
-      && !aligned(from, to, square<KING>(~sideToMove)))
+      && !aligned(to, from, square<KING>(~sideToMove)))
       return true;
 
   assert(color_of(piece_on(from)) == sideToMove);
@@ -1171,13 +1171,10 @@ bool Position::see_ge(Move m, Value threshold) const {
 
 
       // Discovered checks
-      if (stm == sideToMove)
-      {
-          Bitboard lastFrom = least_significant_square_bb(bb);
-          if (   (blockers_for_king(~sideToMove) & lastFrom)
-			  && !(line_bb(to, square<KING>(~sideToMove)) & lastFrom))
-              return true;
-      }
+      Bitboard lastFrom = least_significant_square_bb(bb);
+      if (   (blockers_for_king(~stm) & lastFrom)
+          && !(line_bb(to, square<KING>(~stm)) & lastFrom))
+          break;
   }
 
   return bool(res);
