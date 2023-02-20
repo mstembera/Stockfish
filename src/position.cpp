@@ -1076,17 +1076,17 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
+  // Discovered check
+  if (   (blockers_for_king(~sideToMove) & from)
+      && !aligned(to, from, square<KING>(~sideToMove)))
+      return true;
+
   int swap = PieceValue[MG][piece_on(to)] - threshold;
   if (swap < 0)
       return false;
 
   swap = PieceValue[MG][piece_on(from)] - swap;
   if (swap <= 0)
-      return true;
-
-  // Discovered check
-  if (   (blockers_for_king(~sideToMove) & from)
-      && !aligned(to, from, square<KING>(~sideToMove)))
       return true;
 
   assert(color_of(piece_on(from)) == sideToMove);
