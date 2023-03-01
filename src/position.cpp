@@ -1085,7 +1085,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       return true;
 
   // See if any clearly better (re)captures can be interposed.
-  firstSwap *= 2;
+  firstSwap += PawnValueMg * 5;
   if (   firstSwap < QueenValueMg - PawnValueMg
       && (pieces(~sideToMove, PAWN) & ~square_bb(to)))
   {
