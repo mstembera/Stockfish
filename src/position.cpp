@@ -1070,13 +1070,17 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   assert(is_ok(m));
 
-  // Only deal with normal moves, assume others pass a simple SEE
-  if (type_of(m) != NORMAL)
+  // Only deal with normal moves and promotions, assume others pass a simple SEE
+  if (type_of(m) != NORMAL && type_of(m) != PROMOTION)
       return VALUE_ZERO >= threshold;
 
   Square from = from_sq(m), to = to_sq(m);
 
   int swap = PieceValue[MG][piece_on(to)] - threshold;
+
+  if (type_of(m) == PROMOTION)
+      swap += PieceValue[MG][promotion_type(m)] - PawnValueMg;
+
   if (swap < 0)
       return false;
 
