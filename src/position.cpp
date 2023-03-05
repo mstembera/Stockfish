@@ -1076,12 +1076,8 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap = PieceValue[MG][piece_on(to)] - threshold;
-
-  if (type_of(m) == PROMOTION)
-      swap += PieceValue[MG][promotion_type(m)] - PawnValueMg;
-  else if (type_of(m) == EN_PASSANT)
-      swap += PawnValueMg;
+  int swap =  PieceValue[MG][piece_on(to)] - threshold
+            + (type_of(m) == EN_PASSANT) * PawnValueMg;
 
   if (swap < 0)
       return false;
@@ -1122,12 +1118,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       // the bitboard 'attackers' any X-ray attackers behind it.
       if ((bb = stmAttackers & pieces(PAWN)))
       {
-          if (relative_rank(stm, to) == RANK_8)
-          {
-              if ((swap = QueenValueMg - PawnValueMg - swap) < res)
-                  break;
-          }
-          else if ((swap = PawnValueMg - swap) < res)
+          if ((swap = PawnValueMg - swap) < res)
               break;
 
           occupied ^= least_significant_square_bb(bb);
