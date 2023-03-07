@@ -1077,7 +1077,7 @@ bool Position::see_ge(Move m, Value threshold) const {
   Square from = from_sq(m), to = to_sq(m);
 
   int swap =  PieceValue[MG][piece_on(to)] - threshold
-            + (type_of(m) == EN_PASSANT) * PawnValueMg;
+            + int(type_of(m) == EN_PASSANT || promotion_type(m) == QUEEN) * PawnValueMg;
 
   if (swap < 0)
       return false;
