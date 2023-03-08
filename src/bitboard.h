@@ -20,6 +20,7 @@
 #define BITBOARD_H_INCLUDED
 
 #include <string>
+#include <functional>
 
 #include "types.h"
 
@@ -317,17 +318,20 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
   }
 }
 
+static const std::function<Bitboard(Square s, Bitboard occupied)> attacks_fn[PIECE_TYPE_NB] = {
+  nullptr,
+  nullptr,
+  [](Square s, Bitboard) { return PseudoAttacks[KNIGHT][s]; },
+  [](Square s, Bitboard occupied) { return attacks_bb<BISHOP>(s, occupied); },
+  [](Square s, Bitboard occupied) { return attacks_bb<ROOK>(s, occupied); },
+  [](Square s, Bitboard occupied) { return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied); },
+  [](Square s, Bitboard) { return PseudoAttacks[KING][s]; }
+};
+
 inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
 
   assert((pt != PAWN) && (is_ok(s)));
-
-  switch (pt)
-  {
-  case BISHOP: return attacks_bb<BISHOP>(s, occupied);
-  case ROOK  : return attacks_bb<  ROOK>(s, occupied);
-  case QUEEN : return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
-  default    : return PseudoAttacks[pt][s];
-  }
+  return attacks_fn[pt](s, occupied);
 }
 
 
