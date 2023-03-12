@@ -1113,7 +1113,7 @@ bool Position::see_ge(Move m, Value threshold) const {
       res ^= 1;
 
       // Decay precision with each exchange
-      swap -= 40;
+      swap += stm == sideToMove ? 40 : -40;
 
       // Locate and remove the next least valuable attacker, and add to
       // the bitboard 'attackers' any X-ray attackers behind it.
