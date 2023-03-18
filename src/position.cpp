@@ -1113,7 +1113,30 @@ bool Position::see_ge(Move m, Value threshold) const {
       if ((bb = stmAttackers & pieces(PAWN)))
       {
           if ((swap = PawnValueMg - swap) < res)
+          {
+              if (swap > -QueenValueMg)
+              {
+                  Bitboard targets = pieces(QUEEN, KING);
+
+                  if (swap > -RookValueMg)
+                  {
+                      targets |= pieces(ROOK);
+
+                      if (swap > -BishopValueMg)
+                      {
+                          targets |= pieces(BISHOP);
+
+                          if (swap > -KnightValueMg)
+                              targets |= pieces(KNIGHT);
+                      }
+                  }
+
+                  targets &= pieces(~stm) & occupied;
+                  if (more_than_one(pawn_attacks_bb(stm, to) & targets))
+                      res ^= 1;
+              }
               break;
+          }
 
           occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
@@ -1122,7 +1145,25 @@ bool Position::see_ge(Move m, Value threshold) const {
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
           if ((swap = KnightValueMg - swap) < res)
+          {
+              if (swap > -QueenValueMg)
+              {
+                  Bitboard targets = pieces(QUEEN, KING);
+
+                  if (swap > -RookValueMg)
+                  {
+                      targets |= pieces(ROOK);
+
+                      if (swap > -BishopValueMg)
+                          targets |= pieces(BISHOP);
+                  }
+
+                  targets &= pieces(~stm) & occupied;
+                  if (more_than_one(attacks_bb<KNIGHT>(to) & targets))
+                      res ^= 1;
+              }
               break;
+          }
 
           occupied ^= least_significant_square_bb(bb);
       }
@@ -1130,7 +1171,20 @@ bool Position::see_ge(Move m, Value threshold) const {
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
           if ((swap = BishopValueMg - swap) < res)
+          {
+              if (swap > -QueenValueMg)
+              {
+                  Bitboard targets = pieces(QUEEN, KING);
+
+                  if (swap > -RookValueMg)
+                      targets |= pieces(ROOK);
+
+                  targets &= pieces(~stm) & occupied;
+                  if (targets && more_than_one(attacks_bb<BISHOP>(to, occupied ^ targets) & targets))
+                      res ^= 1;
+              }
               break;
+          }
 
           occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
@@ -1139,7 +1193,15 @@ bool Position::see_ge(Move m, Value threshold) const {
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
           if ((swap = RookValueMg - swap) < res)
+          {
+              if (swap > -QueenValueMg)
+              {
+                  Bitboard targets = pieces(QUEEN, KING) & pieces(~stm) & occupied;
+                  if (targets && more_than_one(attacks_bb<ROOK>(to, occupied ^ targets) & targets))
+                      res ^= 1;
+              }
               break;
+          }
 
           occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
