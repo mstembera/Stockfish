@@ -1027,8 +1027,8 @@ moves_loop: // When in check, search starts here
                   while (leftEnemies && !attacks)
                   {
                       Square sq = pop_lsb(leftEnemies);
-                      attacks =  (attacks_bb<  ROOK>(sq, occupied) & pos.pieces(  ROOK, QUEEN))
-                               | (attacks_bb<BISHOP>(sq, occupied) & pos.pieces(BISHOP, QUEEN));
+                      attacks =  (attacks_bb<  ROOK>(sq, occupied) & pos.pieces(  ROOK))
+                               | (attacks_bb<BISHOP>(sq, occupied) & pos.pieces(BISHOP));
                       attacks &= pos.pieces(us) & occupied;
                       // exclude Queen/Rook(s) which were already threatened before SEE
                       if (attacks && sq != pos.square<KING>(~us) && (pos.attackers_to(sq, pos.pieces()) & pos.pieces(us)))
