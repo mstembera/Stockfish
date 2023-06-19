@@ -34,7 +34,7 @@ namespace {
 
   using SortFn = void (*)(ExtMove* begin, const ExtMove* end, int limit);
 
-  void sort01(ExtMove* , const ExtMove*, int) {}
+  void sort01(ExtMove*, const ExtMove*, int) {}
   
   void sort2(ExtMove* begin, const ExtMove*, int) {
 
@@ -44,21 +44,38 @@ namespace {
 
   void sort3(ExtMove* begin, const ExtMove*, int) {
 
-    if (begin[0] < begin[1])
+      if (begin[0] < begin[1])
       {
           if (begin[1] < begin[2])
               std::swap(begin[0], begin[2]);
           else
-              std::swap(begin[0], begin[1]);
+          {
+              if (begin[0] < begin[2])
+              {
+                  ExtMove tmp = begin[0];
+                  begin[0] = begin[1];
+                  begin[1] = begin[2];
+                  begin[2] = tmp;
+              }
+              else
+                  std::swap(begin[0], begin[1]);
+          }
       }
       else
       {
           if (begin[0] < begin[2])
-              std::swap(begin[0], begin[2]);
+          {
+              ExtMove tmp = begin[0];
+              begin[0] = begin[2];
+              begin[2] = begin[1];
+              begin[1] = tmp;
+          }
+          else
+          {
+              if (begin[1] < begin[2])
+                  std::swap(begin[1], begin[2]);
+          }
       }
-
-      if (begin[1] < begin[2])
-          std::swap(begin[1], begin[2]);
   }
 
   void sort4(ExtMove* begin, const ExtMove* end, int limit) {
@@ -100,88 +117,9 @@ namespace {
           sort3(begin + 1, end, limit);
   }
 
-  void sort5(ExtMove* begin, const ExtMove* end, int limit) {
-
-      if (begin[0] < begin[1])
-      {
-          if (begin[1] < begin[2])
-          {
-              if (begin[2] < begin[3])
-              {
-                  if (begin[3] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[3]);
-              }
-              else
-              {
-                  if (begin[2] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[2]);
-              }
-          }
-          else
-          {
-              if (begin[1] < begin[3])
-              {
-                  if (begin[3] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[3]);
-              }
-              else
-              {
-                  if (begin[1] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[1]);
-              }
-          }
-      }
-      else
-      {
-          if (begin[0] < begin[2])
-          {
-              if (begin[2] < begin[3])
-              {
-                  if (begin[3] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[3]);
-              }
-              else
-              {
-                  if (begin[2] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[2]);
-              }
-          }
-          else
-          {
-              if (begin[0] < begin[3])
-              {
-                  if (begin[3] < begin[4])
-                      std::swap(begin[0], begin[4]);
-                  else
-                      std::swap(begin[0], begin[3]);
-              }
-              else
-              {
-                  if (begin[0] < begin[4])
-                      std::swap(begin[0], begin[4]);
-              }
-          }
-      }
-
-      if (begin[0].value >= limit)
-          sort4(begin + 1, end, limit);
-  }
-
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
-  void partial_insertion_sortN(ExtMove* begin, const ExtMove* end, int limit) {
+  void partial_insertion_sort(ExtMove* begin, const ExtMove* end, int limit) {
 
       for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
           if (p->value >= limit)
@@ -194,11 +132,10 @@ namespace {
           }
   }
 
-  const SortFn sortFnArray[7] = { sort01, sort01, sort2, sort3, sort4, sort5, partial_insertion_sortN };
+  void sort_moves(ExtMove* begin, const ExtMove* end, int limit) {
 
-  void partial_insertion_sort(ExtMove* begin, const ExtMove* end, int limit) {
-
-      sortFnArray[std::min(int(end - begin), 6)](begin, end, limit);
+      constexpr SortFn sortFn[6] = { sort01, sort01, sort2, sort3, sort4, partial_insertion_sort };
+      sortFn[std::min(int(end - begin), 5)](begin, end, limit);
   }
 
 } // namespace
@@ -344,7 +281,7 @@ top:
       endMoves = generate<CAPTURES>(pos, cur);
 
       score<CAPTURES>();
-      partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+      sort_moves(cur, endMoves, std::numeric_limits<int>::min());
       ++stage;
       goto top;
 
@@ -382,7 +319,7 @@ top:
           endMoves = generate<QUIETS>(pos, cur);
 
           score<QUIETS>();
-          partial_insertion_sort(cur, endMoves, -3000 * depth);
+          sort_moves(cur, endMoves, -3000 * depth);
       }
 
       ++stage;
