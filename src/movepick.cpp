@@ -32,89 +32,43 @@ namespace {
     QSEARCH_TT, QCAPTURE_INIT, QCAPTURE, QCHECK_INIT, QCHECK
   };
 
+  inline void order_em(ExtMove& m1, ExtMove& m2)
+  {
+      bool b = m1.value < m2.value;
+
+      ExtMove tmp;
+      tmp.move  = Move(m1.move * b + m2.move * !b);
+      tmp.value = m1.value * b + m2.value * !b;
+
+      m1.move  = Move(m1.move * !b + m2.move * b);
+      m1.value = m1.value * !b + m2.value * b;
+
+      m2 = tmp;
+  }
+
   using SortFn = void (*)(ExtMove* begin, const ExtMove* end, int limit);
 
   void sort01(ExtMove*, const ExtMove*, int) {}
   
   void sort2(ExtMove* begin, const ExtMove*, int) {
 
-      if (begin[0] < begin[1])
-          std::swap(begin[0], begin[1]);
+      order_em(begin[0], begin[1]);
   }
 
   void sort3(ExtMove* begin, const ExtMove*, int) {
 
-      if (begin[0] < begin[1])
-      {
-          if (begin[1] < begin[2])
-              std::swap(begin[0], begin[2]);
-          else
-          {
-              if (begin[0] < begin[2])
-              {
-                  ExtMove tmp = begin[0];
-                  begin[0] = begin[1];
-                  begin[1] = begin[2];
-                  begin[2] = tmp;
-              }
-              else
-                  std::swap(begin[0], begin[1]);
-          }
-      }
-      else
-      {
-          if (begin[0] < begin[2])
-          {
-              ExtMove tmp = begin[0];
-              begin[0] = begin[2];
-              begin[2] = begin[1];
-              begin[1] = tmp;
-          }
-          else
-          {
-              if (begin[1] < begin[2])
-                  std::swap(begin[1], begin[2]);
-          }
-      }
+      order_em(begin[0], begin[1]);
+      order_em(begin[1], begin[2]);
+      order_em(begin[0], begin[1]);
   }
 
-  void sort4(ExtMove* begin, const ExtMove* end, int limit) {
+  void sort4(ExtMove* begin, const ExtMove*, int) {
 
-      if (begin[0] < begin[1])
-      {
-          if (begin[1] < begin[2])
-          {
-              if (begin[2] < begin[3])
-                  std::swap(begin[0], begin[3]);
-              else
-                  std::swap(begin[0], begin[2]);
-          }
-          else
-          {
-              if (begin[1] < begin[3])
-                  std::swap(begin[0], begin[3]);
-              else
-                  std::swap(begin[0], begin[1]);
-          }
-      }
-      else
-      {
-          if (begin[0] < begin[2])
-          {
-              if (begin[2] < begin[3])
-                  std::swap(begin[0], begin[3]);
-              else
-                  std::swap(begin[0], begin[2]);
-          }
-          else
-          {
-              if (begin[0] < begin[3])
-                  std::swap(begin[0], begin[3]);
-          }
-      }
-
-      if (begin[0].value >= limit)
-          sort3(begin + 1, end, limit);
+      order_em(begin[0], begin[1]);
+      order_em(begin[2], begin[3]);
+      order_em(begin[0], begin[2]);
+      order_em(begin[1], begin[3]);
+      order_em(begin[1], begin[2]);
   }
 
   // partial_insertion_sort() sorts moves in descending order up to and including
