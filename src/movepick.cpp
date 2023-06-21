@@ -34,16 +34,10 @@ namespace {
 
   inline void order_em(ExtMove& m1, ExtMove& m2)
   {
-      bool b = m1.value < m2.value;
-
-      ExtMove tmp;
-      tmp.move  = Move(m1.move * b + m2.move * !b);
-      tmp.value = m1.value * b + m2.value * !b;
-
-      m1.move  = Move(m1.move * !b + m2.move * b);
-      m1.value = m1.value * !b + m2.value * b;
-
-      m2 = tmp;
+	  ExtMove tmp[2] = { m1, m2 };
+	  bool b = m1.value < m2.value;
+	  m1 = tmp[b];
+	  m2 = tmp[!b];
   }
 
   using SortFn = void (*)(ExtMove* begin, const ExtMove* end, int limit);
