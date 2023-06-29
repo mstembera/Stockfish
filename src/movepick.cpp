@@ -34,10 +34,21 @@ namespace {
 
   inline void order_em(ExtMove& m1, ExtMove& m2)
   {
-	  ExtMove tmp[2] = { m1, m2 };
-	  bool b = m1.value < m2.value;
-	  m1 = tmp[b];
-	  m2 = tmp[!b];
+      bool b = m1.value < m2.value;
+      ExtMove tmp = b ? m2 : m1;
+      m2 = b ? m1 : m2;
+      m1 = tmp;
+  }
+
+  // Assumes m2 >= m3
+  inline void partial_order_em(ExtMove& m1, ExtMove& m2, ExtMove& m3)
+  {
+      bool b = m1.value < m3.value;
+      ExtMove tmp = b ? m3 : m1;
+      m3 = b ? m1 : m3;
+      b = tmp.value <= m2.value;
+      m1 = b ? m2 : m1;
+      m2 = b ? tmp : m2;
   }
 
   using SortFn = void (*)(ExtMove* begin, const ExtMove* end, int limit);
@@ -51,19 +62,29 @@ namespace {
 
   void sort3(ExtMove* begin, const ExtMove*, int) {
 
-      order_em(begin[0], begin[1]);
       order_em(begin[1], begin[2]);
-      order_em(begin[0], begin[1]);
+      partial_order_em(begin[0], begin[1], begin[2]);
   }
 
   void sort4(ExtMove* begin, const ExtMove*, int) {
 
-      order_em(begin[0], begin[1]);
-      order_em(begin[2], begin[3]);
       order_em(begin[0], begin[2]);
       order_em(begin[1], begin[3]);
+      order_em(begin[0], begin[1]);
+      order_em(begin[2], begin[3]);
       order_em(begin[1], begin[2]);
   }
+
+  void sort5(ExtMove* begin, const ExtMove*, int) {
+
+      order_em(begin[0], begin[1]);
+      order_em(begin[3], begin[4]);
+      partial_order_em(begin[2], begin[3], begin[4]);
+      order_em(begin[1], begin[4]);
+      partial_order_em(begin[0], begin[2], begin[3]);
+      partial_order_em(begin[1], begin[2], begin[3]);
+  }
+
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
@@ -82,8 +103,8 @@ namespace {
 
   void sort_moves(ExtMove* begin, const ExtMove* end, int limit) {
 
-      constexpr SortFn sortFn[6] = { sort01, sort01, sort2, sort3, sort4, partial_insertion_sort };
-      sortFn[std::min(int(end - begin), 5)](begin, end, limit);
+      constexpr SortFn sortFn[7] = { sort01, sort01, sort2, sort3, sort4, sort5, partial_insertion_sort };
+      sortFn[std::min(int(end - begin), 6)](begin, end, limit);
   }
 
 } // namespace
