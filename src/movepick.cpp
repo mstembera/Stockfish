@@ -75,16 +75,6 @@ namespace {
       order_em(begin[1], begin[2]);
   }
 
-  void sort5(ExtMove* begin, const ExtMove*, int) {
-
-      order_em(begin[0], begin[1]);
-      order_em(begin[3], begin[4]);
-      partial_order_em(begin[2], begin[3], begin[4]);
-      order_em(begin[1], begin[4]);
-      partial_order_em(begin[0], begin[2], begin[3]);
-      partial_order_em(begin[1], begin[2], begin[3]);
-  }
-
 
   // partial_insertion_sort() sorts moves in descending order up to and including
   // a given limit. The order of moves smaller than the limit is left unspecified.
@@ -103,8 +93,8 @@ namespace {
 
   void sort_moves(ExtMove* begin, const ExtMove* end, int limit) {
 
-      constexpr SortFn sortFn[7] = { sort01, sort01, sort2, sort3, sort4, sort5, partial_insertion_sort };
-      sortFn[std::min(int(end - begin), 6)](begin, end, limit);
+      constexpr SortFn sortFn[6] = { sort01, sort01, sort2, sort3, sort4, partial_insertion_sort };
+      sortFn[std::min(int(end - begin), 5)](begin, end, limit);
   }
 
 } // namespace
