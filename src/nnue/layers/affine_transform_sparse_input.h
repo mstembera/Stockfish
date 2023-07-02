@@ -74,8 +74,8 @@ namespace Stockfish::Eval::NNUE::Layers {
     }
     return v;
   }();
-  alignas(CacheLineSize) static inline const std::array<unsigned, 256> lookup_count = [](){
-    std::array<unsigned, 256> v;
+  alignas(CacheLineSize) static inline const std::array<std::uint8_t, 256> lookup_count = [](){
+    std::array<std::uint8_t, 256> v;
     for (int i = 0; i < 256; ++i)
     {
       int j = i;
