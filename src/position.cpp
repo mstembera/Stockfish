@@ -1063,6 +1063,11 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
 
   assert(is_ok(m));
 
+  if (threshold < -QueenValueMg)
+	  return true;
+  else if (threshold > QueenValueMg)
+      return false; 
+
   // Only deal with normal moves, assume others pass a simple SEE
   if (type_of(m) != NORMAL)
       return VALUE_ZERO >= threshold;
