@@ -137,8 +137,8 @@ namespace Stockfish::Simd {
       );
 #   else
       __m512i product0 = _mm512_maddubs_epi16(a, b);
-      product0 = _mm512_madd_epi16(product0, _mm512_set1_epi16(1));
-      acc = _mm512_add_epi32(acc, product0);
+      product0 = _mm512_madd_epi16(product0, _mm512_set1_epi16(-1));
+      acc = _mm512_sub_epi32(acc, product0);
 #   endif
 # endif
     }
@@ -175,9 +175,10 @@ namespace Stockfish::Simd {
 #   else
       __m512i product0 = _mm512_maddubs_epi16(a0, b0);
       __m512i product1 = _mm512_maddubs_epi16(a1, b1);
-      product0 = _mm512_madd_epi16(product0, _mm512_set1_epi16(1));
-      product1 = _mm512_madd_epi16(product1, _mm512_set1_epi16(1));
-      acc = _mm512_add_epi32(acc, _mm512_add_epi32(product0, product1));
+      __m512i nOnes = _mm512_set1_epi16(-1);
+      product0 = _mm512_madd_epi16(product0, nOnes);
+      product1 = _mm512_madd_epi16(product1, nOnes);
+      acc = _mm512_sub_epi32(acc, _mm512_add_epi32(product0, product1));
 #   endif
 # endif
     }
@@ -234,8 +235,8 @@ namespace Stockfish::Simd {
       );
 #   else
       __m256i product0 = _mm256_maddubs_epi16(a, b);
-      product0 = _mm256_madd_epi16(product0, _mm256_set1_epi16(1));
-      acc = _mm256_add_epi32(acc, product0);
+      product0 = _mm256_madd_epi16(product0, _mm256_cmpeq_epi16(a, a));
+      acc = _mm256_sub_epi32(acc, product0);
 #   endif
 # endif
     }
@@ -272,9 +273,10 @@ namespace Stockfish::Simd {
 #   else
       __m256i product0 = _mm256_maddubs_epi16(a0, b0);
       __m256i product1 = _mm256_maddubs_epi16(a1, b1);
-      product0 = _mm256_madd_epi16(product0, _mm256_set1_epi16(1));
-      product1 = _mm256_madd_epi16(product1, _mm256_set1_epi16(1));
-      acc = _mm256_add_epi32(acc, _mm256_add_epi32(product0, product1));
+      __m256i nOnes = _mm256_cmpeq_epi16(a0, a0);
+      product0 = _mm256_madd_epi16(product0, nOnes);
+      product1 = _mm256_madd_epi16(product1, nOnes);
+      acc = _mm256_sub_epi32(acc, _mm256_add_epi32(product0, product1));
 #   endif
 # endif
     }
@@ -314,8 +316,8 @@ namespace Stockfish::Simd {
       );
 #   else
       __m128i product0 = _mm_maddubs_epi16(a, b);
-      product0 = _mm_madd_epi16(product0, _mm_set1_epi16(1));
-      acc = _mm_add_epi32(acc, product0);
+      product0 = _mm_madd_epi16(product0, _mm_cmpeq_epi16(a, a));
+      acc = _mm_sub_epi32(acc, product0);
 #   endif
     }
 
@@ -338,9 +340,10 @@ namespace Stockfish::Simd {
 #   else
       __m128i product0 = _mm_maddubs_epi16(a0, b0);
       __m128i product1 = _mm_maddubs_epi16(a1, b1);
-      product0 = _mm_madd_epi16(product0, _mm_set1_epi16(1));
-      product1 = _mm_madd_epi16(product1, _mm_set1_epi16(1));
-      acc = _mm_add_epi32(acc, _mm_add_epi32(product0, product1));
+      __m128i nOnes = _mm_cmpeq_epi16(a0, a0);
+      product0 = _mm_madd_epi16(product0, nOnes);
+      product1 = _mm_madd_epi16(product1, nOnes);
+      acc = _mm_sub_epi32(acc, _mm_add_epi32(product0, product1));
 #   endif
     }
 
