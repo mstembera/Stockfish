@@ -42,7 +42,7 @@
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101693
 // Clang does fine without it.
 // Play around here: https://godbolt.org/z/7EWqrYq51
-#if (defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER))
+#if 0 //(defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER))
 #define USE_INLINE_ASM
 #endif
 
