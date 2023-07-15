@@ -44,7 +44,7 @@ namespace Stockfish::Eval::NNUE {
   #ifdef USE_AVX512
   using vec_t = __m512i;
   using psqt_vec_t = __m256i;
-  #define vec_load(a) _mm512_load_si512(a)
+  #define vec_load(a) _mm512_stream_load_si512(a)
   #define vec_store(a,b) _mm512_store_si512(a,b)
   #define vec_add_16(a,b) _mm512_add_epi16(a,b)
   #define vec_sub_16(a,b) _mm512_sub_epi16(a,b)
@@ -57,7 +57,7 @@ namespace Stockfish::Eval::NNUE {
     vec_t compacted = _mm512_packs_epi16(_mm512_srli_epi16(a,7),_mm512_srli_epi16(b,7));
     return _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7), compacted);
   }
-  #define vec_load_psqt(a) _mm256_load_si256(a)
+  #define vec_load_psqt(a) _mm256_stream_load_si256(a)
   #define vec_store_psqt(a,b) _mm256_store_si256(a,b)
   #define vec_add_psqt_32(a,b) _mm256_add_epi32(a,b)
   #define vec_sub_psqt_32(a,b) _mm256_sub_epi32(a,b)
@@ -68,7 +68,7 @@ namespace Stockfish::Eval::NNUE {
   #elif USE_AVX2
   using vec_t = __m256i;
   using psqt_vec_t = __m256i;
-  #define vec_load(a) _mm256_load_si256(a)
+  #define vec_load(a) _mm256_stream_load_si256(a)
   #define vec_store(a,b) _mm256_store_si256(a,b)
   #define vec_add_16(a,b) _mm256_add_epi16(a,b)
   #define vec_sub_16(a,b) _mm256_sub_epi16(a,b)
@@ -81,7 +81,7 @@ namespace Stockfish::Eval::NNUE {
     vec_t compacted = _mm256_packs_epi16(_mm256_srli_epi16(a,7), _mm256_srli_epi16(b,7));
     return _mm256_permute4x64_epi64(compacted, 0b11011000);
   }
-  #define vec_load_psqt(a) _mm256_load_si256(a)
+  #define vec_load_psqt(a) _mm256_stream_load_si256(a)
   #define vec_store_psqt(a,b) _mm256_store_si256(a,b)
   #define vec_add_psqt_32(a,b) _mm256_add_epi32(a,b)
   #define vec_sub_psqt_32(a,b) _mm256_sub_epi32(a,b)
