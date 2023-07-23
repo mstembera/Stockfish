@@ -135,7 +135,7 @@ namespace Stockfish::Eval::NNUE::Layers {
       return hashValue;
     }
 
-    static IndexType get_weight_index_scrambled(IndexType i)
+    static constexpr IndexType get_weight_index_scrambled(IndexType i)
     {
       return
         (i / ChunkSize) % (PaddedInputDimensions / ChunkSize) * OutputDimensions * ChunkSize +
@@ -143,7 +143,7 @@ namespace Stockfish::Eval::NNUE::Layers {
         i % ChunkSize;
     }
 
-    static IndexType get_weight_index(IndexType i)
+    static constexpr IndexType get_weight_index(IndexType i)
     {
 #if defined (USE_SSSE3)
       return get_weight_index_scrambled(i);
@@ -195,22 +195,30 @@ namespace Stockfish::Eval::NNUE::Layers {
 
       constexpr IndexType NumChunks = ceil_to_multiple<IndexType>(InputDimensions, 8) / ChunkSize;
       constexpr IndexType NumRegs = OutputDimensions / OutputSimdWidth;
-      std::uint16_t nnz[NumChunks];
+      std::uint16_t nnz[NumChunks + 1];
       IndexType count;
 
-      const auto input32 = reinterpret_cast<const std::int32_t*>(input);
+      const std::int32_t* input32 = reinterpret_cast<const std::int32_t*>(input);
 
       // Find indices of nonzero 32bit blocks
       find_nnz<NumChunks>(input32, nnz, count);
+      nnz[count] = nnz[count - 1];
 
       const vec_t* biasvec = reinterpret_cast<const vec_t*>(biases);
       vec_t acc[NumRegs];
       for (IndexType k = 0; k < NumRegs; ++k)
         acc[k] = biasvec[k];
 
+      IndexType iNext = nnz[0];
+      prefetch(const_cast<std::int32_t*>(&input32[iNext]));
+      prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
       for (IndexType j = 0; j < count; ++j)
       {
-        const auto i = nnz[j];
+        const IndexType i = iNext;
+        iNext = nnz[j + 1];
+        prefetch(const_cast<std::int32_t*>(&input32[iNext]));
+        prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
+
         const vec_t in = vec_set_32(input32[i]);
         const auto col = reinterpret_cast<const vec_t*>(&weights[i * OutputDimensions * ChunkSize]);
         for (IndexType k = 0; k < NumRegs; ++k)
