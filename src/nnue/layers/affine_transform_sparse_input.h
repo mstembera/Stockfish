@@ -210,14 +210,14 @@ namespace Stockfish::Eval::NNUE::Layers {
         acc[k] = biasvec[k];
 
       IndexType iNext = nnz[0];
-      prefetch(const_cast<std::int32_t*>(&input32[iNext]));
-      //prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
+      //prefetch(const_cast<std::int32_t*>(&input32[iNext]));
+      prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
       for (IndexType j = 0; j < count; ++j)
       {
         const IndexType i = iNext;
         iNext = nnz[j + 1];
-        prefetch(const_cast<std::int32_t*>(&input32[iNext]));
-        //prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
+        //prefetch(const_cast<std::int32_t*>(&input32[iNext]));
+        prefetch(const_cast<WeightType*>(&weights[iNext * OutputDimensions * ChunkSize]));
 
         const vec_t in = vec_set_32(input32[i]);
         const auto col = reinterpret_cast<const vec_t*>(&weights[i * OutputDimensions * ChunkSize]);
