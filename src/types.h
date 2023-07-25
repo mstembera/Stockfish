@@ -167,10 +167,9 @@ enum ScaleFactor {
 };
 
 enum Bound {
-  // These are intentionally ordered from worst to best.
   BOUND_NONE,
-  BOUND_UPPER,
   BOUND_LOWER,
+  BOUND_UPPER,
   BOUND_EXACT = BOUND_UPPER | BOUND_LOWER
 };
 
