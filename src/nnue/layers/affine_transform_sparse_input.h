@@ -240,13 +240,28 @@ namespace Stockfish::Eval::NNUE::Layers {
       for (IndexType k = 0; k < NumRegs; ++k)
         acc[k] = biasvec[k];
 
-      for (IndexType j = 0; j < count; ++j)
+      IndexType j = 0;
+      for (; j < count - 1; j += 2)
       {
-        const auto i = nnz[j];
-        const invec_t in = vec_set_32(input32[i]);
-        const auto col = reinterpret_cast<const invec_t*>(&weights[i * OutputDimensions * ChunkSize]);
+        const auto i1 = nnz[j];
+        const invec_t in1 = vec_set_32(input32[i1]);
+        const auto col1 = reinterpret_cast<const invec_t*>(&weights[i1 * OutputDimensions * ChunkSize]);
         for (IndexType k = 0; k < NumRegs; ++k)
-          vec_add_dpbusd_32(acc[k], in, col[k]);
+          vec_add_dpbusd_32(acc[k], in1, col1[k]);
+
+		const auto i2 = nnz[j+1];
+		const invec_t in2 = vec_set_32(input32[i2]);
+		const auto col2 = reinterpret_cast<const invec_t*>(&weights[i2 * OutputDimensions * ChunkSize]);
+		for (IndexType k = 0; k < NumRegs; ++k)
+			vec_add_dpbusd_32(acc[k], in2, col2[k]);
+      }
+      for (; j < count; j++)
+      {
+          const auto i = nnz[j];
+          const invec_t in = vec_set_32(input32[i]);
+          const auto col = reinterpret_cast<const invec_t*>(&weights[i * OutputDimensions * ChunkSize]);
+          for (IndexType k = 0; k < NumRegs; ++k)
+              vec_add_dpbusd_32(acc[k], in, col[k]);
       }
 
       outvec_t* outptr = reinterpret_cast<outvec_t*>(output);
