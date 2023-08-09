@@ -241,7 +241,7 @@ namespace Stockfish::Eval::NNUE::Layers {
         acc[k] = biasvec[k];
 
       IndexType j = 0;
-      for (; j < count - 1; j += 2)
+      for (; j < count - 2; j += 3)
       {
         const auto i1 = nnz[j];
         const invec_t in1 = vec_set_32(input32[i1]);
@@ -254,6 +254,12 @@ namespace Stockfish::Eval::NNUE::Layers {
 		const auto col2 = reinterpret_cast<const invec_t*>(&weights[i2 * OutputDimensions * ChunkSize]);
 		for (IndexType k = 0; k < NumRegs; ++k)
 			vec_add_dpbusd_32(acc[k], in2, col2[k]);
+
+		const auto i3 = nnz[j + 2];
+		const invec_t in3 = vec_set_32(input32[i3]);
+		const auto col3 = reinterpret_cast<const invec_t*>(&weights[i3 * OutputDimensions * ChunkSize]);
+		for (IndexType k = 0; k < NumRegs; ++k)
+			vec_add_dpbusd_32(acc[k], in3, col3[k]);
       }
       for (; j < count; j++)
       {
