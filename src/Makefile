@@ -562,7 +562,7 @@ endif
 ### 3.3 Optimization
 ifeq ($(optimize),yes)
 
-	CXXFLAGS += -O3 -funroll-loops
+	CXXFLAGS += -O3 -funroll-loops -ftracer -fsplit-loops -funswitch-loops
 
 	ifeq ($(comp),gcc)
 		ifeq ($(OS), Android)
