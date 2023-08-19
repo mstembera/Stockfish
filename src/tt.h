@@ -44,6 +44,10 @@ struct TTEntry {
   bool is_pv()  const { return (bool)(genBound8 & 0x4); }
   Bound bound() const { return (Bound)(genBound8 & 0x3); }
   void save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev);
+  void reset() {
+      key16 = 0;
+      depth8 = 0;
+  }
 
 private:
   friend class TranspositionTable;
