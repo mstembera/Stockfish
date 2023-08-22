@@ -202,26 +202,31 @@ namespace Stockfish::Eval::NNUE::Layers {
       using outvec_t = __m512i;
       #define vec_set_32 _mm512_set1_epi32
       #define vec_add_dpbusd_32 Simd::m512_add_dpbusd_epi32
+      #define vec_add_dpbusd_32x2 Simd::m512_add_dpbusd_epi32x2
 #elif defined (USE_AVX2)
       using invec_t = __m256i;
       using outvec_t = __m256i;
       #define vec_set_32 _mm256_set1_epi32
       #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
+      #define vec_add_dpbusd_32x2 Simd::m256_add_dpbusd_epi32x2
 #elif defined (USE_SSSE3)
       using invec_t = __m128i;
       using outvec_t = __m128i;
       #define vec_set_32 _mm_set1_epi32
       #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
+      #define vec_add_dpbusd_32x2 Simd::m128_add_dpbusd_epi32x2
 #elif defined (USE_NEON_DOTPROD)
       using invec_t = int8x16_t;
       using outvec_t = int32x4_t;
       #define vec_set_32(a) vreinterpretq_s8_u32(vdupq_n_u32(a))
       #define vec_add_dpbusd_32 Simd::dotprod_m128_add_dpbusd_epi32
+      #define vec_add_dpbusd_32x2 Simd::dotprod_m128_add_dpbusd_epi32x2
 #elif defined (USE_NEON)
       using invec_t = int8x16_t;
       using outvec_t = int32x4_t;
       #define vec_set_32(a) vreinterpretq_s8_u32(vdupq_n_u32(a))
       #define vec_add_dpbusd_32 Simd::neon_m128_add_dpbusd_epi32
+      #define vec_add_dpbusd_32x2 Simd::neon_m128_add_dpbusd_epi32x2
 #endif
       static constexpr IndexType OutputSimdWidth = sizeof(outvec_t) / sizeof(OutputType);
 
@@ -240,7 +245,18 @@ namespace Stockfish::Eval::NNUE::Layers {
       for (IndexType k = 0; k < NumRegs; ++k)
         acc[k] = biasvec[k];
 
-      for (IndexType j = 0; j < count; ++j)
+      IndexType j = 0;
+      for (; j < count - 1; j += 2)
+      {
+        const auto i0 = nnz[j], i1 = nnz[j + 1];
+        const invec_t in0 = vec_set_32(input32[i0]);
+        const invec_t in1 = vec_set_32(input32[i1]);
+		const auto col0 = reinterpret_cast<const invec_t*>(&weights[i0 * OutputDimensions * ChunkSize]);
+		const auto col1 = reinterpret_cast<const invec_t*>(&weights[i1 * OutputDimensions * ChunkSize]);
+        for (IndexType k = 0; k < NumRegs; ++k)
+          vec_add_dpbusd_32x2(acc[k], in0, col0[k], in1, col1[k]);
+      }
+      for (; j < count; ++j)
       {
         const auto i = nnz[j];
         const invec_t in = vec_set_32(input32[i]);
@@ -254,6 +270,7 @@ namespace Stockfish::Eval::NNUE::Layers {
         outptr[k] = acc[k];
 # undef vec_set_32
 # undef vec_add_dpbusd_32
+# undef vec_add_dpbusd_32x2
 #else
       // Use dense implementation for the other architectures.
       affine_transform_non_ssse3<
