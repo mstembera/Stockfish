@@ -158,12 +158,13 @@ Value Eval::evaluate(const Position& pos) {
   Color stm      = pos.side_to_move();
   int shuffling  = pos.rule50_count();
   int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
+  int material = PawnValue * pos.count<PAWN>() + pos.non_pawn_material();
 
-  bool lazy = abs(simpleEval) >=   RookValue + KnightValue
-                                 + 16 * shuffling * shuffling
-                                 + abs(pos.this_thread()->bestValue)
-                                 + abs(pos.this_thread()->rootSimpleEval);
-
+  bool lazy =    abs(simpleEval) * 8 > material
+              && abs(simpleEval) >=    8 * PawnValue
+                                    + 16 * shuffling * shuffling
+                                    + abs(pos.this_thread()->bestValue)
+                                    + abs(pos.this_thread()->rootSimpleEval);
   if (lazy)
       v = Value(simpleEval);
   else
