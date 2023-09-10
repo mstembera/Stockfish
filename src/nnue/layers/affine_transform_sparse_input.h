@@ -229,18 +229,17 @@ namespace Stockfish::Eval::NNUE::Layers {
 
       constexpr IndexType NumChunks = ceil_to_multiple<IndexType>(InputDimensions, 8) / ChunkSize;
       constexpr IndexType NumRegs = OutputDimensions / OutputSimdWidth;
-      std::uint16_t nnz[NumChunks];
-      IndexType count;
-
-      const auto input32 = reinterpret_cast<const std::int32_t*>(input);
-
-      // Find indices of nonzero 32bit blocks
-      find_nnz<NumChunks>(input32, nnz, count);
-
+      
       const outvec_t* biasvec = reinterpret_cast<const outvec_t*>(biases);
       outvec_t acc[NumRegs];
       for (IndexType k = 0; k < NumRegs; ++k)
         acc[k] = biasvec[k];
+
+      // Find indices of nonzero 32bit blocks
+      const auto input32 = reinterpret_cast<const std::int32_t*>(input);
+      std::uint16_t nnz[NumChunks];
+      IndexType count;
+      find_nnz<NumChunks>(input32, nnz, count);
 
       for (IndexType j = 0; j < count; ++j)
       {
