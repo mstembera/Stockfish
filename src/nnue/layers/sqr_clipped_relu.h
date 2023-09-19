@@ -70,6 +70,7 @@ namespace Stockfish::Eval::NNUE::Layers {
       constexpr IndexType NumChunks = InputDimensions / 16;
 
       static_assert(WeightScaleBits == 6);
+      const __m128i Rounding128 = _mm_set1_epi16(4);
       const auto in = reinterpret_cast<const __m128i*>(input);
       const auto out = reinterpret_cast<__m128i*>(output);
       for (IndexType i = 0; i < NumChunks; ++i) {
@@ -83,8 +84,8 @@ namespace Stockfish::Eval::NNUE::Layers {
         // We shift by WeightScaleBits * 2 = 12 and divide by 128
         // which is an additional shift-right of 7, meaning 19 in total.
         // MulHi strips the lower 16 bits so we need to shift out 3 more to match.
-        words0 = _mm_srli_epi16(_mm_mulhi_epi16(words0, words0), 3);
-        words1 = _mm_srli_epi16(_mm_mulhi_epi16(words1, words1), 3);
+        words0 = _mm_srli_epi16(_mm_add_epi16(_mm_mulhi_epi16(words0, words0), Rounding128), 3);
+        words1 = _mm_srli_epi16(_mm_add_epi16(_mm_mulhi_epi16(words1, words1), Rounding128), 3);
 
         _mm_store_si128(&out[i], _mm_packs_epi16(words0, words1));
       }
@@ -94,11 +95,12 @@ namespace Stockfish::Eval::NNUE::Layers {
       constexpr IndexType Start = 0;
   #endif
 
+      constexpr long long Rounding = 1ll << (2 * WeightScaleBits + 7 - 1);
       for (IndexType i = Start; i < InputDimensions; ++i) {
         output[i] = static_cast<OutputType>(
-            // really should be /127 but we need to make it fast
-            // needs to be accounted for in the trainer
-            std::min(127ll, (((long long)input[i] * input[i]) >> (2 * WeightScaleBits)) / 128));
+            // Really should be /127 but we need to make it fast so we right shift
+            // by an extra 7 bits instead. Needs to be accounted for in the trainer.
+            std::min(127ll, ((long long)input[i] * input[i] + Rounding) >> (2 * WeightScaleBits + 7)));
       }
     }
   };
