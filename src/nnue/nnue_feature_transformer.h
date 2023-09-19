@@ -303,7 +303,7 @@ namespace Stockfish::Eval::NNUE {
           constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
 
           vec_t Zero = vec_zero();
-          vec_t One = vec_set_16(130);
+          vec_t One = vec_set_16(124);
 
           const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
           const vec_t* in1 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
@@ -327,8 +327,8 @@ namespace Stockfish::Eval::NNUE {
           for (IndexType j = 0; j < HalfDimensions / 2; ++j) {
               BiasType sum0 = accumulation[static_cast<int>(perspectives[p])][j + 0];
               BiasType sum1 = accumulation[static_cast<int>(perspectives[p])][j + HalfDimensions / 2];
-              sum0 = std::max<int>(0, std::min<int>(130, sum0));
-              sum1 = std::max<int>(0, std::min<int>(130, sum1));
+              sum0 = std::max<int>(0, std::min<int>(124, sum0));
+              sum1 = std::max<int>(0, std::min<int>(124, sum1));
               output[offset + j] = static_cast<OutputType>(sum0 * sum1 / 128);
           }
 
