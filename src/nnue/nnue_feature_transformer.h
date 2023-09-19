@@ -302,22 +302,23 @@ namespace Stockfish::Eval::NNUE {
           static_assert((HalfDimensions / 2) % OutputChunkSize == 0);
           constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
 
-          vec_t Zero = vec_zero();
-          vec_t One = vec_set_16(124);
+          const vec_t Zero = vec_zero();
+          const vec_t One = vec_set_16(127);
+          const vec_t Rounding = vec_set_16(64);
 
-          const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
-          const vec_t* in1 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
+          const vec_t* in0 = reinterpret_cast<const vec_t*>(&accumulation[perspectives[p]][0]);
+          const vec_t* in1 = reinterpret_cast<const vec_t*>(&accumulation[perspectives[p]][HalfDimensions / 2]);
                 vec_t* out = reinterpret_cast<      vec_t*>(output + offset);
 
-          for (IndexType j = 0; j < NumOutputChunks; j += 1)
+          for (IndexType j = 0; j < NumOutputChunks; ++j)
           {
               const vec_t sum0a = vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero);
               const vec_t sum0b = vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero);
               const vec_t sum1a = vec_max_16(vec_min_16(in1[j * 2 + 0], One), Zero);
               const vec_t sum1b = vec_max_16(vec_min_16(in1[j * 2 + 1], One), Zero);
 
-              const vec_t pa = vec_mul_16(sum0a, sum1a);
-              const vec_t pb = vec_mul_16(sum0b, sum1b);
+              const vec_t pa = vec_add_16(vec_mul_16(sum0a, sum1a), Rounding);
+              const vec_t pb = vec_add_16(vec_mul_16(sum0b, sum1b), Rounding);
 
               out[j] = vec_msb_pack_16(pa, pb);
           }
@@ -327,9 +328,9 @@ namespace Stockfish::Eval::NNUE {
           for (IndexType j = 0; j < HalfDimensions / 2; ++j) {
               BiasType sum0 = accumulation[static_cast<int>(perspectives[p])][j + 0];
               BiasType sum1 = accumulation[static_cast<int>(perspectives[p])][j + HalfDimensions / 2];
-              sum0 = std::max<int>(0, std::min<int>(124, sum0));
-              sum1 = std::max<int>(0, std::min<int>(124, sum1));
-              output[offset + j] = static_cast<OutputType>(sum0 * sum1 / 128);
+              sum0 = std::max<int>(0, std::min<int>(127, sum0));
+              sum1 = std::max<int>(0, std::min<int>(127, sum1));
+              output[offset + j] = static_cast<OutputType>((sum0 * sum1 + 64) / 128);
           }
 
 #endif
