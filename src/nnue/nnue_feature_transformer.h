@@ -304,7 +304,6 @@ namespace Stockfish::Eval::NNUE {
 
           const vec_t Zero = vec_zero();
           const vec_t One = vec_set_16(127);
-          const vec_t Rounding = vec_set_16(64);
 
           const vec_t* in0 = reinterpret_cast<const vec_t*>(&accumulation[perspectives[p]][0]);
           const vec_t* in1 = reinterpret_cast<const vec_t*>(&accumulation[perspectives[p]][HalfDimensions / 2]);
@@ -317,8 +316,8 @@ namespace Stockfish::Eval::NNUE {
               const vec_t sum1a = vec_max_16(vec_min_16(in1[j * 2 + 0], One), Zero);
               const vec_t sum1b = vec_max_16(vec_min_16(in1[j * 2 + 1], One), Zero);
 
-              const vec_t pa = vec_add_16(vec_mul_16(sum0a, sum1a), Rounding);
-              const vec_t pb = vec_add_16(vec_mul_16(sum0b, sum1b), Rounding);
+              const vec_t pa = vec_add_16(vec_mul_16(sum0a, sum1a), One);
+              const vec_t pb = vec_add_16(vec_mul_16(sum0b, sum1b), One);
 
               out[j] = vec_msb_pack_16(pa, pb);
           }
@@ -330,7 +329,7 @@ namespace Stockfish::Eval::NNUE {
               BiasType sum1 = accumulation[static_cast<int>(perspectives[p])][j + HalfDimensions / 2];
               sum0 = std::max<int>(0, std::min<int>(127, sum0));
               sum1 = std::max<int>(0, std::min<int>(127, sum1));
-              output[offset + j] = static_cast<OutputType>((sum0 * sum1 + 64) / 128);
+              output[offset + j] = static_cast<OutputType>((sum0 * sum1 + 127) / 128);
           }
 
 #endif
