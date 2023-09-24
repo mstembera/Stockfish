@@ -44,7 +44,7 @@ namespace Stockfish::Eval::NNUE::Features {
     while (bb)
     {
       Square s = pop_lsb(bb);
-      active.push_back(make_index<Perspective>(s, pos.piece_on(s), ksq));
+      active.insert_sorted(make_index<Perspective>(s, pos.piece_on(s), ksq));
     }
   }
 

@@ -88,6 +88,15 @@ public:
   const T* begin() const { return values_; }
   const T* end() const { return values_ + size_; }
 
+  void insert_sorted(const T& value) {
+
+      int i = (int)size_ - 1;
+      for (; i >= 0 && values_[i] > value; --i)
+          values_[i + 1] = values_[i];
+      values_[i + 1] = value;
+      ++size_;
+  }
+
 private:
   T values_[MaxSize];
   std::size_t size_ = 0;
