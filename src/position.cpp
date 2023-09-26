@@ -1063,6 +1063,20 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
   occupied = pieces() ^ from ^ to; // xoring to is important for pinned piece logic
   Color stm = sideToMove;
   Bitboard attackers = attackers_to(to, occupied);
+  const Bitboard ksq[COLOR_NB] = { pieces(WHITE, KING), pieces(BLACK, KING) };
+  const Bitboard checkingAttackers[COLOR_NB] = {
+      (  (pawn_attacks_bb(WHITE, to)       & ksq[BLACK]) ? pieces(PAWN)   : 0
+       | (attacks_bb<KNIGHT>(to)           & ksq[BLACK]) ? pieces(KNIGHT) : 0
+       | (attacks_bb<BISHOP>(to, occupied) & ksq[BLACK]) ? pieces(BISHOP) : 0
+       | (attacks_bb<ROOK  >(to, occupied) & ksq[BLACK]) ? pieces(ROOK)   : 0
+       | (attacks_bb<QUEEN >(to, occupied) & ksq[BLACK]) ? pieces(QUEEN)  : 0 ) & attackers & pieces(WHITE),
+      (  (pawn_attacks_bb(BLACK, to)       & ksq[WHITE]) ? pieces(PAWN)   : 0
+       | (attacks_bb<KNIGHT>(to)           & ksq[WHITE]) ? pieces(KNIGHT) : 0
+       | (attacks_bb<BISHOP>(to, occupied) & ksq[WHITE]) ? pieces(BISHOP) : 0
+       | (attacks_bb<ROOK  >(to, occupied) & ksq[WHITE]) ? pieces(ROOK)   : 0
+       | (attacks_bb<QUEEN >(to, occupied) & ksq[WHITE]) ? pieces(QUEEN)  : 0 ) & attackers & pieces(BLACK)
+  };
+
   Bitboard stmAttackers, bb;
   int res = 1;
 
@@ -1092,7 +1106,8 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
       if ((bb = stmAttackers & pieces(PAWN)))
       {
           occupied ^= least_significant_square_bb(bb);
-          if ((swap = PawnValue - swap) < res)
+          if (   (swap = PawnValue - swap) < res
+              && ((res && !(checkingAttackers[~sideToMove] & occupied)) || (!res && !(checkingAttackers[sideToMove] & occupied))))
               break;
 
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
@@ -1101,14 +1116,16 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
       else if ((bb = stmAttackers & pieces(KNIGHT)))
       {
           occupied ^= least_significant_square_bb(bb);
-          if ((swap = KnightValue - swap) < res)
+          if (   (swap = KnightValue - swap) < res
+              && ((res && !(checkingAttackers[~sideToMove] & occupied)) || (!res && !(checkingAttackers[sideToMove] & occupied))))
               break;
       }
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
       {
           occupied ^= least_significant_square_bb(bb);
-          if ((swap = BishopValue - swap) < res)
+          if (   (swap = BishopValue - swap) < res
+              && ((res && !(checkingAttackers[~sideToMove] & occupied)) || (!res && !(checkingAttackers[sideToMove] & occupied))))
               break;
 
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
@@ -1117,7 +1134,8 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
       else if ((bb = stmAttackers & pieces(ROOK)))
       {
           occupied ^= least_significant_square_bb(bb);
-          if ((swap = RookValue - swap) < res)
+          if (   (swap = RookValue - swap) < res
+              && ((res && !(checkingAttackers[~sideToMove] & occupied)) || (!res && !(checkingAttackers[sideToMove] & occupied))))
               break;
 
           attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
@@ -1126,7 +1144,8 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
       else if ((bb = stmAttackers & pieces(QUEEN)))
       {
           occupied ^= least_significant_square_bb(bb);
-          if ((swap = QueenValue - swap) < res)
+          if (   (swap = QueenValue - swap) < res
+              && ((res && !(checkingAttackers[~sideToMove] & occupied)) || (!res && !(checkingAttackers[sideToMove] & occupied))))
               break;
 
           attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
