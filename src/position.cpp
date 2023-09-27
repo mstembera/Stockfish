@@ -1047,7 +1047,7 @@ bool Position::see_ge(Move m, Bitboard& occupied, Value threshold) const {
 
   // Only deal with normal moves, assume others pass a simple SEE
   if (type_of(m) != NORMAL)
-      return VALUE_ZERO >= threshold || gives_check(m) * 128 >= threshold;
+      return VALUE_ZERO >= threshold || gives_check(m);
 
   Square from = from_sq(m), to = to_sq(m);
 
