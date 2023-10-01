@@ -283,12 +283,11 @@ namespace Stockfish::Eval::NNUE {
       update_accumulator<BLACK>(pos);
 
       const Color perspectives[2] = {pos.side_to_move(), ~pos.side_to_move()};
-      const auto& accumulation = pos.state()->accumulator.accumulation;
-      const auto& psqtAccumulation = pos.state()->accumulator.psqtAccumulation;
+      const auto& accumulation = pos.state()->accumulator;
 
       const auto psqt = (
-            psqtAccumulation[perspectives[0]][bucket]
-          - psqtAccumulation[perspectives[1]][bucket]
+            accumulation.perspective[perspectives[0]].psqtAccumulation[bucket]
+          - accumulation.perspective[perspectives[1]].psqtAccumulation[bucket]
         ) / 2;
 
 
@@ -305,8 +304,8 @@ namespace Stockfish::Eval::NNUE {
           vec_t Zero = vec_zero();
           vec_t One = vec_set_16(127);
 
-          const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
-          const vec_t* in1 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
+          const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation.perspective[perspectives[p]].accumulation[0]));
+          const vec_t* in1 = reinterpret_cast<const vec_t*>(&(accumulation.perspective[perspectives[p]].accumulation[HalfDimensions / 2]));
                 vec_t* out = reinterpret_cast<      vec_t*>(output + offset);
 
           for (IndexType j = 0; j < NumOutputChunks; j += 1)
@@ -424,7 +423,7 @@ namespace Stockfish::Eval::NNUE {
       {
         // Load accumulator
         auto accTile = reinterpret_cast<vec_t*>(
-          &st->accumulator.accumulation[Perspective][j * TileHeight]);
+          &st->accumulator.perspective[Perspective].accumulation[j * TileHeight]);
         for (IndexType k = 0; k < NumRegs; ++k)
           acc[k] = vec_load(&accTile[k]);
 
@@ -450,7 +449,7 @@ namespace Stockfish::Eval::NNUE {
 
           // Store accumulator
           accTile = reinterpret_cast<vec_t*>(
-            &states_to_update[i]->accumulator.accumulation[Perspective][j * TileHeight]);
+            &states_to_update[i]->accumulator.perspective[Perspective].accumulation[j * TileHeight]);
           for (IndexType k = 0; k < NumRegs; ++k)
             vec_store(&accTile[k], acc[k]);
         }
@@ -460,7 +459,7 @@ namespace Stockfish::Eval::NNUE {
       {
         // Load accumulator
         auto accTilePsqt = reinterpret_cast<psqt_vec_t*>(
-          &st->accumulator.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+          &st->accumulator.perspective[Perspective].psqtAccumulation[j * PsqtTileHeight]);
         for (std::size_t k = 0; k < NumPsqtRegs; ++k)
           psqt[k] = vec_load_psqt(&accTilePsqt[k]);
 
@@ -486,7 +485,7 @@ namespace Stockfish::Eval::NNUE {
 
           // Store accumulator
           accTilePsqt = reinterpret_cast<psqt_vec_t*>(
-            &states_to_update[i]->accumulator.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+            &states_to_update[i]->accumulator.perspective[Perspective].psqtAccumulation[j * PsqtTileHeight]);
           for (std::size_t k = 0; k < NumPsqtRegs; ++k)
             vec_store_psqt(&accTilePsqt[k], psqt[k]);
         }
@@ -570,7 +569,7 @@ namespace Stockfish::Eval::NNUE {
         }
 
         auto accTile = reinterpret_cast<vec_t*>(
-            &accumulator.accumulation[Perspective][j * TileHeight]);
+            &accumulator.perspective[Perspective].accumulation[j * TileHeight]);
         for (unsigned k = 0; k < NumRegs; k++)
           vec_store(&accTile[k], acc[k]);
       }
@@ -590,7 +589,7 @@ namespace Stockfish::Eval::NNUE {
         }
 
         auto accTilePsqt = reinterpret_cast<psqt_vec_t*>(
-          &accumulator.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+          &accumulator.perspective[Perspective].psqtAccumulation[j * PsqtTileHeight]);
         for (std::size_t k = 0; k < NumPsqtRegs; ++k)
           vec_store_psqt(&accTilePsqt[k], psqt[k]);
       }

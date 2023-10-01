@@ -29,9 +29,12 @@
 namespace Stockfish::Eval::NNUE {
 
   // Class that holds the result of affine transformation of input features
-  struct alignas(CacheLineSize) Accumulator {
-    std::int16_t accumulation[2][TransformedFeatureDimensions];
-    std::int32_t psqtAccumulation[2][PSQTBuckets];
+  struct Accumulator {
+    struct {
+        alignas(CacheLineSize) std::int16_t accumulation[TransformedFeatureDimensions];
+        alignas(CacheLineSize) std::int32_t psqtAccumulation[PSQTBuckets];
+    } perspective[2];
+
     bool computed[2];
   };
 
