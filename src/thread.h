@@ -68,6 +68,7 @@ public:
   Depth rootDepth, completedDepth;
   Value rootDelta;
   Value rootSimpleEval;
+  alignas(64)
   CounterMoveHistory counterMoves;
   ButterflyHistory mainHistory;
   CapturePieceToHistory captureHistory;
