@@ -125,7 +125,12 @@ void MovePicker::score() {
                        | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
   }
 
-  for (auto& m : *this)
+  int vSum = 0, mCount = 0;
+  ExtMove* endM = end();
+  for (ExtMove* mp = begin(); mp < endM; ++mp)
+  {
+      ExtMove& m = *mp;
+
       if constexpr (Type == CAPTURES)
           m.value =  (7 * int(PieceValue[pos.piece_on(to_sq(m))])
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
@@ -177,6 +182,19 @@ void MovePicker::score() {
               m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
+      
+      if constexpr (Type != EVASIONS)
+      {
+          int tmp = m.value;
+          if (m.value * mCount * 2 < vSum * 3)
+          {
+              std::swap(*mp, *--endM);
+              --mp;
+          }
+          vSum += tmp;
+          ++mCount;
+      }
+  }
 }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
