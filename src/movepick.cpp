@@ -186,7 +186,7 @@ void MovePicker::score() {
       if constexpr (Type != EVASIONS)
       {
           int tmp = m.value;
-          if (m.value * mCount < vSum - 3000)
+          if ((m.value + 500) * mCount < vSum)
           {
               std::swap(*mp, *--endM);
               --mp;
