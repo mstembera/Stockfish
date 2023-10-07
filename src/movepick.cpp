@@ -106,7 +106,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 /// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
 /// captures with a good history. Quiets moves are ordered using the history tables.
 template<GenType Type>
-void MovePicker::score() {
+void MovePicker::score(int limit) {
 
   static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -138,11 +138,8 @@ void MovePicker::score() {
           Square    to   = to_sq(m);
 
           // histories
-          m.value =  2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
+          m.value  = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
           m.value += 2 * (*continuationHistory[0])[pc][to];
-          m.value +=     (*continuationHistory[1])[pc][to];
-          m.value +=     (*continuationHistory[3])[pc][to];
-          m.value +=     (*continuationHistory[5])[pc][to];
 
           // bonus for checks
           m.value += bool(pos.check_squares(pt) & to) * 16384;
@@ -165,6 +162,13 @@ void MovePicker::score() {
                        : pt != PAWN ?    bool(to & threatenedByPawn)  * 15000
                        :                                                0 )
                        :                                                0 ;
+
+          if (m.value > limit)
+          {
+			  m.value += (*continuationHistory[1])[pc][to];
+			  m.value += (*continuationHistory[3])[pc][to];
+			  m.value += (*continuationHistory[5])[pc][to];
+          }
       }
 
       else // Type == EVASIONS
@@ -256,7 +260,7 @@ top:
           cur = endBadCaptures;
           endMoves = generate<QUIETS>(pos, cur);
 
-          score<QUIETS>();
+          score<QUIETS>(-3000 * depth - 5000);
           partial_insertion_sort(cur, endMoves, -3000 * depth);
       }
 
