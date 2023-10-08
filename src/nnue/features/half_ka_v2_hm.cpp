@@ -74,6 +74,19 @@ namespace Stockfish::Eval::NNUE::Features {
 
   int HalfKAv2_hm::update_cost(const StateInfo* st) {
     const DirtyPiece& dp = st->dirtyPiece;
+
+    if (   dp.dirty_num == 1
+        && dp.from[0] != SQ_NONE
+        && dp.to[0]   != SQ_NONE)
+        return 1;
+
+	if (   dp.dirty_num == 2
+		&& dp.from[0] != SQ_NONE
+        && dp.from[1] != SQ_NONE
+		&& dp.to[0]   != SQ_NONE
+        && dp.to[1]   == SQ_NONE)
+		return 2;
+    
     int cost = 0;
     for(int i = 0; i < dp.dirty_num; ++i)
         cost += (dp.from[i] != SQ_NONE) + (dp.to[i] != SQ_NONE);
