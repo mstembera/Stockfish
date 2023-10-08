@@ -73,7 +73,11 @@ namespace Stockfish::Eval::NNUE::Features {
   template void HalfKAv2_hm::append_changed_indices<BLACK>(Square ksq, const DirtyPiece& dp, IndexList& removed, IndexList& added);
 
   int HalfKAv2_hm::update_cost(const StateInfo* st) {
-    return st->dirtyPiece.dirty_num;
+    const DirtyPiece& dp = st->dirtyPiece;
+    int cost = 0;
+    for(int i = 0; i < dp.dirty_num; ++i)
+        cost += (dp.from[i] != SQ_NONE) + (dp.to[i] != SQ_NONE);
+    return cost;
   }
 
   int HalfKAv2_hm::refresh_cost(const Position& pos) {
