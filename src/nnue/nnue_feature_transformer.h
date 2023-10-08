@@ -321,14 +321,16 @@ namespace Stockfish::Eval::NNUE {
       // Look for a usable accumulator of an earlier position. We keep track
       // of the estimated gain in terms of features to be added/subtracted.
       StateInfo *st = pos.state(), *next = nullptr;
-      int gain = FeatureSet::refresh_cost(pos);
+      int gain = FeatureSet::refresh_cost(pos) + 10;
       while (st->previous && !st->accumulator.computed[Perspective])
       {
         // This governs when a full feature refresh is needed and how many
         // updates are better than just one full refresh.
         if (   FeatureSet::requires_refresh(st, Perspective)
-            || (gain -= FeatureSet::update_cost(st)) < 0)
+            || (gain -= FeatureSet::update_cost(st) + 1) < 0)
           break;
+
+        gain -= 10 * (next == nullptr);
         next = st;
         st = st->previous;
       }
