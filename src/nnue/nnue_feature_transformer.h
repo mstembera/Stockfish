@@ -448,6 +448,18 @@ namespace Stockfish::Eval::NNUE {
                                           vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
           }
       }
+      else if (   states_to_update[1] == nullptr
+               && !removed[0].size()
+               && !added[0].size())
+      {
+          std::memcpy(&states_to_update[0]->accumulator.accumulation[Perspective][0],
+                      &st->accumulator.accumulation[Perspective][0],
+                      HalfDimensions * sizeof(std::int16_t));
+
+          std::memcpy(&states_to_update[0]->accumulator.psqtAccumulation[Perspective][0],
+                      &st->accumulator.psqtAccumulation[Perspective][0],
+                      PSQTBuckets * sizeof(std::int32_t));
+      }
       else
       {
           for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
@@ -682,7 +694,7 @@ namespace Stockfish::Eval::NNUE {
         //     1. for the current position
         //     2. the next accumulator after the computed one
         // The heuristic may change in the future.
-        StateInfo *states_to_update[3] =
+        StateInfo* states_to_update[3] =
           { next, next == pos.state() ? nullptr : pos.state(), nullptr };
 
         update_accumulator_incremental<Perspective, 3>(pos, oldest_st, states_to_update);
