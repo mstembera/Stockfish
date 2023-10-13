@@ -449,16 +449,24 @@ namespace Stockfish::Eval::NNUE {
           }
       }
       else if (   states_to_update[1] == nullptr
-               && !removed[0].size()
-               && !added[0].size())
+               && removed[0].size() == 0
+               && added[0].size() == 0)
       {
-          std::memcpy(&states_to_update[0]->accumulator.accumulation[Perspective][0],
-                      &st->accumulator.accumulation[Perspective][0],
-                      HalfDimensions * sizeof(std::int16_t));
+          auto accIn = reinterpret_cast<const vec_t*>(
+              &st->accumulator.accumulation[Perspective][0]);
+          auto accOut = reinterpret_cast<vec_t*>(
+              &states_to_update[0]->accumulator.accumulation[Perspective][0]);
 
-          std::memcpy(&states_to_update[0]->accumulator.psqtAccumulation[Perspective][0],
-                      &st->accumulator.psqtAccumulation[Perspective][0],
-                      PSQTBuckets * sizeof(std::int32_t));
+          for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t); ++k)
+              accOut[k] = accIn[k];
+
+          auto accPsqtIn = reinterpret_cast<const psqt_vec_t*>(
+              &st->accumulator.psqtAccumulation[Perspective][0]);
+          auto accPsqtOut = reinterpret_cast<psqt_vec_t*>(
+              &states_to_update[0]->accumulator.psqtAccumulation[Perspective][0]);
+
+          for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t); ++k)
+              accPsqtOut[k] = accPsqtIn[k];
       }
       else
       {
