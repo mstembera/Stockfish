@@ -975,13 +975,20 @@ void Position::do_null_move(StateInfo& newSt) {
 
   std::memcpy(&newSt, st, offsetof(StateInfo, accumulator));
 
+  newSt.dirtyPiece.dirty_num = 0;
+  newSt.dirtyPiece.piece[0] = NO_PIECE; // Avoid checks in UpdateAccumulator()
+
+  if (   st->accumulator.computed[WHITE]
+      || st->accumulator.computed[BLACK])
+      newSt.accumulator = st->accumulator;
+  else
+  {
+	  newSt.accumulator.computed[WHITE] =
+      newSt.accumulator.computed[BLACK] = false;
+  }
+
   newSt.previous = st;
   st = &newSt;
-
-  st->dirtyPiece.dirty_num = 0;
-  st->dirtyPiece.piece[0] = NO_PIECE; // Avoid checks in UpdateAccumulator()
-  st->accumulator.computed[WHITE] = false;
-  st->accumulator.computed[BLACK] = false;
 
   if (st->epSquare != SQ_NONE)
   {
