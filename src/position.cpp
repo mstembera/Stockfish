@@ -687,7 +687,14 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
   // Copy some fields of the old state to our new StateInfo object except the
   // ones which are going to be recalculated from scratch anyway and then switch
   // our state pointer to point to the new (ready to be updated) state.
-  std::memcpy(&newSt, st, offsetof(StateInfo, key));
+  newSt.materialKey = st->materialKey;
+  newSt.nonPawnMaterial[WHITE] = st->nonPawnMaterial[WHITE];
+  newSt.nonPawnMaterial[BLACK] = st->nonPawnMaterial[BLACK];
+  newSt.castlingRights = st->castlingRights;
+  newSt.rule50 = st->rule50;
+  newSt.pliesFromNull = st->pliesFromNull;
+  newSt.epSquare = st->epSquare;
+
   newSt.previous = st;
   st = &newSt;
 
@@ -975,20 +982,13 @@ void Position::do_null_move(StateInfo& newSt) {
 
   std::memcpy(&newSt, st, offsetof(StateInfo, accumulator));
 
-  newSt.dirtyPiece.dirty_num = 0;
-  newSt.dirtyPiece.piece[0] = NO_PIECE; // Avoid checks in UpdateAccumulator()
-
-  if (   st->accumulator.computed[WHITE]
-      || st->accumulator.computed[BLACK])
-      newSt.accumulator = st->accumulator;
-  else
-  {
-	  newSt.accumulator.computed[WHITE] =
-      newSt.accumulator.computed[BLACK] = false;
-  }
-
   newSt.previous = st;
   st = &newSt;
+
+  st->dirtyPiece.dirty_num = 0;
+  st->dirtyPiece.piece[0] = NO_PIECE; // Avoid checks in UpdateAccumulator()
+  st->accumulator.computed[WHITE] = false;
+  st->accumulator.computed[BLACK] = false;
 
   if (st->epSquare != SQ_NONE)
   {
