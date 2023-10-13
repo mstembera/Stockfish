@@ -875,6 +875,8 @@ namespace {
             {
                 assert(pos.capture_stage(move));
 
+                prefetch(TT.first_entry(pos.key_after(move)));
+
                 ss->currentMove = move;
                 ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck]
                                                                           [true]
