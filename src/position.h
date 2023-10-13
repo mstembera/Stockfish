@@ -58,6 +58,8 @@ struct StateInfo {
   // Used by NNUE
   Eval::NNUE::Accumulator accumulator;
   DirtyPiece dirtyPiece;
+  int psqt;
+  int positional;
 };
 
 
