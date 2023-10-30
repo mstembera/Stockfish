@@ -170,7 +170,7 @@ void MovePicker::score() {
     for (auto& m : *this)
         if constexpr (Type == CAPTURES)
             m.value =
-              (7 * int(PieceValue[pos.piece_on(to_sq(m))])
+              (  7 * int(PieceValue[pos.piece_on(to_sq(m))])
                + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))])
               / 16;
 
@@ -182,35 +182,34 @@ void MovePicker::score() {
             Square    to   = to_sq(m);
 
             // histories
-            m.value = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
+            m.value  = 2 * (*mainHistory)[pos.side_to_move()][from_to(m)];
             m.value += 2 * (*continuationHistory[0])[pc][to];
             m.value += (*continuationHistory[1])[pc][to];
             m.value += (*continuationHistory[2])[pc][to] / 4;
             m.value += (*continuationHistory[3])[pc][to];
             m.value += (*continuationHistory[5])[pc][to];
+            m.value += pawnHistory[pawn_structure(pos)][pc][to];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
             // bonus for escaping from capture
-            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 50000
-                                                  : pt == ROOK && !(to & threatenedByMinor) ? 25000
-                                                  : !(to & threatenedByPawn)                ? 15000
-                                                                                            : 0)
+            m.value += threatenedPieces & from ? (  pt == QUEEN && !(to & threatenedByRook)  ? 50000
+                                                  : pt == ROOK  && !(to & threatenedByMinor) ? 25000
+                                                  : !(to & threatenedByPawn)                 ? 15000
+                                                                                             : 0)
                                                : 0;
 
             // malus for putting piece en prise
             m.value -= !(threatenedPieces & from)
-                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 50000
-                                          + bool(to & threatenedByMinor) * 10000
-                                          + bool(to & threatenedByPawn) * 20000
-                          : pt == ROOK ? bool(to & threatenedByMinor) * 25000
-                                           + bool(to & threatenedByPawn) * 10000
-                          : pt != PAWN ? bool(to & threatenedByPawn) * 15000
-                                       : 0)
+                       ? (  pt == QUEEN ? bool(to & threatenedByRook)      * 50000
+                                            + bool(to & threatenedByMinor) * 10000
+                                            + bool(to & threatenedByPawn)  * 20000
+                          : pt == ROOK  ? bool(to & threatenedByMinor)     * 25000
+                                            + bool(to & threatenedByPawn)  * 10000
+                          : pt != PAWN  ? bool(to & threatenedByPawn)      * 15000
+                                        : 0)
                        : 0;
-
-            m.value += pawnHistory[pawn_structure(pos)][pc][to];
         }
 
         else  // Type == EVASIONS
