@@ -62,7 +62,7 @@ enum Stages {
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void adaptive_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    int adjustedLimit = std::min(limit, begin->value + 10000);
+    int adjustedLimit = std::min(limit, begin->value + 5000);
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= adjustedLimit)
@@ -73,7 +73,7 @@ void adaptive_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
                 *q = *(q - 1);
             *q = tmp;
 
-            adjustedLimit = std::min(limit, begin->value + 10000);
+            adjustedLimit = std::min(limit, begin->value + 5000);
         }
 }
 
@@ -306,7 +306,7 @@ top:
             endMoves = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
+            adaptive_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
         }
 
         ++stage;
