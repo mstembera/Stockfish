@@ -76,17 +76,19 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     ExtMove *best = begin, *sortedEnd = begin;
     for (ExtMove* p = begin; p < end; ++p)
     {
-        if (p->value > best->value)
-            best = p;
-
         if (p->value >= limit)
         {
+            if (best == sortedEnd)
+                best = p;
+
             ExtMove tmp = *p, *q;
             *p          = *sortedEnd;
             for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
         }
+        else if (*best < *p)
+            best = p;
     }
 
     if (sortedEnd < best && *sortedEnd < *best)    
