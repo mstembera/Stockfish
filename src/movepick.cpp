@@ -79,7 +79,7 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         if (p->value >= limit)
         {
             if (best <= sortedEnd)
-                best = p + (sortedEnd->value >= limit);
+                best = p;
 
             ExtMove tmp = *p, *q;
             *p          = *sortedEnd;
