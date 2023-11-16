@@ -73,16 +73,14 @@ void insertion_sort(ExtMove* begin, ExtMove* end)
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    ExtMove *best[3] = {begin, nullptr, nullptr}, *sortedEnd = begin;
+    constexpr int bestN = 5;
+    ExtMove *best[bestN] = { begin }, *sortedEnd = begin;
     for (ExtMove* p = begin; p < end; ++p)
     {
         if (p->value >= limit)
         {
             if (best[0] <= sortedEnd)
-            {
                 best[0] = p;
-                best[1] = best[2] = nullptr;
-            }
 
             ExtMove tmp = *p, *q;
             *p          = *sortedEnd;
@@ -92,23 +90,18 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         }
         else if (*best[0] < *p)
         {
-            best[2] = best[1];
-            best[1] = best[0];
+            for (int i = bestN - 1; i > 0; --i)
+                best[i] = best[i - 1];
             best[0] = p;
         }
     }
 
-    if (sortedEnd < best[0] && *sortedEnd < *best[0])
+    for (int i = 0; i < bestN; ++i)
     {
-        std::swap(*sortedEnd, *best[0]);
-
-        if (sortedEnd + 1 < best[1] && *(sortedEnd + 1) < *best[1])
-        {
-            std::swap(*(sortedEnd + 1), *best[1]);
-
-            if (sortedEnd + 2 < best[2] && *(sortedEnd + 2) < *best[2])
-                std::swap(*(sortedEnd + 2), *best[2]);
-        }
+        if (sortedEnd + i < best[i] && *(sortedEnd + i) < *best[i])
+            std::swap(*(sortedEnd + i), *best[i]);
+        else
+            break;
     }
 }
 
