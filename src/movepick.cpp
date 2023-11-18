@@ -73,14 +73,13 @@ void insertion_sort(ExtMove* begin, ExtMove* end)
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    constexpr int bestN = 5;
-    ExtMove *best[bestN] = { begin }, *sortedEnd = begin;
+    ExtMove *best = begin, *sortedEnd = begin;
     for (ExtMove* p = begin; p < end; ++p)
     {
         if (p->value >= limit)
         {
-            if (best[0] <= sortedEnd)
-                best[0] = p;
+            if (best <= sortedEnd)
+                best = p + (sortedEnd->value >= limit);
 
             ExtMove tmp = *p, *q;
             *p          = *sortedEnd;
@@ -88,21 +87,12 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
                 *q = *(q - 1);
             *q = tmp;
         }
-        else if (*best[0] < *p)
-        {
-            for (int i = bestN - 1; i > 0; --i)
-                best[i] = best[i - 1];
-            best[0] = p;
-        }
+        else if (*best < *p)
+            best = p;
     }
 
-    for (int i = 0; i < bestN; ++i)
-    {
-        if (sortedEnd + i < best[i] && *(sortedEnd + i) < *best[i])
-            std::swap(*(sortedEnd + i), *best[i]);
-        else
-            break;
-    }
+    if (sortedEnd < best && *sortedEnd < *best)    
+        std::swap(*sortedEnd, *best);
 }
 
 }  // namespace
@@ -332,7 +322,10 @@ top:
             endMoves = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
+            if (depth > 2)
+                insertion_sort(cur, endMoves);
+            else
+                partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
         }
 
         ++stage;
