@@ -313,7 +313,7 @@ top:
             endMoves = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            if (depth > 3)
+            if (depth > 2)
                 insertion_sort(cur, endMoves);
             else
                 partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
