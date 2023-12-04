@@ -151,7 +151,7 @@ static bool write_parameters(std::ostream& stream) {
 }
 
 void hint_common_parent_position(const Position& pos) {
-    if (abs(pos.simple_eval()) < 3000)
+    if (abs(pos.simple_eval()) < 2000)
         featureTransformer->hint_common_access(pos);
 }
 
