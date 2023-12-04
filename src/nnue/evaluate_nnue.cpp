@@ -151,7 +151,8 @@ static bool write_parameters(std::ostream& stream) {
 }
 
 void hint_common_parent_position(const Position& pos) {
-    featureTransformer->hint_common_access(pos);
+    if (abs(pos.simple_eval()) < 3000)
+        featureTransformer->hint_common_access(pos);
 }
 
 // Evaluation function. Perform differential calculation.

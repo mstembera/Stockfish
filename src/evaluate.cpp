@@ -143,16 +143,6 @@ void NNUE::verify() {
 }
 }
 
-
-// Returns a static, purely materialistic evaluation of the position from
-// the point of view of the given color. It can be divided by PawnValue to get
-// an approximation of the material advantage on the board in terms of pawns.
-Value Eval::simple_eval(const Position& pos, Color c) {
-    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
-}
-
-
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
 Value Eval::evaluate(const Position& pos) {
@@ -162,7 +152,7 @@ Value Eval::evaluate(const Position& pos) {
     Value v;
     Color stm        = pos.side_to_move();
     int   shuffling  = pos.rule50_count();
-    int   simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
+    int   simpleEval = pos.simple_eval() + (int(pos.key() & 7) - 3);
 
     bool lazy = abs(simpleEval) >= RookValue + KnightValue + 16 * shuffling * shuffling
                                      + abs(pos.this_thread()->bestValue)

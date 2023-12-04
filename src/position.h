@@ -160,6 +160,7 @@ class Position {
     int     rule50_count() const;
     Value   non_pawn_material(Color c) const;
     Value   non_pawn_material() const;
+    Value   simple_eval() const;
 
     // Position consistency check, for debugging
     bool pos_is_ok() const;
@@ -303,6 +304,11 @@ inline Value Position::non_pawn_material(Color c) const { return st->nonPawnMate
 
 inline Value Position::non_pawn_material() const {
     return non_pawn_material(WHITE) + non_pawn_material(BLACK);
+}
+
+inline Value Position::simple_eval() const {
+    return  PawnValue * (count<PAWN>(sideToMove) - count<PAWN>(~sideToMove))
+          + (non_pawn_material(sideToMove) - non_pawn_material(~sideToMove));
 }
 
 inline int Position::game_ply() const { return gamePly; }
