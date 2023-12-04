@@ -163,12 +163,15 @@ Value Eval::evaluate(const Position& pos) {
     Color stm        = pos.side_to_move();
     int   shuffling  = pos.rule50_count();
     int   simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
-    int   dirtNum    = std::max(pos.state()->dirtyPiece.dirty_num, 6 * (type_of(pos.state()->dirtyPiece.piece[0]) == KING));
+
+    int notUpdated = 0;
+    for (const StateInfo* st = pos.state(); st != nullptr && !st->accumulator.computed[0]; st = st->previous)
+        ++notUpdated;
 
     bool lazy = abs(simpleEval) >= RookValue + KnightValue + 16 * shuffling * shuffling
                                      + abs(pos.this_thread()->bestValue)
                                      + abs(pos.this_thread()->rootSimpleEval)
-                                     - dirtNum * 64 + 128;
+                                     - notUpdated * 128 + 128;
 
     if (lazy)
         v = Value(simpleEval);
