@@ -167,18 +167,18 @@ Value Eval::evaluate(const Position& pos) {
     int notUpdated = 0;
     for (const StateInfo* st = pos.state(); st != nullptr && !st->accumulator.computed[0]; st = st->previous)
     {
+        ++notUpdated;
         if (type_of(st->dirtyPiece.piece[0]) == KING)
         {
-            notUpdated = pos.count<ALL_PIECES>() / 4;
+            notUpdated += pos.count<ALL_PIECES>() / 4;
             break;
         }
-        ++notUpdated;
     }
 
     bool lazy = abs(simpleEval) >= RookValue + KnightValue + 16 * shuffling * shuffling
                                      + abs(pos.this_thread()->bestValue)
                                      + abs(pos.this_thread()->rootSimpleEval)
-                                     - notUpdated * 128 + 128;
+                                     - notUpdated * 100 + 100;
 
     if (lazy)
         v = Value(simpleEval);
