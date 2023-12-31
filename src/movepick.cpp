@@ -321,7 +321,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        return select<Next>([]() { return true; });
+        return select<Next>([&]() { return !skipQuiets || cur->value >= -120; });
 
     case EVASION_INIT :
         cur      = moves;
