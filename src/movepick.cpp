@@ -316,6 +316,7 @@ top:
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
         endMoves = endBadCaptures;
+        if (depth > 2)
             partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
 
         ++stage;
