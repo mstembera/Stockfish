@@ -1025,27 +1025,41 @@ Key Position::key_after(Move m) const {
     return (captured || type_of(pc) == PAWN) ? k : adjust_key50<true>(k);
 }
 
+bool Position::see_ge(Move m, Value threshold) const {
+
+    int residue;
+    return see_ge(m, threshold, residue);
+}
 
 // Tests if the SEE (Static Exchange Evaluation)
 // value of move is greater or equal to the given threshold. We'll use an
 // algorithm similar to alpha-beta pruning with a null window.
-bool Position::see_ge(Move m, Value threshold) const {
+bool Position::see_ge(Move m, Value threshold, int& residue) const {
 
     assert(is_ok(m));
 
     // Only deal with normal moves, assume others pass a simple SEE
     if (type_of(m) != NORMAL)
+    {
+        residue = -threshold;
         return VALUE_ZERO >= threshold;
+    }
 
     Square from = from_sq(m), to = to_sq(m);
 
     int swap = PieceValue[piece_on(to)] - threshold;
     if (swap < 0)
+    {
+        residue = swap;
         return false;
+    }
 
     swap = PieceValue[piece_on(from)] - swap;
     if (swap <= 0)
+    {
+        residue = -swap;
         return true;
+    }
 
     assert(color_of(piece_on(from)) == sideToMove);
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
@@ -1124,8 +1138,14 @@ bool Position::see_ge(Move m, Value threshold) const {
         else  // KING
               // If we "capture" with the king but the opponent still has attackers,
               // reverse the result.
-            return (attackers & ~pieces(stm)) ? res ^ 1 : res;
+        {
+            if (attackers & ~pieces(stm))
+                res ^= 1;
+            break;
+        }
     }
+
+    residue = res ? std::abs(swap) : -std::abs(swap);
 
     return bool(res);
 }
