@@ -33,6 +33,8 @@ namespace {
 enum Stages {
     // generate main search moves
     MAIN_TT,
+    REFUTATION_CAPTURE_INIT,
+    REFUTATION_CAPTURE,
     CAPTURE_INIT,
     GOOD_CAPTURE,
     REFUTATION,
@@ -254,6 +256,27 @@ top:
         ++stage;
         return ttMove;
 
+    case REFUTATION_CAPTURE_INIT :
+        // Prepare the pointers to loop over the refutations array
+        cur      = std::begin(refutations);
+        endMoves = std::end(refutations);
+
+        // If the countermove is the same as a killer, skip it
+        if (   refutations[0].move == refutations[2].move
+            || refutations[1].move == refutations[2].move)
+            --endMoves;
+
+        ++stage;
+        [[fallthrough]];
+
+    case REFUTATION_CAPTURE :
+        if (select<Next>([&]() {
+                return *cur != MOVE_NONE && pos.capture_stage(*cur) && pos.pseudo_legal(*cur);
+            }))
+            return *(cur - 1);
+        ++stage;
+        [[fallthrough]];
+
     case CAPTURE_INIT :
     case PROBCUT_INIT :
     case QCAPTURE_INIT :
@@ -267,6 +290,12 @@ top:
 
     case GOOD_CAPTURE :
         if (select<Next>([&]() {
+            // Filter refutations
+            if (   *cur == refutations[0].move
+                || *cur == refutations[1].move
+                || *cur == refutations[2].move)
+                    return false;
+
                 // Move losing capture to endBadCaptures to be tried later
                 return pos.see_ge(*cur, Value(-cur->value)) ? true
                                                             : (*endBadCaptures++ = *cur, false);
