@@ -313,7 +313,7 @@ top:
             }))
         {
             Move tmp = *(cur - 1);
-            if ((cur - 1)->value < -5000 && (cur - 1)->value > quiet_threshold(depth))
+            if ((cur - 1)->value < -3000 && (cur - 1)->value > quiet_threshold(depth))
             {
                 // Remaining quiets are bad
                 beginBadQuiets = cur;
