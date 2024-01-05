@@ -313,7 +313,7 @@ top:
             }))
         {
             Move tmp = *(cur - 1);
-            if ((cur - 1)->value < -18000 && (cur - 1)->value > quiet_threshold(depth))
+            if ((cur - 1)->value < -7500 && (cur - 1)->value > quiet_threshold(depth))
             {
                 // Remaining quiets are bad
                 beginBadQuiets = cur;
@@ -328,7 +328,7 @@ top:
         }
 
         // No bad quiets
-        beginBadQuiets = endBadQuiets = moves;
+        beginBadQuiets = endBadQuiets;
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
