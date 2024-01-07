@@ -314,7 +314,7 @@ top:
                     return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
                 }))
             {
-                if ((cur - 1)->value > -8500)
+                if ((cur - 1)->value > -7500)
                     return *(cur - 1);
 
                 if (--cur < sortedEnd)
