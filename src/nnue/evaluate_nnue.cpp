@@ -178,9 +178,12 @@ static bool write_parameters(std::ostream& stream, NetSize netSize) {
 void hint_common_parent_position(const Position& pos) {
 
     int simpleEval = simple_eval(pos, pos.side_to_move());
-    if (std::abs(simpleEval) > 900)
+    if (std::abs(simpleEval) > 2550)
+        return;
+
+    if (std::abs(simpleEval) > 1050)
         featureTransformerSmall->hint_common_access(pos);
-    if (std::abs(simpleEval) < 1200)
+    else
         featureTransformerBig->hint_common_access(pos);
 }
 
