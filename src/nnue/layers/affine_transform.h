@@ -46,7 +46,8 @@ template<IndexType InputDimensions, IndexType PaddedInputDimensions, IndexType O
 static void affine_transform_non_ssse3(std::int32_t*       output,
                                        const std::int8_t*  weights,
                                        const std::int32_t* biases,
-                                       const std::uint8_t* input) {
+                                       const std::uint8_t* input,
+                                       int                 inputThreshold) {
     #if defined(USE_SSE2) || defined(USE_NEON_DOTPROD) || defined(USE_NEON)
         #if defined(USE_SSE2)
     // At least a multiple of 16, with SSE2.
@@ -117,14 +118,16 @@ static void affine_transform_non_ssse3(std::int32_t*       output,
     std::memcpy(output, biases, sizeof(std::int32_t) * OutputDimensions);
 
     // Traverse weights in transpose order to take advantage of input sparsity
-    for (IndexType i = 0; i < InputDimensions; ++i)
-        if (input[i])
-        {
-            const std::int8_t* w  = &weights[i];
-            const int          in = input[i];
-            for (IndexType j = 0; j < OutputDimensions; ++j)
-                output[j] += w[j * PaddedInputDimensions] * in;
-        }
+    for (IndexType i = 0; i < InputDimensions; i += 4)
+        if (input[i] + input[i + 1] + input[i + 2] + input[i + 3] > inputThreshold)
+            for (int o = 0; o < 4; ++o)
+                if (input[i + o])
+                {
+                    const std::int8_t* w  = &weights[i + o];
+                    const int          in = input[i + o];
+                    for (IndexType j = 0; j < OutputDimensions; ++j)
+                        output[j] += w[j * PaddedInputDimensions] * in;
+                }
     #endif
 }
 #endif
@@ -291,7 +294,7 @@ class AffineTransform {
 #else
         // Use old implementation for the other architectures.
         affine_transform_non_ssse3<InputDimensions, PaddedInputDimensions, OutputDimensions>(
-          output, weights, biases, input);
+          output, weights, biases, input, 0);
 #endif
     }
 

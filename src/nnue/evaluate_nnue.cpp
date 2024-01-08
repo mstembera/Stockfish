@@ -188,7 +188,7 @@ void hint_common_parent_position(const Position& pos) {
 
 // Evaluation function. Perform differential calculation.
 template<NetSize Net_Size>
-Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+Value evaluate(const Position& pos, bool adjusted, int* complexity, int inputThreshold) {
 
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
@@ -218,8 +218,8 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
     const auto psqt       = Net_Size == Small
                             ? featureTransformerSmall->transform(pos, transformedFeatures, bucket)
                             : featureTransformerBig->transform(pos, transformedFeatures, bucket);
-    const auto positional = Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
-                                              : networkBig[bucket]->propagate(transformedFeatures);
+    const auto positional = Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures, inputThreshold)
+                                              : networkBig[bucket]->propagate(transformedFeatures, inputThreshold);
 
     if (complexity)
         *complexity = std::abs(psqt - positional) / OutputScale;
@@ -232,8 +232,8 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
         return static_cast<Value>((psqt + positional) / OutputScale);
 }
 
-template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity);
-template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity);
+template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity, int inputThreshold);
+template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity, int inputThreshold);
 
 struct NnueEvalTrace {
     static_assert(LayerStacks == PSQTBuckets);
@@ -267,7 +267,7 @@ static NnueEvalTrace trace_evaluate(const Position& pos) {
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
         const auto materialist = featureTransformerBig->transform(pos, transformedFeatures, bucket);
-        const auto positional  = networkBig[bucket]->propagate(transformedFeatures);
+        const auto positional  = networkBig[bucket]->propagate(transformedFeatures, 0);
 
         t.psqt[bucket]       = static_cast<Value>(materialist / OutputScale);
         t.positional[bucket] = static_cast<Value>(positional / OutputScale);

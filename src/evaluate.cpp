@@ -202,19 +202,36 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     int   v;
     Color stm        = pos.side_to_move();
     int   shuffling  = pos.rule50_count();
-    int   simpleEval = simple_eval(pos, stm);
+    int   simpleEval = simple_eval(pos, stm), simpleEvalAbs = std::abs(simpleEval);
+    constexpr int lazyThreshold  = 2550;
+    constexpr int smallThreshold = 1050;
 
-    bool lazy = std::abs(simpleEval) > 2550;
+    bool lazy = simpleEvalAbs > lazyThreshold;
     if (lazy)
         v = simpleEval;
     else
     {
-        bool smallNet = std::abs(simpleEval) > 1050;
+        bool smallNet = simpleEvalAbs > smallThreshold;
+
+        int inputThreshold = 0;
+        if (smallNet)
+        {
+            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 70 / 100;
+            if (simpleEvalAbs > x0)
+                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 100);
+        }
+#if 0
+        else
+        {
+            int x0 = smallThreshold * 75 / 100;
+            if (simpleEvalAbs > x0)
+                inputThreshold = interpolate(simpleEvalAbs, x0, smallThreshold, 0, 60);
+        }
+#endif
 
         int nnueComplexity;
-
-        Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity)
-                              : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity);
+        Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, inputThreshold)
+                              : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, inputThreshold);
 
         // Blend optimism and eval with nnue complexity and material imbalance
         optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;

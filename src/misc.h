@@ -169,6 +169,11 @@ inline uint64_t mul_hi64(uint64_t a, uint64_t b) {
 #endif
 }
 
+template<typename Tx, typename Ty>
+inline Ty interpolate(Tx x, Tx x0, Tx x1, Ty y0, Ty y1) {
+    return Ty(y0 + (x - x0) * (y1 - y0) / (x1 - x0));
+}
+
 // Under Windows it is not possible for a process to run on more than one
 // logical processor group. This usually means being limited to using max 64
 // cores. To overcome this, some special platform-specific API should be
