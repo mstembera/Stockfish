@@ -58,21 +58,21 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec_t = __m512i;
             #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
             #define vec_nnz_threshold(a, b) \
-                _mm512_cmpgt_epi32_mask(_mm512_madd_epi16(_mm512_maddubs_epi16(a, _mm512_set1_epi8(1)), _mm512_set1_epi16(1)), b)
+                _mm512_cmpgt_epi32_mask(_mm512_madd_epi16(_mm512_maddubs_epi16(a, a), _mm512_set1_epi16(1)), b)
             #define vec_set_32(a) _mm512_set1_epi32(a)
         #elif defined(USE_AVX2)
     using vec_t = __m256i;
             #if defined(USE_VNNI) && !defined(USE_AVXVNNI)
                 #define vec_nnz(a) _mm256_cmpgt_epi32_mask(a, _mm256_setzero_si256())
                 #define vec_nnz_threshold(a, b) \
-                    _mm256_cmpgt_epi32_mask(_mm256_madd_epi16(_mm256_maddubs_epi16(a, _mm256_set1_epi8(1)), _mm256_set1_epi16(1)), b)
+                    _mm256_cmpgt_epi32_mask(_mm256_madd_epi16(_mm256_maddubs_epi16(a, a), _mm256_set1_epi16(1)), b)
             #else
                 #define vec_nnz(a) \
                     _mm256_movemask_ps( \
                       _mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
                 #define vec_nnz_threshold(a, b) \
                     _mm256_movemask_ps( \
-                      _mm256_castsi256_ps(_mm256_cmpgt_epi32(_mm256_madd_epi16(_mm256_maddubs_epi16(a, _mm256_set1_epi8(1)), _mm256_set1_epi16(1)), b)))
+                      _mm256_castsi256_ps(_mm256_cmpgt_epi32(_mm256_madd_epi16(_mm256_maddubs_epi16(a, a), _mm256_set1_epi16(1)), b)))
             #endif
             #define vec_set_32(a) _mm256_set1_epi32(a)
         #elif defined(USE_SSSE3)
@@ -80,7 +80,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
             #define vec_nnz(a) \
                 _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
             #define vec_nnz_threshold(a, b) \
-                _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(_mm_madd_epi16(_mm_maddubs_epi16(a, _mm_set1_epi8(1)), _mm_set1_epi16(1)), b)))
+                _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(_mm_madd_epi16(_mm_maddubs_epi16(a, a), _mm_set1_epi16(1)), b)))
             #define vec_set_32(a) _mm_set1_epi32(a)
         #endif
     using vec128_t = __m128i;

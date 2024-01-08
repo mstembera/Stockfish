@@ -218,7 +218,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
         {
             int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 70 / 100;
             if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 100);
+                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 5000);
         }
 #if 0
         else
