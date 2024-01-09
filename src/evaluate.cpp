@@ -216,9 +216,9 @@ Value Eval::evaluate(const Position& pos, int optimism) {
         int inputThreshold = 0;
         if (smallNet)
         {
-            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 50 / 100;
+            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 25 / 100;
             if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 120);
+                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 110);
         }
 #if 0
         else
