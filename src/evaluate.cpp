@@ -214,20 +214,18 @@ Value Eval::evaluate(const Position& pos, int optimism) {
         bool smallNet = simpleEvalAbs > smallThreshold;
 
         int inputThreshold = 0;
-#if 0
         if (smallNet)
         {
-            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 70 / 100;
+            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 50 / 100;
             if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 5000);
+                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 120);
         }
-#endif
-#if 1
-        if (!smallNet)
+#if 0
+        else
         {
             int x0 = smallThreshold * 75 / 100;
             if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, smallThreshold, 0, 4000);
+                inputThreshold = interpolate(simpleEvalAbs, x0, smallThreshold, 0, 60);
         }
 #endif
 

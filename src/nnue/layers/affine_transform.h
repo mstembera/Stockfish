@@ -119,14 +119,12 @@ static void affine_transform_non_ssse3(std::int32_t*       output,
 
     // Traverse weights in transpose order to take advantage of input sparsity
     for (IndexType i = 0; i < InputDimensions; i += 4)
-        if (    input[i] * input[i] + input[i + 1] * input[i + 1]
-              + input[i + 2] * input[i + 2]+ input[i + 3] * input[i + 3]
-            > inputThreshold)
-            for (int o = 0; o < 4; ++o)
-                if (input[i + o])
+        if (input[i] + input[i + 1] + input[i + 2] + input[i + 3] > inputThreshold)
+            for (int di = 0; di < 4; ++di)
+                if (input[i + di])
                 {
-                    const std::int8_t* w  = &weights[i + o];
-                    const int          in = input[i + o];
+                    const std::int8_t* w  = &weights[i + di];
+                    const int          in = input[i + di];
                     for (IndexType j = 0; j < OutputDimensions; ++j)
                         output[j] += w[j * PaddedInputDimensions] * in;
                 }
