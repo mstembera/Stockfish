@@ -57,22 +57,28 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #if defined(USE_AVX512)
     using vec_t = __m512i;
             #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
-            #define vec_nnz_threshold(a, b) \
-                _mm512_cmpgt_epi32_mask(_mm512_madd_epi16(_mm512_maddubs_epi16(a, _mm512_set1_epi8(1)), _mm512_set1_epi16(1)), b)
+            #if defined(USE_VNNI)
+                #define vec_nnz_threshold(a, b) \
+                    _mm512_cmpgt_epi32_mask(_mm512_dpbusd_epi32(_mm512_setzero_si512(), a, _mm512_set1_epi8(1)), b)
+            #else
+                #define vec_nnz_threshold(a, b) \
+                    _mm512_cmpgt_epi32_mask(_mm512_madd_epi16(_mm512_maddubs_epi16(a, _mm512_set1_epi8(1)), _mm512_set1_epi16(1)), b)
+            #endif
             #define vec_set_32(a) _mm512_set1_epi32(a)
         #elif defined(USE_AVX2)
     using vec_t = __m256i;
-            #if defined(USE_VNNI) && !defined(USE_AVXVNNI)
+            #if defined(USE_AVXVNNI)
+                #define vec_nnz(a) _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
+                #define vec_nnz_threshold(a, b) \
+                    _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(_mm256_dpbusd_epi32(_mm256_setzero_si256(), a, _mm256_set1_epi8(1)), b)))
+            #elif defined(USE_VNNI)        
                 #define vec_nnz(a) _mm256_cmpgt_epi32_mask(a, _mm256_setzero_si256())
                 #define vec_nnz_threshold(a, b) \
-                    _mm256_cmpgt_epi32_mask(_mm256_madd_epi16(_mm256_maddubs_epi16(a, _mm256_set1_epi8(1)), _mm256_set1_epi16(1)), b)
+                    _mm256_cmpgt_epi32_mask(_mm256_dpbusd_epi32(_mm256_setzero_si256(), a, _mm256_set1_epi8(1)), b)
             #else
-                #define vec_nnz(a) \
-                    _mm256_movemask_ps( \
-                      _mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
+                #define vec_nnz(a) _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
                 #define vec_nnz_threshold(a, b) \
-                    _mm256_movemask_ps( \
-                      _mm256_castsi256_ps(_mm256_cmpgt_epi32(_mm256_madd_epi16(_mm256_maddubs_epi16(a, _mm256_set1_epi8(1)), _mm256_set1_epi16(1)), b)))
+                    _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(_mm256_madd_epi16(_mm256_maddubs_epi16(a, _mm256_set1_epi8(1)), _mm256_set1_epi16(1)), b)))
             #endif
             #define vec_set_32(a) _mm256_set1_epi32(a)
         #elif defined(USE_SSSE3)
@@ -93,6 +99,8 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec_t                        = uint32x4_t;
     static const std::uint32_t Mask[4] = {1, 2, 4, 8};
         #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
+        //#define vec_nnz_threshold(a, b) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask))) //Fix me
+        //#define vec_set_32(a) vreinterpretq_s8_u32(vdupq_n_u32(a))
     using vec128_t                     = uint16x8_t;
         #define vec128_zero vdupq_n_u16(0)
         #define vec128_set_16(a) vdupq_n_u16(a)
@@ -109,37 +117,47 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
 
     const auto     inputVector = reinterpret_cast<const vec_t*>(input);
     IndexType      count       = 0;
-    vec128_t       base        = vec128_zero;
     const vec128_t increment   = vec128_set_16(8);
-    const vec_t    sparse      = vec_set_32(inputThreshold);
-    for (IndexType i = 0; i < NumChunks; ++i)
+
+    do
     {
-        // bitmask of nonzero values in this chunk
-        unsigned nnz = 0;
+        vec128_t    base      = vec128_zero;
+        const vec_t threshold = vec_set_32(inputThreshold);
 
-        if (inputThreshold)
-            for (IndexType j = 0; j < InputsPerChunk; ++j)
-            {
-                const vec_t inputChunk = inputVector[i * InputsPerChunk + j];
-                nnz |= unsigned(vec_nnz_threshold(inputChunk, sparse)) << (j * InputSimdWidth);
-            }
-        else
-            for (IndexType j = 0; j < InputsPerChunk; ++j)
-            {
-                const vec_t inputChunk = inputVector[i * InputsPerChunk + j];
-                nnz |= unsigned(vec_nnz(inputChunk)) << (j * InputSimdWidth);
-            }
-
-        for (IndexType j = 0; j < OutputsPerChunk; ++j)
+        for (IndexType i = 0; i < NumChunks; ++i)
         {
-            const auto lookup = (nnz >> (j * 8)) & 0xFF;
-            const auto offsets =
-              vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
-            vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
-            count += popcount(lookup);
-            base = vec128_add(base, increment);
+            // bitmask of values above threshold in this chunk
+            unsigned nnz = 0;
+
+            if (inputThreshold)
+                for (IndexType j = 0; j < InputsPerChunk; ++j)
+                {
+                    const vec_t inputChunk = inputVector[i * InputsPerChunk + j];
+                    nnz |= unsigned(vec_nnz_threshold(inputChunk, threshold)) << (j * InputSimdWidth);
+                }
+            else
+                for (IndexType j = 0; j < InputsPerChunk; ++j)
+                {
+                    const vec_t inputChunk = inputVector[i * InputsPerChunk + j];
+                    nnz |= unsigned(vec_nnz(inputChunk)) << (j * InputSimdWidth);
+                }
+
+            for (IndexType j = 0; j < OutputsPerChunk; ++j)
+            {
+                const auto lookup = (nnz >> (j * 8)) & 0xFF;
+                const auto offsets =
+                  vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
+                vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
+                count += popcount(lookup);
+                base = vec128_add(base, increment);
+            }
         }
-    }
+
+        inputThreshold /= 2;
+
+    // Make sure we process at least one input
+    } while (!count && inputThreshold);
+
     count_out = count;
 }
     #undef vec_nnz
