@@ -243,14 +243,29 @@ class AffineTransformSparseInput {
         for (IndexType k = 0; k < NumRegs; ++k)
             acc[k] = biasvec[k];
 
-        for (IndexType j = 0; j < count; ++j)
+        IndexType j = 0;
+        for (; j < count - 1; j += 2)
         {
-            const auto    i  = nnz[j];
-            const invec_t in = vec_set_32(input32[i]);
-            const auto    col =
-              reinterpret_cast<const invec_t*>(&weights[i * OutputDimensions * ChunkSize]);
+            const auto    i0 = nnz[j], i1 = nnz[j+1];
+            const invec_t in0 = vec_set_32(input32[i0]);
+            const invec_t in1 = vec_set_32(input32[i1]);
+            const auto    col0 =
+              reinterpret_cast<const invec_t*>(&weights[i0 * OutputDimensions * ChunkSize]);
+            const auto    col1 =
+              reinterpret_cast<const invec_t*>(&weights[i1 * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
-                vec_add_dpbusd_32(acc[k], in, col[k]);
+                vec_add_dpbusd_32(acc[k], in0, col0[k]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in1, col1[k]);
+        }
+        for (; j < count; ++j)
+        {
+            const auto    i0  = nnz[j];
+            const invec_t in0 = vec_set_32(input32[i0]);
+            const auto    col0 =
+              reinterpret_cast<const invec_t*>(&weights[i0 * OutputDimensions * ChunkSize]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in0, col0[k]);
         }
 
         outvec_t* outptr = reinterpret_cast<outvec_t*>(output);
