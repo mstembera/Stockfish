@@ -210,7 +210,7 @@ Value Eval::evaluate(const Position& pos, const Search::Worker& workerThread) {
         v = simpleEval;
     else
     {
-        bool smallNet = std::abs(simpleEval) > 900;
+        bool smallNet = std::abs(simpleEval) > 1200;
 
         int nnueComplexity;
 
