@@ -244,19 +244,24 @@ class AffineTransformSparseInput {
             acc[k] = biasvec[k];
 
         IndexType j = 0;
-        for (; j < count - 1; j += 2)
+        for (; j < count - 2; j += 3)
         {
-            const auto    i0 = nnz[j], i1 = nnz[j+1];
+            const auto    i0 = nnz[j], i1 = nnz[j+1], i2 = nnz[j+2];
             const invec_t in0 = vec_set_32(input32[i0]);
             const invec_t in1 = vec_set_32(input32[i1]);
+            const invec_t in2 = vec_set_32(input32[i2]);
             const auto    col0 =
               reinterpret_cast<const invec_t*>(&weights[i0 * OutputDimensions * ChunkSize]);
             const auto    col1 =
               reinterpret_cast<const invec_t*>(&weights[i1 * OutputDimensions * ChunkSize]);
+            const auto    col2 =
+              reinterpret_cast<const invec_t*>(&weights[i2 * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
                 vec_add_dpbusd_32(acc[k], in0, col0[k]);
             for (IndexType k = 0; k < NumRegs; ++k)
                 vec_add_dpbusd_32(acc[k], in1, col1[k]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in2, col2[k]);
         }
         for (; j < count; ++j)
         {
