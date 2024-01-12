@@ -90,7 +90,7 @@ Depth reduction(bool i, Depth d, int mn, int delta, int rootDelta) {
 }
 
 constexpr int futility_move_count(bool improving, Depth depth) {
-    return improving ? (3 + depth * depth) : (3 + depth * depth) / 2;
+    return improving ? 2 * (3 + depth * depth) : (3 + depth * depth);
 }
 
 // Guarantee evaluation does not hit the tablebase range
@@ -1005,9 +1005,9 @@ moves_loop:  // When in check, search starts here
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (moveCountPruning < 2)
             {
-                if (moveCount >= futility_move_count(improving, depth))
+                if (moveCount * 2 >= futility_move_count(improving, depth))
                     moveCountPruning = 2;
-                else if (moveCount + 1 >= futility_move_count(improving, depth))
+                else if (moveCount * 2 + 3 >= futility_move_count(improving, depth))
                     moveCountPruning = 1;
             }
 
