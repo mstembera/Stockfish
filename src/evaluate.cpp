@@ -205,7 +205,7 @@ Value Eval::evaluate(const Position& pos, const Search::Worker& workerThread) {
     int   shuffling  = pos.rule50_count();
     int   simpleEval = simple_eval(pos, stm);
 
-    bool lazy = std::abs(simpleEval) > 2750;
+    bool lazy = std::abs(simpleEval) > 2350;
     if (lazy)
         v = simpleEval;
     else
