@@ -214,7 +214,7 @@ Value Eval::evaluate(const Position& pos, const Search::Worker& workerThread) {
 
         int nnueComplexity;
 
-        Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity)
+        Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity) * 955 / 1024
                               : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity);
 
         int optimism = workerThread.optimism[stm];
