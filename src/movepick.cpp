@@ -293,17 +293,20 @@ top:
         [[fallthrough]];
 
     case QUIET_INIT :
-        cur      = endBadCaptures;
-        endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
+        if (!skipQuiets)
+        {
+            cur      = endBadCaptures;
+            endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
-        score<QUIETS>();
-        partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            score<QUIETS>();
+            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+        }
 
         ++stage;
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (select<Next>([&]() {
+        if (!skipQuiets && select<Next>([&]() {
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
