@@ -262,6 +262,22 @@ inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
     }
 }
 
+inline Bitboard pseudo_attacks_bb(PieceType pt, Square s) {
+
+    assert((pt != PAWN) && (is_ok(s)));
+
+    switch (pt)
+    {
+    case BISHOP :
+        return attacks_bb<BISHOP>(s);
+    case ROOK :
+        return attacks_bb<ROOK>(s);
+    case QUEEN :
+        return attacks_bb<BISHOP>(s) | attacks_bb<ROOK>(s);
+    default :
+        return PseudoAttacks[pt][s];
+    }
+}
 
 // Counts the number of non-zero bits in a bitboard.
 inline int popcount(Bitboard b) {
