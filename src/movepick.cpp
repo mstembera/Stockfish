@@ -172,7 +172,7 @@ void MovePicker::score() {
               / 16
               + (type_of(pos.piece_on(m.to_sq())) != PAWN
                      ? bool(pseudo_attacks_bb(type_of(pos.piece_on(m.to_sq())), m.to_sq()) & m.from_sq())
-                     : bool(pawn_attacks_bb(~pos.side_to_move(), m.to_sq()) & m.from_sq())) * 32;
+                     : bool(pawn_attacks_bb(~pos.side_to_move(), m.to_sq()) & m.from_sq())) * 64;
 
         else if constexpr (Type == QUIETS)
         {
