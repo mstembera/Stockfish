@@ -250,7 +250,7 @@ Move MovePicker::select(Pred filter) {
 // moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets) {
 
-    constexpr int goodQuietLimit = -8000;
+    constexpr int goodQuietLimit = -7000;
 
 top:
     switch (stage)
