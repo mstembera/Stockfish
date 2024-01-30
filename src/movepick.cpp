@@ -59,6 +59,16 @@ enum Stages {
     QCHECK
 };
 
+void insertion_sort(ExtMove* begin, ExtMove* end) {
+    for (ExtMove* p = begin + 1; p < end; ++p)
+    {
+        ExtMove tmp = *p, *q;
+        for (q = p; q != begin && *(q - 1) < tmp; --q)
+            *q = *(q - 1);
+        *q = tmp;
+    }
+}
+
 // Sort moves in descending order up to and including
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit, int partitionLimit) {
@@ -250,7 +260,7 @@ Move MovePicker::select(Pred filter) {
 // moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets) {
 
-    constexpr int goodQuietLimit = -9000;
+    constexpr int goodQuietLimit = -8000;
 
 top:
     switch (stage)
@@ -270,7 +280,7 @@ top:
         endMoves             = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
+        insertion_sort(cur, endMoves);
         ++stage;
         goto top;
 
@@ -307,7 +317,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -3330 * depth, goodQuietLimit);
+            partial_insertion_sort(cur, endMoves,  std::max(-3330 * depth, goodQuietLimit), goodQuietLimit);
         }
 
         ++stage;
