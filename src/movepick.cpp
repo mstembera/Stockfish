@@ -61,17 +61,25 @@ enum Stages {
 
 // Sort moves in descending order up to and including
 // a given limit. The order of moves smaller than the limit is left unspecified.
-void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+void partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit, int partitionLimit) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
-        if (p->value >= limit)
+    for (ExtMove *sortedEnd = begin, *p = begin; p < end; )
+    {
+        if (p->value >= sortLimit)
         {
             ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            *p          = *sortedEnd;
+            for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
         }
+        else if (p->value < partitionLimit)
+        {
+            std::swap(*p, *--end);
+            continue;
+        }
+        ++p;
+    }
 }
 
 }  // namespace
@@ -242,7 +250,7 @@ Move MovePicker::select(Pred filter) {
 // moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets) {
 
-    auto quiet_threshold = [](Depth d) { return -3330 * d; };
+    constexpr int goodQuietLimit = -8000;
 
 top:
     switch (stage)
@@ -262,7 +270,7 @@ top:
         endMoves             = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
         ++stage;
         goto top;
 
@@ -299,7 +307,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            partial_insertion_sort(cur, endMoves, -3330 * depth, goodQuietLimit);
         }
 
         ++stage;
@@ -310,7 +318,7 @@ top:
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
-            if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
+            if ((cur - 1)->value >= goodQuietLimit)
                 return *(cur - 1);
 
             // Remaining quiets are bad
