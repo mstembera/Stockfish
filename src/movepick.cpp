@@ -170,9 +170,10 @@ void MovePicker::score() {
               (7 * int(PieceValue[pos.piece_on(m.to_sq())])
                + (*captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))])
               / 16
-              + (type_of(pos.piece_on(m.to_sq())) != PAWN
-                   ? bool(PseudoAttacks[type_of(pos.piece_on(m.to_sq()))][m.to_sq()] & m.from_sq())
-                   : bool(pawn_attacks_bb(~pos.side_to_move(), m.to_sq()) & m.from_sq())) * 128;
+              + bool( (type_of(pos.piece_on(m.to_sq())) != PAWN
+                           ? PseudoAttacks[type_of(pos.piece_on(m.to_sq()))][m.to_sq()]
+                           : pawn_attacks_bb(~pos.side_to_move(), m.to_sq()))
+                     & m.from_sq()) * 256;
 
         else if constexpr (Type == QUIETS)
         {
