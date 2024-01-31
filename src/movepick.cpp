@@ -73,6 +73,7 @@ void insertion_sort(ExtMove* begin, ExtMove* end) {
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit, int partitionLimit) {
 
+    assert(sortLimit >= partitionLimit);
     for (ExtMove *sortedEnd = begin, *p = begin; p < end; )
     {
         if (p->value >= sortLimit)
@@ -85,7 +86,8 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit, int par
         }
         else if (p->value < partitionLimit)
         {
-            std::swap(*p, *--end);
+            while (--end > p && end->value < partitionLimit);
+            std::swap(*p, *end);
             continue;
         }
         ++p;
@@ -352,7 +354,8 @@ top:
         {
             cur      = beginBadQuiets;
             endMoves = endBadQuiets;
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth), std::numeric_limits<int>::min());
+            if (quiet_threshold(depth) < goodQuietLimit)
+                partial_insertion_sort(cur, endMoves, quiet_threshold(depth), std::numeric_limits<int>::min());
         }
 
         ++stage;
