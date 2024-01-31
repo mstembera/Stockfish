@@ -263,7 +263,6 @@ Move MovePicker::select(Pred filter) {
 Move MovePicker::next_move(bool skipQuiets) {
 
     constexpr int goodQuietLimit = -8000;
-    auto quiet_threshold = [](Depth d) { return -3330 * d; };
 
 top:
     switch (stage)
@@ -320,7 +319,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, std::max(quiet_threshold(depth), goodQuietLimit), goodQuietLimit);
+            partial_insertion_sort(cur, endMoves, std::max(-3400 * depth, goodQuietLimit), goodQuietLimit);
         }
 
         ++stage;
@@ -354,8 +353,8 @@ top:
         {
             cur      = beginBadQuiets;
             endMoves = endBadQuiets;
-            if (quiet_threshold(depth) < goodQuietLimit)
-                partial_insertion_sort(cur, endMoves, quiet_threshold(depth), std::numeric_limits<int>::min());
+            if (-2800 * depth < goodQuietLimit)
+                partial_insertion_sort(cur, endMoves, -2800 * depth, std::numeric_limits<int>::min());
         }
 
         ++stage;
