@@ -211,27 +211,12 @@ Value Eval::evaluate(const Position& pos, int optimism) {
         v = simpleEval;
     else
     {
-        bool smallNet = simpleEvalAbs > smallThreshold;
-
         int inputThreshold = 0;
-        if (smallNet)
-        {
-            int x0 = smallThreshold + (lazyThreshold - smallThreshold) * 60 / 100;
-            if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, lazyThreshold, 0, 120);
-        }
-#if 0
-        else
-        {
-            int x0 = smallThreshold * 75 / 100;
-            if (simpleEvalAbs > x0)
-                inputThreshold = interpolate(simpleEvalAbs, x0, smallThreshold, 0, 60);
-        }
-#endif
+        if (simpleEvalAbs > smallThreshold)
+            inputThreshold = interpolate(simpleEvalAbs, smallThreshold, lazyThreshold, 0, 110);
 
         int nnueComplexity;
-        Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, inputThreshold)
-                              : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, inputThreshold);
+        Value nnue = NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, inputThreshold);
 
         // Blend optimism and eval with nnue complexity and material imbalance
         optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;
