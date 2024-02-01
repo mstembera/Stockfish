@@ -213,7 +213,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     {
         int inputThreshold = 0;
         if (simpleEvalAbs > smallThreshold)
-            inputThreshold = interpolate(simpleEvalAbs, smallThreshold, lazyThreshold, 0, 110);
+            inputThreshold = interpolate(simpleEvalAbs, smallThreshold, lazyThreshold, 0, 15000);
 
         int nnueComplexity;
         Value nnue = NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, inputThreshold);
