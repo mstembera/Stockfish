@@ -204,7 +204,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     int   shuffling  = pos.rule50_count();
     int   simpleEval = simple_eval(pos, stm), simpleEvalAbs = std::abs(simpleEval);
     constexpr int lazyThreshold  = 2550;
-    constexpr int smallThreshold = 1050;
+    constexpr int smallThreshold = 1800;
 
     bool lazy = simpleEvalAbs > lazyThreshold;
     if (lazy)
@@ -213,7 +213,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     {
         int inputThreshold = 0;
         if (simpleEvalAbs > smallThreshold)
-            inputThreshold = interpolate(simpleEvalAbs, smallThreshold, lazyThreshold, 0, 15000);
+            inputThreshold = interpolate(simpleEvalAbs, smallThreshold, lazyThreshold, 0, 110);
 
         int nnueComplexity;
         Value nnue = NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, inputThreshold);
