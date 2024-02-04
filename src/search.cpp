@@ -523,9 +523,9 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, ttCapture;
     Piece    movedPiece;
-    int      moveCount, captureCount, quietCount;
+    int      moveCount, captureCount, quietCount, moveCountPruning;
 
     // Step 1. Initialize node
     Worker* thisThread = this;
@@ -900,7 +900,7 @@ moves_loop:  // When in check, search starts here
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
-    moveCountPruning = false;
+    moveCountPruning = std::numeric_limits<int>::min();
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -950,8 +950,8 @@ moves_loop:  // When in check, search starts here
         if (!rootNode && pos.non_pawn_material(us) && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-            if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving, depth);
+            if (moveCountPruning < 0)
+                moveCountPruning = moveCount - futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;

@@ -240,7 +240,7 @@ Move MovePicker::select(Pred filter) {
 // Most important method of the MovePicker class. It
 // returns a new pseudo-legal move every time it is called until there are no more
 // moves left, picking the move with the highest score from a list of generated moves.
-Move MovePicker::next_move(bool skipQuiets) {
+Move MovePicker::next_move(int skipQuiets) {
 
     auto quiet_threshold = [](Depth d) { return -3330 * d; };
 
@@ -293,24 +293,30 @@ top:
         [[fallthrough]];
 
     case QUIET_INIT :
-        if (!skipQuiets)
+        if (skipQuiets < 0)
         {
             cur      = endBadCaptures;
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            if (skipQuiets < -3)
+            {
+                partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+                sortedQuiets = true;
+            }
+            else
+                sortedQuiets = false;
         }
 
         ++stage;
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
-            }))
+        if (   skipQuiets < 0 
+            && (sortedQuiets ? select<Next>([&](){ return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2]; })
+                             : select<Best>([&](){ return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2]; })))
         {
-            if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
+            if ((cur - 1)->value > -8000 || (sortedQuiets && (cur - 1)->value <= quiet_threshold(depth)))
                 return *(cur - 1);
 
             // Remaining quiets are bad
@@ -336,10 +342,9 @@ top:
         [[fallthrough]];
 
     case BAD_QUIET :
-        if (!skipQuiets)
-            return select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
-            });
+        if (skipQuiets < 0)
+            return sortedQuiets ? select<Next>([&](){ return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2]; })
+                                : select<Best>([&](){ return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2]; });
 
         return Move::none();
 

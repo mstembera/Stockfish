@@ -172,7 +172,7 @@ class MovePicker {
                const PieceToHistory**,
                const PawnHistory*);
     MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
-    Move next_move(bool skipQuiets = false);
+    Move next_move(int skipQuiets = -1);
 
    private:
     template<PickType T, typename Pred>
@@ -193,6 +193,7 @@ class MovePicker {
     int     threshold;
     Depth   depth;
     ExtMove moves[MAX_MOVES];
+    bool    sortedQuiets;
 };
 
 }  // namespace Stockfish
