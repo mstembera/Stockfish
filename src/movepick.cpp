@@ -240,9 +240,7 @@ Move MovePicker::select(Pred filter) {
 // Most important method of the MovePicker class. It
 // returns a new pseudo-legal move every time it is called until there are no more
 // moves left, picking the move with the highest score from a list of generated moves.
-Move MovePicker::next_move(bool skipQuiets) {
-
-    auto quiet_threshold = [](Depth d) { return -3330 * d; };
+Move MovePicker::next_move(int skipQuiets) {
 
 top:
     switch (stage)
@@ -293,24 +291,25 @@ top:
         [[fallthrough]];
 
     case QUIET_INIT :
-        if (!skipQuiets)
+        if (skipQuiets < 0)
         {
             cur      = endBadCaptures;
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            sortThreshold = -3330 * depth + 256 * (skipQuiets + 4);
+            partial_insertion_sort(cur, endMoves, sortThreshold);
         }
 
         ++stage;
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select<Next>([&]() {
+        if (skipQuiets < 0 && select<Next>([&]() {
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
-            if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
+            if ((cur - 1)->value > -8000 || (cur - 1)->value <= sortThreshold)
                 return *(cur - 1);
 
             // Remaining quiets are bad
@@ -336,7 +335,7 @@ top:
         [[fallthrough]];
 
     case BAD_QUIET :
-        if (!skipQuiets)
+        if (skipQuiets < 0)
             return select<Next>([&]() {
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             });
