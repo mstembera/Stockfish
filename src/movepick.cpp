@@ -299,7 +299,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            if (skipQuiets < -3)
+            if (skipQuiets < -2)
             {
                 partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
                 sortedQuiets = true;
