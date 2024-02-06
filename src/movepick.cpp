@@ -297,7 +297,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            sortThreshold = -3330 * depth + 400 * (skipQuiets + 4);
+            sortThreshold = -3330 * depth + 650 * (skipQuiets + 4);
             partial_insertion_sort(cur, endMoves, sortThreshold);
         }
 
