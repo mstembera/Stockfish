@@ -199,13 +199,16 @@ Value Eval::evaluate(const Position& pos, int optimism) {
 
     assert(!pos.checkers());
 
-    int  simpleEval = simple_eval(pos, pos.side_to_move());
-    bool smallNet   = std::abs(simpleEval) > 1050;
+    int simpleEval = simple_eval(pos, pos.side_to_move());
+    int  simpleEvalAbs = std::abs(simpleEval);
+    bool smallNet      = simpleEvalAbs > 1050;
 
+    int inputThreshold = (simpleEvalAbs > 2000)
+                         ? interpolate(std::min(simpleEvalAbs, 5000), 2000, 5000, 0, 512)
+                         : 0;
     int nnueComplexity;
-
-    Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity)
-                          : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity);
+    Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, inputThreshold)
+                          : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, 0);
 
     // Blend optimism and eval with nnue complexity and material imbalance
     optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;
