@@ -181,14 +181,17 @@ void hint_common_parent_position(const Position& pos) {
 
     int simpleEval = simple_eval(pos, pos.side_to_move());
     if (std::abs(simpleEval) > 1050)
-        featureTransformerSmall->hint_common_access(pos);
+    {
+        bool psqtOnly = std::abs(simpleEval) > 2500;
+        featureTransformerSmall->hint_common_access(pos, psqtOnly);
+    }
     else
-        featureTransformerBig->hint_common_access(pos);
+        featureTransformerBig->hint_common_access(pos, false);
 }
 
 // Evaluation function. Perform differential calculation.
 template<NetSize Net_Size>
-Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+Value evaluate(const Position& pos, bool adjusted, int* complexity, bool psqtOnly) {
 
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
@@ -215,10 +218,13 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
 
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
     const auto psqt       = Net_Size == Small
-                            ? featureTransformerSmall->transform(pos, transformedFeatures, bucket)
-                            : featureTransformerBig->transform(pos, transformedFeatures, bucket);
-    const auto positional = Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
-                                              : networkBig[bucket]->propagate(transformedFeatures);
+                            ? featureTransformerSmall->transform(pos, transformedFeatures, bucket, psqtOnly)
+                            : featureTransformerBig->transform(pos, transformedFeatures, bucket, psqtOnly);
+
+    const auto positional = !psqtOnly
+        ? (Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
+                             : networkBig[bucket]->propagate(transformedFeatures))
+        : 0;
 
     if (complexity)
         *complexity = std::abs(psqt - positional) / OutputScale;
@@ -231,8 +237,8 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
         return static_cast<Value>((psqt + positional) / OutputScale);
 }
 
-template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity);
-template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity);
+template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity, bool psqtOnly);
+template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity, bool psqtOnly);
 
 struct NnueEvalTrace {
     static_assert(LayerStacks == PSQTBuckets);
@@ -265,7 +271,7 @@ static NnueEvalTrace trace_evaluate(const Position& pos) {
     t.correctBucket = (pos.count<ALL_PIECES>() - 1) / 4;
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
-        const auto materialist = featureTransformerBig->transform(pos, transformedFeatures, bucket);
+        const auto materialist = featureTransformerBig->transform(pos, transformedFeatures, bucket, false);
         const auto positional  = networkBig[bucket]->propagate(transformedFeatures);
 
         t.psqt[bucket]       = static_cast<Value>(materialist / OutputScale);
@@ -370,16 +376,16 @@ std::string trace(Position& pos) {
                 auto st = pos.state();
 
                 pos.remove_piece(sq);
-                st->accumulatorBig.computed[WHITE] = false;
-                st->accumulatorBig.computed[BLACK] = false;
+                st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+                st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] = false;
 
                 Value eval = evaluate<NNUE::Big>(pos);
                 eval       = pos.side_to_move() == WHITE ? eval : -eval;
                 v          = base - eval;
 
                 pos.put_piece(pc, sq);
-                st->accumulatorBig.computed[WHITE] = false;
-                st->accumulatorBig.computed[BLACK] = false;
+                st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+                st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] = false;
             }
 
             writeSquare(f, r, pc, v);
