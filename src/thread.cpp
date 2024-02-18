@@ -224,8 +224,8 @@ Thread* ThreadPool::get_best_thread() const {
 
     // Vote according to score and depth, and select the best thread
     auto thread_voting_value = [minScore](Thread* th) {
-        auto cube = [](int64_t v) { return v * v * v; };
-        return cube(th->worker->rootMoves[0].score - minScore + 14) * int64_t(th->worker->completedDepth);
+        auto sq = [](int64_t v) { return v * v; };
+        return sq((th->worker->rootMoves[0].score - minScore + 14) * int64_t(th->worker->completedDepth));
     };
 
     for (Thread* th : threads)
