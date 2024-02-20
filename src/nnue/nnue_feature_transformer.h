@@ -559,11 +559,12 @@ class FeatureTransformer {
             // Difference calculation for the deactivated features
             for (const auto index : removed[i])
             {
-                const IndexType offset = HalfDimensions * index;
-
                 if (!psqtOnly)
+                {
+                    const IndexType offset = HalfDimensions * index;
                     for (IndexType j = 0; j < HalfDimensions; ++j)
                         (st->*accPtr).accumulation[Perspective][j] -= weights[offset + j];
+                }
 
                 for (std::size_t k = 0; k < PSQTBuckets; ++k)
                     (st->*accPtr).psqtAccumulation[Perspective][k] -=
@@ -573,11 +574,12 @@ class FeatureTransformer {
             // Difference calculation for the activated features
             for (const auto index : added[i])
             {
-                const IndexType offset = HalfDimensions * index;
-
                 if (!psqtOnly)
+                {
+                    const IndexType offset = HalfDimensions * index;
                     for (IndexType j = 0; j < HalfDimensions; ++j)
                         (st->*accPtr).accumulation[Perspective][j] += weights[offset + j];
+                }
 
                 for (std::size_t k = 0; k < PSQTBuckets; ++k)
                     (st->*accPtr).psqtAccumulation[Perspective][k] +=
@@ -658,11 +660,12 @@ class FeatureTransformer {
 
         for (const auto index : active)
         {
-            const IndexType offset = HalfDimensions * index;
-
             if (!psqtOnly)
+            {
+                const IndexType offset = HalfDimensions * index;
                 for (IndexType j = 0; j < HalfDimensions; ++j)
                     accumulator.accumulation[Perspective][j] += weights[offset + j];
+            }
 
             for (std::size_t k = 0; k < PSQTBuckets; ++k)
                 accumulator.psqtAccumulation[Perspective][k] +=
