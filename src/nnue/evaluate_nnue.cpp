@@ -224,7 +224,7 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity, bool psqtOnl
         : 0;
 
     if (complexity)
-        *complexity = std::abs(psqt - positional) / OutputScale;
+        *complexity = !psqtOnly ? std::abs(psqt - positional) / OutputScale : 0;
 
     // Give more value to positional evaluation when adjusted flag is set
     if (adjusted)
