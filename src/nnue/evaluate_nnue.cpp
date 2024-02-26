@@ -221,7 +221,7 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity, bool psqtOnl
     const auto positional = !psqtOnly
         ? (Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
                              : networkBig[bucket]->propagate(transformedFeatures))
-        : psqt / -3;
+        : 0;
 
     if (complexity)
         *complexity = std::abs(psqt - positional) / OutputScale;
