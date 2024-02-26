@@ -181,7 +181,7 @@ void hint_common_parent_position(const Position& pos) {
 
     int simpleEvalAbs = std::abs(simple_eval(pos, pos.side_to_move()));
     if (simpleEvalAbs > 1050)   
-        featureTransformerSmall->hint_common_access(pos, simpleEvalAbs > 2500);
+        featureTransformerSmall->hint_common_access(pos, simpleEvalAbs > 2450);
     else
         featureTransformerBig->hint_common_access(pos, false);
 }
@@ -221,10 +221,10 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity, bool psqtOnl
     const auto positional = !psqtOnly
         ? (Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
                              : networkBig[bucket]->propagate(transformedFeatures))
-        : 0;
+        : psqt / -3;
 
     if (complexity)
-        *complexity = !psqtOnly ? std::abs(psqt - positional) / OutputScale : 0;
+        *complexity = std::abs(psqt - positional) / OutputScale;
 
     // Give more value to positional evaluation when adjusted flag is set
     if (adjusted)
