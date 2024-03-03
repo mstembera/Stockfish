@@ -193,7 +193,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     assert(!pos.checkers());
 
     int  simpleEval = simple_eval(pos, pos.side_to_move());
-    bool smallNet   = std::abs(simpleEval) > 1050;
+    bool smallNet   = std::abs(simpleEval) > 900;
     bool psqtOnly   = std::abs(simpleEval) > 2500;
 
     int nnueComplexity;
@@ -201,8 +201,8 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, psqtOnly)
                           : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
-    if (psqtOnly && std::abs(nnue) < 2000)
-        nnue = NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, false);
+    if (smallNet && abs(nnue) < 100)
+        nnue = NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
     // Blend optimism and eval with nnue complexity and material imbalance
     optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;
