@@ -201,9 +201,8 @@ Value Eval::evaluate(const Position& pos, int optimism) {
     Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, psqtOnly)
                           : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
-    bool reEval = simpleEval > 0 ? nnue + 700 < simpleEval : nnue - 700 > simpleEval;
-    if (psqtOnly && reEval)
-        nnue = NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, false);
+    if (smallNet && (nnue * simpleEval < 0 || std::abs(nnue) < 100))
+        nnue = NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
     // Blend optimism and eval with nnue complexity and material imbalance
     optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;
