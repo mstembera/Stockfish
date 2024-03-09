@@ -202,7 +202,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
                           : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
     if (psqtOnly)
-        nnue = (7 * nnue + simpleEval) / 8;
+        nnue = (15 * nnue + simpleEval) / 16;
 
     // Blend optimism and eval with nnue complexity and material imbalance
     optimism += optimism * (nnueComplexity + std::abs(simpleEval - nnue)) / 512;
