@@ -132,11 +132,11 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
         }
 
     // Find an entry to be replaced according to the replacement strategy
-    int      minPolicyScore = tte->depth8 * 2 - tte->relative_age(generation8) * 3;
+    int      minPolicyScore = tte->depth8 * 3 - tte->relative_age(generation8) * 2;
     TTEntry* replace = tte;
     for (int i = 1; i < ClusterSize; ++i)
     {
-        int policyScore = tte[i].depth8 * 2 - tte[i].relative_age(generation8) * 3;
+        int policyScore = tte[i].depth8 * 3 - tte[i].relative_age(generation8) * 2;
         if (policyScore < minPolicyScore)
         {
             minPolicyScore = policyScore;
