@@ -620,21 +620,17 @@ class FeatureTransformer {
                     acc[k] = biasesTile[k];
 
                 int i = 0;
-                for (; i < (int)active.size() - 2; i += 3)
+                for (; i < (int)active.size() - 1; i += 2)
                 {
                     IndexType       index0  = active[i];
                     IndexType       index1  = active[i+1];
-                    IndexType       index2  = active[i+2];
                     const IndexType offset0 = HalfDimensions * index0 + j * TileHeight;
                     const IndexType offset1 = HalfDimensions * index1 + j * TileHeight;
-                    const IndexType offset2 = HalfDimensions * index2 + j * TileHeight;
                     auto            column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
                     auto            column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
-                    auto            column2 = reinterpret_cast<const vec_t*>(&weights[offset2]);
 
                     for (unsigned k = 0; k < NumRegs; ++k)
-                        acc[k] = vec_add_16(vec_add_16(acc[k], column0[k]),
-                                            vec_add_16(column1[k], column2[k]));
+                        acc[k] = vec_add_16(vec_add_16(acc[k], column0[k]), column1[k]);
                 }
                 for (; i < (int)active.size(); ++i)
                 {
@@ -658,21 +654,17 @@ class FeatureTransformer {
                 psqt[k] = vec_zero_psqt();
 
             int i = 0;
-            for (; i < (int)active.size() - 2; i += 3)
+            for (; i < (int)active.size() - 1; i += 2)
             {
                 IndexType       index0  = active[i];
                 IndexType       index1  = active[i+1];
-                IndexType       index2  = active[i+2];
                 const IndexType offset0 = PSQTBuckets * index0 + j * PsqtTileHeight;
                 const IndexType offset1 = PSQTBuckets * index1 + j * PsqtTileHeight;
-                const IndexType offset2 = PSQTBuckets * index2 + j * PsqtTileHeight;
                 auto columnPsqt0        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset0]);
                 auto columnPsqt1        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset1]);
-                auto columnPsqt2        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset2]);
 
                 for (std::size_t k = 0; k < NumPsqtRegs; ++k)
-                    psqt[k] = vec_add_psqt_32(vec_add_psqt_32(psqt[k], columnPsqt0[k]),
-                                              vec_add_psqt_32(columnPsqt1[k], columnPsqt2[k]));
+                    psqt[k] = vec_add_psqt_32(vec_add_psqt_32(psqt[k], columnPsqt0[k]), columnPsqt1[k]);
             }
             for (; i < (int)active.size(); ++i)
             {
