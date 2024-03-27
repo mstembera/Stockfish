@@ -77,7 +77,7 @@ template void HalfKAv2_hm::append_changed_indices<BLACK>(Square            ksq,
 
 int HalfKAv2_hm::update_cost(const StateInfo* st) { return st->dirtyPiece.dirty_num; }
 
-int HalfKAv2_hm::refresh_cost(const Position& pos) { return pos.count<ALL_PIECES>(); }
+int HalfKAv2_hm::refresh_cost(const Position& pos) { return pos.count<ALL_PIECES>() * 3 / 4; }
 
 bool HalfKAv2_hm::requires_refresh(const StateInfo* st, Color perspective) {
     return st->dirtyPiece.piece[0] == make_piece(perspective, KING);
