@@ -276,9 +276,8 @@ class FeatureTransformer {
             static_assert((HalfDimensions / 2) % OutputChunkSize == 0);
             constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
 
-            vec_t Zero = vec_zero();
-            vec_t One  = vec_set_16(132);
-            vec_t OneSq = vec_mul_16(vec_set_16(127), vec_set_16(127));
+            const vec_t Zero = vec_zero();
+            const vec_t One  = vec_set_16(125);
 
             const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
             const vec_t* in1 =
@@ -292,8 +291,8 @@ class FeatureTransformer {
                 const vec_t sum1a = vec_max_16(vec_min_16(in1[j * 2 + 0], One), Zero);
                 const vec_t sum1b = vec_max_16(vec_min_16(in1[j * 2 + 1], One), Zero);
 
-                const vec_t pa = vec_min_16(vec_mul_16(sum0a, sum1a), OneSq);
-                const vec_t pb = vec_min_16(vec_mul_16(sum0b, sum1b), OneSq);
+                const vec_t pa = vec_mul_16(sum0a, sum1a);
+                const vec_t pb = vec_mul_16(sum0b, sum1b);
 
                 out[j] = vec_msb_pack_16(pa, pb);
             }
@@ -305,9 +304,9 @@ class FeatureTransformer {
                 BiasType sum0 = accumulation[static_cast<int>(perspectives[p])][j + 0];
                 BiasType sum1 =
                   accumulation[static_cast<int>(perspectives[p])][j + HalfDimensions / 2];
-                sum0               = std::clamp<BiasType>(sum0, 0, 132);
-                sum1               = std::clamp<BiasType>(sum1, 0, 132);
-                output[offset + j] = static_cast<OutputType>(std::min(unsigned(sum0 * sum1) / 128, 127U * 127U));
+                sum0               = std::clamp<BiasType>(sum0, 0, 125);
+                sum1               = std::clamp<BiasType>(sum1, 0, 125);
+                output[offset + j] = static_cast<OutputType>(unsigned(sum0 * sum1) / 128);
             }
 
 #endif
