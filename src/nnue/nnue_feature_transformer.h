@@ -483,8 +483,21 @@ class FeatureTransformer {
                     for (IndexType i = 0; states_to_update[i]; ++i)
                     {
                         // Difference calculation for the deactivated features
-                        for (const auto index : removed[i])
+                        int l = 0;
+                        for (; l < int(removed[i].size()) - 1; l += 2)
                         {
+                            const IndexType index0  = removed[i][l];
+                            const IndexType index1  = removed[i][l + 1];
+                            const IndexType offset0 = HalfDimensions * index0 + j * TileHeight;
+                            const IndexType offset1 = HalfDimensions * index1 + j * TileHeight;
+                            auto column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                            auto column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+                            for (IndexType k = 0; k < NumRegs; ++k)
+                                acc[k] = vec_sub_16(acc[k], vec_add_16(column0[k], column1[k]));
+                        }
+                        for (; l < int(removed[i].size()); ++l)
+                        {
+                            const IndexType index  = removed[i][l];
                             const IndexType offset = HalfDimensions * index + j * TileHeight;
                             auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
                             for (IndexType k = 0; k < NumRegs; ++k)
@@ -492,8 +505,21 @@ class FeatureTransformer {
                         }
 
                         // Difference calculation for the activated features
-                        for (const auto index : added[i])
+                        l = 0;
+                        for (; l < int(added[i].size()) - 1; l += 2)
                         {
+                            const IndexType index0  = added[i][l];
+                            const IndexType index1  = added[i][l + 1];
+                            const IndexType offset0 = HalfDimensions * index0 + j * TileHeight;
+                            const IndexType offset1 = HalfDimensions * index1 + j * TileHeight;
+                            auto column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                            auto column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+                            for (IndexType k = 0; k < NumRegs; ++k)
+                                acc[k] = vec_add_16(acc[k], vec_add_16(column0[k], column1[k]));
+                        }
+                        for (; l < int(added[i].size()); ++l)
+                        {
+                            const IndexType index  = added[i][l];
                             const IndexType offset = HalfDimensions * index + j * TileHeight;
                             auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
                             for (IndexType k = 0; k < NumRegs; ++k)
@@ -520,8 +546,21 @@ class FeatureTransformer {
                 for (IndexType i = 0; states_to_update[i]; ++i)
                 {
                     // Difference calculation for the deactivated features
-                    for (const auto index : removed[i])
+                    int l = 0;
+                    for (; l < int(removed[i].size()) - 1; l += 2)
                     {
+                        const IndexType index0  = removed[i][l];
+                        const IndexType index1  = removed[i][l + 1];
+                        const IndexType offset0 = PSQTBuckets * index0 + j * PsqtTileHeight;
+                        const IndexType offset1 = PSQTBuckets * index1 + j * PsqtTileHeight;
+                        auto columnPsqt0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset0]);
+                        auto columnPsqt1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset1]);
+                        for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                            psqt[k] = vec_sub_psqt_32(psqt[k], vec_add_psqt_32(columnPsqt0[k], columnPsqt1[k]));
+                    }
+                    for (; l < int(removed[i].size()); ++l)
+                    {
+                        const IndexType index  = removed[i][l];
                         const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
                         auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
                         for (std::size_t k = 0; k < NumPsqtRegs; ++k)
@@ -529,8 +568,21 @@ class FeatureTransformer {
                     }
 
                     // Difference calculation for the activated features
-                    for (const auto index : added[i])
+                    l = 0;
+                    for (; l < int(added[i].size()) - 1; l += 2)
                     {
+                        const IndexType index0  = added[i][l];
+                        const IndexType index1  = added[i][l + 1];
+                        const IndexType offset0 = PSQTBuckets * index0 + j * PsqtTileHeight;
+                        const IndexType offset1 = PSQTBuckets * index1 + j * PsqtTileHeight;
+                        auto columnPsqt0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset0]);
+                        auto columnPsqt1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset1]);
+                        for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                            psqt[k] = vec_add_psqt_32(psqt[k], vec_add_psqt_32(columnPsqt0[k], columnPsqt1[k]));
+                    }
+                    for (; l < int(added[i].size()); ++l)
+                    {
+                        const IndexType index  = added[i][l];
                         const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
                         auto columnPsqt = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
                         for (std::size_t k = 0; k < NumPsqtRegs; ++k)
