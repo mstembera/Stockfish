@@ -406,7 +406,7 @@ class FeatureTransformer {
 #ifdef VECTOR
 
         if (states_to_update[1] == nullptr && (removed[0].size() == 1 || removed[0].size() == 2)
-            && added[0].size() == 1)
+            && added[0].size() <= removed[0].size())
         {
             assert(states_to_update[0]);
 
@@ -419,24 +419,37 @@ class FeatureTransformer {
 
                 const IndexType offsetR0 = HalfDimensions * removed[0][0];
                 auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-                const IndexType offsetA  = HalfDimensions * added[0][0];
-                auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+                const IndexType offsetA0 = HalfDimensions * added[0][0];
+                auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
                 if (removed[0].size() == 1)
                 {
                     for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
                          ++k)
-                        accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA[k]);
+                        accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA0[k]);
                 }
                 else
                 {
                     const IndexType offsetR1 = HalfDimensions * removed[0][1];
                     auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
 
-                    for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
-                         ++k)
-                        accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA[k]),
-                                               vec_add_16(columnR0[k], columnR1[k]));
+                    if (added[0].size() == 1)
+                    {
+                        for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                             ++k)
+                            accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA0[k]),
+                                                   vec_add_16(columnR0[k], columnR1[k]));
+                    }
+                    else
+                    {
+                        const IndexType offsetA1 = HalfDimensions * added[0][1];
+                        auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
+
+                        for (IndexType k = 0;
+                             k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t); ++k)  
+                            accOut[k] = vec_add_16(accIn[k], vec_sub_16(vec_add_16(columnA0[k], columnA1[k]),
+                                                                        vec_add_16(columnR0[k], columnR1[k])));
+                    }
                 }
             }
 
@@ -447,26 +460,41 @@ class FeatureTransformer {
 
             const IndexType offsetPsqtR0 = PSQTBuckets * removed[0][0];
             auto columnPsqtR0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR0]);
-            const IndexType offsetPsqtA = PSQTBuckets * added[0][0];
-            auto columnPsqtA = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA]);
+            const IndexType offsetPsqtA0 = PSQTBuckets * added[0][0];
+            auto columnPsqtA0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA0]);
 
             if (removed[0].size() == 1)
             {
                 for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
                      ++k)
                     accPsqtOut[k] = vec_add_psqt_32(vec_sub_psqt_32(accPsqtIn[k], columnPsqtR0[k]),
-                                                    columnPsqtA[k]);
+                                                    columnPsqtA0[k]);
             }
             else
             {
                 const IndexType offsetPsqtR1 = PSQTBuckets * removed[0][1];
                 auto columnPsqtR1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR1]);
 
-                for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
-                     ++k)
-                    accPsqtOut[k] =
-                      vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA[k]),
-                                      vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
+                if (added[0].size() == 1)
+                {
+                    for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
+                         ++k)
+                        accPsqtOut[k] =
+                          vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA0[k]),
+                                          vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
+                }
+                else
+                {
+                    const IndexType offsetPsqtA1 = PSQTBuckets * added[0][1];
+                    auto columnPsqtA1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA1]);
+
+                    for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
+                         ++k)
+                        accPsqtOut[k] =
+                          vec_add_psqt_32(accPsqtIn[k],
+                                          vec_sub_psqt_32(vec_add_psqt_32(columnPsqtA0[k], columnPsqtA1[k]),
+                                                          vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k])));
+                }
             }
         }
         else
