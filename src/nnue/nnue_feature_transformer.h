@@ -284,6 +284,12 @@ class FeatureTransformer {
               reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
             vec_t* out = reinterpret_cast<vec_t*>(output + offset);
 
+#if !defined(USE_AVX2)
+//NOTE: For fishtest testing purposes only, artificially slow down older architectures
+// to which this patch doesn't apply so that those machines will be too slow and
+// we skip testing on them.
+            for (volatile int slow = 0; slow < 100; ++slow)
+#endif
             for (IndexType j = 0; j < NumOutputChunks; ++j)
             {
                 const vec_t sum0a = vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero);
