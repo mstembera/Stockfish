@@ -225,6 +225,40 @@ class FeatureTransformer {
         return FeatureSet::HashValue ^ (OutputDimensions * 2);
     }
 
+    static constexpr void order_packs(uint64_t* v) {
+#if defined(USE_AVX512) // _mm512_packs_epi16 ordering
+        uint64_t tmp0, tmp1;
+        tmp0  = v[2],  tmp1  = v[3];
+        v[2]  = v[8],  v[3]  = v[9];
+        v[8]  = v[4],  v[9]  = v[5];
+        v[4]  = tmp0,  v[5]  = tmp1;
+        tmp0  = v[6],  tmp1  = v[7];
+        v[6]  = v[10], v[7]  = v[11];
+        v[10] = v[12], v[11] = v[13];
+        v[12] = tmp0,  v[13] = tmp1;
+#elif defined(USE_AVX2) // _mm256_packs_epi16 ordering
+        std::swap(v[2], v[4]);
+        std::swap(v[3], v[5]);
+#endif
+    }
+
+    static constexpr void inverse_order_packs(uint64_t* v) {
+#if defined(USE_AVX512) // Inverse _mm512_packs_epi16 ordering
+        uint64_t tmp0, tmp1;
+        tmp0  = v[2],  tmp1  = v[3];
+        v[2]  = v[4],  v[3]  = v[5];
+        v[4]  = v[8],  v[5]  = v[9];
+        v[8]  = tmp0,  v[9]  = tmp1;
+        tmp0  = v[6],  tmp1  = v[7];
+        v[6]  = v[12], v[7]  = v[13];
+        v[12] = v[10], v[13] = v[11];
+        v[10] = tmp0,  v[11] = tmp1;
+#elif defined(USE_AVX2) // Inverse _mm256_packs_epi16 ordering
+        std::swap(v[2], v[4]);
+        std::swap(v[3], v[5]);
+#endif
+    }
+
     // Read network parameters
     bool read_parameters(std::istream& stream) {
 
@@ -233,35 +267,13 @@ class FeatureTransformer {
         read_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
 #if defined(USE_AVX2)
-        auto inverse_order_packs = [](uint64_t* v)
-        {
-        #if defined(USE_AVX512)
-            // Inverse _mm512_packs_epi16 ordering
-            uint64_t tmp0, tmp1;
-            tmp0 = v[2], tmp1 = v[3];
-            v[2] = v[4], v[3] = v[5];
-            v[4] = v[8], v[5] = v[9];
-            v[8] = tmp0, v[9] = tmp1;
-
-            tmp0  = v[ 6], tmp1  = v[ 7];
-            v[ 6] = v[12], v[ 7] = v[13];
-            v[12] = v[10], v[13] = v[11];
-            v[10] = tmp0,  v[11] = tmp1;
-        #else
-            // Inverse _mm256_packs_epi16 ordering
-            std::swap(v[2], v[4]);
-            std::swap(v[3], v[5]);
-        #endif
-        };
-
         #if defined(USE_AVX512)
             constexpr IndexType di = 16;
         #else
             constexpr IndexType di = 8;
         #endif
-
         uint64_t* b = reinterpret_cast<uint64_t*>(&biases[0]);
-        for (IndexType i = 0; i < HalfDimensions * sizeof(BiasType) / sizeof(uint64_t); i += di)
+        for (IndexType i = 0; i < HalfDimensions * sizeof(BiasType) / sizeof(uint64_t); i += di)    
             inverse_order_packs(&b[i]);
 
         for (IndexType j = 0; j < InputDimensions; ++j)
@@ -276,13 +288,37 @@ class FeatureTransformer {
 
     // Write network parameters
     bool write_parameters(std::ostream& stream) const {
+#if defined(USE_AVX2)
+        #if defined(USE_AVX512)
+            constexpr IndexType di = 16;
+        #else
+            constexpr IndexType di = 8;
+        #endif
+        uint64_t* b = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(&biases[0]));
+        for (IndexType i = 0; i < HalfDimensions * sizeof(BiasType) / sizeof(uint64_t); i += di)
+            order_packs(&b[i]);
+        for (IndexType j = 0; j < InputDimensions; ++j)
+        {
+            uint64_t* w = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(&weights[j * HalfDimensions]));
+            for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(uint64_t); i += di)
+                order_packs(&w[i]);
+        }
+#endif
 
         write_leb_128<BiasType>(stream, biases, HalfDimensions);
         write_leb_128<WeightType>(stream, weights, HalfDimensions * InputDimensions);
         write_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
-        //TODO: Undo inverse ordering
-
+#if defined(USE_AVX2)
+        for (IndexType i = 0; i < HalfDimensions * sizeof(BiasType) / sizeof(uint64_t); i += di)
+            inverse_order_packs(&b[i]);
+        for (IndexType j = 0; j < InputDimensions; ++j)
+        {
+            uint64_t* w = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(&weights[j * HalfDimensions]));
+            for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(uint64_t); i += di)
+                inverse_order_packs(&w[i]);
+        }
+#endif
         return !stream.fail();
     }
 
