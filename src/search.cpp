@@ -917,7 +917,7 @@ moves_loop:  // When in check, search starts here
             continue;
 
         // Check for legality
-        if (!pos.legal(move))
+        if ((type_of(pos.moved_piece(move)) == KING && !pos.pseudo_legal(move)) || !pos.legal(move))
             continue;
 
         // At root obey the "searchmoves" option and skip moves not listed in Root
