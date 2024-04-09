@@ -482,22 +482,48 @@ class FeatureTransformer {
 
                     for (IndexType i = 0; states_to_update[i]; ++i)
                     {
-                        // Difference calculation for the deactivated features
-                        for (const auto index : removed[i])
+                        if ((removed[i].size() == 1 || removed[i].size() == 2)
+                            && added[i].size() == 1)
                         {
-                            const IndexType offset = HalfDimensions * index + j * TileHeight;
-                            auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
-                            for (IndexType k = 0; k < NumRegs; ++k)
-                                acc[k] = vec_sub_16(acc[k], column[k]);
-                        }
+                            const IndexType offsetR0 = HalfDimensions * removed[i][0] + j * TileHeight;
+                            auto columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+                            const IndexType offsetA0 = HalfDimensions * added[i][0] + j * TileHeight;
+                            auto columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
-                        // Difference calculation for the activated features
-                        for (const auto index : added[i])
+                            if (removed[i].size() == 1)
+                            {
+                                for (IndexType k = 0; k < NumRegs; ++k)
+                                    acc[k] = vec_add_16(vec_sub_16(acc[k], columnR0[k]), columnA0[k]);
+                            }
+                            else
+                            {
+                                const IndexType offsetR1 = HalfDimensions * removed[i][1] + j * TileHeight;
+                                auto columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+
+                                for (IndexType k = 0; k < NumRegs; ++k)
+                                    acc[k] = vec_sub_16(vec_add_16(acc[k], columnA0[k]),
+                                                        vec_add_16(columnR0[k], columnR1[k]));
+                            }
+                        }
+                        else
                         {
-                            const IndexType offset = HalfDimensions * index + j * TileHeight;
-                            auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
-                            for (IndexType k = 0; k < NumRegs; ++k)
-                                acc[k] = vec_add_16(acc[k], column[k]);
+                            // Difference calculation for the deactivated features
+                            for (const auto index : removed[i])
+                            {
+                                const IndexType offset = HalfDimensions * index + j * TileHeight;
+                                auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
+                                for (IndexType k = 0; k < NumRegs; ++k)
+                                    acc[k] = vec_sub_16(acc[k], column[k]);
+                            }
+
+                            // Difference calculation for the activated features
+                            for (const auto index : added[i])
+                            {
+                                const IndexType offset = HalfDimensions * index + j * TileHeight;
+                                auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
+                                for (IndexType k = 0; k < NumRegs; ++k)
+                                    acc[k] = vec_add_16(acc[k], column[k]);
+                            }
                         }
 
                         // Store accumulator
