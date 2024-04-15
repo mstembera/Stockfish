@@ -166,11 +166,13 @@ void MovePicker::score() {
 
     for (auto& m : *this)
         if constexpr (Type == CAPTURES)
+        {
+            Bitboard attackers = pos.attackers_to(m.to_sq());
             m.value =
               7 * int(PieceValue[pos.piece_on(m.to_sq())])
               + (*captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))]
-              + !(pos.attackers_to(m.to_sq()) & pos.pieces(~pos.side_to_move())) * 64 - 40;
-
+              + (popcount(attackers & pos.pieces(pos.side_to_move())) > popcount(attackers & pos.pieces(~pos.side_to_move()))) * 128;
+        }
         else if constexpr (Type == QUIETS)
         {
             Piece     pc   = pos.moved_piece(m);
