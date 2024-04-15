@@ -169,7 +169,7 @@ void MovePicker::score() {
             m.value =
               7 * int(PieceValue[pos.piece_on(m.to_sq())])
               + (*captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))]
-              + !(pos.attackers_to(m.to_sq()) & pos.pieces(~pos.side_to_move())) * 128 - 80;
+              + !(pos.attackers_to(m.to_sq()) & pos.pieces(~pos.side_to_move())) * 64 - 40;
 
         else if constexpr (Type == QUIETS)
         {
