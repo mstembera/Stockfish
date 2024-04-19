@@ -306,7 +306,7 @@ top:
     case GOOD_QUIET :
         if (!skipQuiets && select<Next>([&]() {
                 return (*cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2])
-                       ? (cur->value > -9000) ? true
+                       ? (cur->value > -7000) ? true
                                               : (*endBadQuiets++ = *cur, false)
                        : false;
             }))
