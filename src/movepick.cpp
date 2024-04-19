@@ -300,7 +300,7 @@ top:
                     return false;
                 else
                 {
-                    if (pos.see_ge(*cur, -cur->value / 256))
+                    if (cur->value > -6000 || pos.see_ge(*cur, 100))
                         return true;
                     else
                     {
