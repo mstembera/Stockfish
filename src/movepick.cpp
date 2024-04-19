@@ -195,15 +195,6 @@ void MovePicker::score() {
                                                   : !(to & threatenedByPawn)                ? 14450
                                                                                             : 0)
                                                : 0;
-
-            // malus for putting piece en prise
-            m.value -= !(threatenedPieces & from)
-                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 48150
-                                          + bool(to & threatenedByMinor) * 10650
-                          : pt == ROOK ? bool(to & threatenedByMinor) * 24500
-                          : pt != PAWN ? bool(to & threatenedByPawn) * 14950
-                                       : 0)
-                       : 0;
         }
 
         else  // Type == EVASIONS
@@ -309,7 +300,7 @@ top:
                     return false;
                 else
                 {
-                    if (cur->value > -8000)
+                    if (pos.see_ge(*cur, -cur->value / 256))
                         return true;
                     else
                     {
