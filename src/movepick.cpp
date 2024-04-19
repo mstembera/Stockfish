@@ -195,6 +195,15 @@ void MovePicker::score() {
                                                   : !(to & threatenedByPawn)                ? 14450
                                                                                             : 0)
                                                : 0;
+
+            // malus for putting piece en prise
+            m.value -= !(threatenedPieces & from)
+                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 48150
+                                          + bool(to & threatenedByMinor) * 10650
+                          : pt == ROOK ? bool(to & threatenedByMinor) * 24500
+                          : pt != PAWN ? bool(to & threatenedByPawn) * 14950
+                                       : 0)
+                       : 0;
         }
 
         else  // Type == EVASIONS
@@ -299,19 +308,9 @@ top:
                 if (*cur == refutations[0] || *cur == refutations[1] || *cur == refutations[2])
                     return false;
                 else
-                {
-                    if (cur->value > -6000 || pos.see_ge(*cur, 100))
-                        return true;
-                    else
-                    {
-                        *endBadQuiets++ = *cur;
-                        return false;
-                    }
-                }
+                    return (cur->value > -9000) ? true : (*endBadQuiets++ = *cur, false);
             }))
-        {
             return *(cur - 1);
-        }
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
