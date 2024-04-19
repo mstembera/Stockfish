@@ -241,8 +241,6 @@ Move MovePicker::select(Pred filter) {
 // moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets) {
 
-    auto quiet_threshold = [](Depth d) { return -3550 * d; };
-
 top:
     switch (stage)
     {
@@ -295,11 +293,11 @@ top:
     case QUIET_INIT :
         if (!skipQuiets)
         {
-            cur      = endBadCaptures;
-            endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
+            cur      = endBadQuiets = endBadCaptures;
+            endMoves = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            partial_insertion_sort(cur, endMoves, -3550 * depth);
         }
 
         ++stage;
@@ -307,14 +305,21 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
+                if (*cur == refutations[0] || *cur == refutations[1] || *cur == refutations[2])
+                    return false;
+                else
+                {
+                    if (cur->value > -8000)
+                        return true;
+                    else
+                    {
+                        *endBadQuiets++ = *cur;
+                        return false;
+                    }
+                }
             }))
         {
-            if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
-                return *(cur - 1);
-
-            // Remaining quiets are bad
-            beginBadQuiets = cur - 1;
+            return *(cur - 1);
         }
 
         // Prepare the pointers to loop over the bad captures
@@ -329,7 +334,7 @@ top:
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
-        cur      = beginBadQuiets;
+        cur      = endBadCaptures;
         endMoves = endBadQuiets;
 
         ++stage;
@@ -337,9 +342,7 @@ top:
 
     case BAD_QUIET :
         if (!skipQuiets)
-            return select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
-            });
+            return select<Next>([&]() { return true; });
 
         return Move::none();
 
