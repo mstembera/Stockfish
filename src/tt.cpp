@@ -41,7 +41,7 @@ void TTEntry::save(
 
     // Overwrite less valuable entries (cheapest checks first)
     if (b == BOUND_EXACT || uint16_t(k) != key16 || d - DEPTH_OFFSET + 2 * pv > depth8 - 4
-        || relative_age(generation8))
+        || relative_age(generation8) > TranspositionTable::GENERATION_DELTA)
     {
         assert(d > DEPTH_OFFSET);
         assert(d < 256 + DEPTH_OFFSET);
@@ -129,8 +129,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
     // Find an entry to be replaced according to the replacement strategy
     TTEntry* replace = tte;
     for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8) * 3
-            > tte[i].depth8 - tte[i].relative_age(generation8) * 3)
+        if (replace->depth8 - replace->relative_age(generation8) * 2
+            > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
             replace = &tte[i];
 
     return found = false, replace;
