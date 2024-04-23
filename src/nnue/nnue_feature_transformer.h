@@ -699,7 +699,9 @@ class FeatureTransformer {
         for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
         {
             auto entryTile =
-              reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][j * TileHeight]);
+                reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][j * TileHeight]);
+            auto accTile =
+                reinterpret_cast<vec_t*>(&accumulator.accumulation[Perspective][j * TileHeight]);
             for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = entryTile[k];
 
@@ -723,13 +725,19 @@ class FeatureTransformer {
             }
 
             for (IndexType k = 0; k < NumRegs; k++)
+            {
                 vec_store(&entryTile[k], acc[k]);
+                vec_store(&accTile[k], acc[k]);
+            }
         }
 
         for (IndexType j = 0; j < PSQTBuckets / PsqtTileHeight; ++j)
         {
             auto entryTilePsqt = reinterpret_cast<psqt_vec_t*>(
-              &entry.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+                &entry.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+            auto accTilePsqt = reinterpret_cast<psqt_vec_t*>(
+                &accumulator.psqtAccumulation[Perspective][j * PsqtTileHeight]);
+
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                 psqt[k] = entryTilePsqt[k];
 
@@ -753,9 +761,11 @@ class FeatureTransformer {
             }
 
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+            {
                 vec_store_psqt(&entryTilePsqt[k], psqt[k]);
+                vec_store_psqt(&accTilePsqt[k], psqt[k]);
+            }
         }
-
 #else
 
         for (const auto index : added)
@@ -777,16 +787,14 @@ class FeatureTransformer {
                 entry.psqtAccumulation[Perspective][k] -= psqtWeights[index * PSQTBuckets + k];
         }
 
-#endif
-
         // The accumulator of the refresh entry has been updated.
         // Now copy its content to the actual accumulator we were refreshing
-
         std::memcpy(accumulator.psqtAccumulation[Perspective], entry.psqtAccumulation[Perspective],
                     sizeof(int32_t) * PSQTBuckets);
 
         std::memcpy(accumulator.accumulation[Perspective], entry.accumulation[Perspective],
                     sizeof(BiasType) * HalfDimensions);
+#endif
 
         for (Color c : {WHITE, BLACK})
             entry.byColorBB[Perspective][c] = pos.pieces(c);
