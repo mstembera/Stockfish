@@ -85,6 +85,7 @@ struct AccumulatorCaches {
         }
 
         Entry& operator[](Square sq) { return entries[sq]; }
+        const Entry& operator[](Square sq) const { return entries[sq]; }
 
         std::array<Entry, SQUARE_NB> entries;
     };
