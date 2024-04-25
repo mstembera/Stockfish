@@ -400,7 +400,7 @@ class FeatureTransformer {
             const Bitboard posBB = pos.pieces();
 
             // Not exact but an estimate
-            gain = popcount(cacheBB ^ posBB) + 1;
+            gain = popcount(cacheBB ^ posBB) + 3;
         }
         else
             gain = FeatureSet::refresh_cost(pos);
