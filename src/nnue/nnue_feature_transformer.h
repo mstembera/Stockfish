@@ -693,69 +693,151 @@ class FeatureTransformer {
         }
 
 #ifdef VECTOR
-        vec_t      acc[NumRegs];
-        psqt_vec_t psqt[NumPsqtRegs];
+        if (removed.size() == added.size() && removed.size() >= 1 && removed.size() <= 3)
+        {        
+            auto  entryAcc = reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][0]);
+            const IndexType offsetR0 = HalfDimensions * removed[0];
+            auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+            const IndexType offsetA0 = HalfDimensions * added[0];
+            auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
-        for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
-        {
-            auto entryTile =
-              reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][j * TileHeight]);
-            for (IndexType k = 0; k < NumRegs; ++k)
-                acc[k] = entryTile[k];
-
-            for (int i = 0; i < int(added.size()); ++i)
+            if (removed.size() == 1)
             {
-                IndexType       index  = added[i];
-                const IndexType offset = HalfDimensions * index + j * TileHeight;
-                auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
-
-                for (unsigned k = 0; k < NumRegs; ++k)
-                    acc[k] = vec_add_16(acc[k], column[k]);
+                for (std::size_t k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t); ++k)
+                    entryAcc[k] = vec_add_16(vec_sub_16(entryAcc[k], columnR0[k]), columnA0[k]);
             }
-            for (int i = 0; i < int(removed.size()); ++i)
+            else
             {
-                IndexType       index  = removed[i];
-                const IndexType offset = HalfDimensions * index + j * TileHeight;
-                auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
+                const IndexType offsetR1 = HalfDimensions * removed[1];
+                auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+                const IndexType offsetA1 = HalfDimensions * added[1];
+                auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
 
-                for (unsigned k = 0; k < NumRegs; ++k)
-                    acc[k] = vec_sub_16(acc[k], column[k]);
+                if (removed.size() == 2)
+                {
+                    for (std::size_t k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t); ++k)
+                        entryAcc[k] = vec_add_16(entryAcc[k],vec_sub_16(vec_add_16(columnA0[k], columnA1[k]),
+                                                                        vec_add_16(columnR0[k], columnR1[k])));
+                }
+                else
+                {
+                    const IndexType offsetR2 = HalfDimensions * removed[2];
+                    auto            columnR2 = reinterpret_cast<const vec_t*>(&weights[offsetR2]);
+                    const IndexType offsetA2 = HalfDimensions * added[2];
+                    auto            columnA2 = reinterpret_cast<const vec_t*>(&weights[offsetA2]);
+
+                    for (std::size_t k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t); ++k)
+                        entryAcc[k] = vec_add_16(entryAcc[k],vec_sub_16(vec_add_16(vec_add_16(columnA0[k], columnA1[k]), columnA2[k]),
+                                                                        vec_add_16(vec_add_16(columnR0[k], columnR1[k]), columnR2[k])));
+                }
             }
 
-            for (IndexType k = 0; k < NumRegs; k++)
-                vec_store(&entryTile[k], acc[k]);
+            auto  entryPsqt = reinterpret_cast<psqt_vec_t*>(&entry.psqtAccumulation[Perspective][0]);
+            const IndexType offsetPsqtR0 = PSQTBuckets * removed[0];
+            auto  columnPsqtR0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR0]);
+            const IndexType offsetPsqtA0 = PSQTBuckets * added[0];
+            auto  columnPsqtA0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA0]);
+
+            if (removed.size() == 1)
+            {
+                for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t); ++k)
+                    entryPsqt[k] = vec_add_psqt_32(vec_sub_psqt_32(entryPsqt[k], columnPsqtR0[k]), columnPsqtA0[k]);
+            }
+            else
+            {
+                const IndexType offsetPsqtR1 = PSQTBuckets * removed[1];
+                auto columnPsqtR1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR1]);
+                const IndexType offsetPsqtA1 = PSQTBuckets * added[1];
+                auto columnPsqtA1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA1]);
+
+                if (removed.size() == 2)
+                {
+                    for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t); ++k)
+                        entryPsqt[k] = vec_add_psqt_32(entryPsqt[k],
+                                                       vec_sub_psqt_32(vec_add_psqt_32(columnPsqtA0[k], columnPsqtA1[k]),
+                                                                       vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k])));
+                }
+                else
+                {
+                    const IndexType offsetPsqtR2 = PSQTBuckets * removed[2];
+                    auto columnPsqtR2 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR2]);
+                    const IndexType offsetPsqtA2 = PSQTBuckets * added[2];
+                    auto columnPsqtA2 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA2]);
+
+                    for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t); ++k)
+                        entryPsqt[k] = vec_add_psqt_32(entryPsqt[k],
+                                                       vec_sub_psqt_32(vec_add_psqt_32(vec_add_psqt_32(columnPsqtA0[k], columnPsqtA1[k]), columnPsqtA2[k]),
+                                                                       vec_add_psqt_32(vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]), columnPsqtR2[k])));
+                }
+            }
         }
-
-        for (IndexType j = 0; j < PSQTBuckets / PsqtTileHeight; ++j)
+        else
         {
-            auto entryTilePsqt = reinterpret_cast<psqt_vec_t*>(
-              &entry.psqtAccumulation[Perspective][j * PsqtTileHeight]);
-            for (std::size_t k = 0; k < NumPsqtRegs; ++k)
-                psqt[k] = entryTilePsqt[k];
+            vec_t      acc[NumRegs];
+            psqt_vec_t psqt[NumPsqtRegs];
 
-            for (int i = 0; i < int(added.size()); ++i)
+            for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
             {
-                IndexType       index  = added[i];
-                const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
-                auto columnPsqt        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
+                auto entryTile =
+                  reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][j * TileHeight]);
+
+                for (IndexType k = 0; k < NumRegs; ++k)
+                    acc[k] = entryTile[k];
+
+                for (int i = 0; i < int(added.size()); ++i)
+                {
+                    IndexType       index  = added[i];
+                    const IndexType offset = HalfDimensions * index + j * TileHeight;
+                    auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
+
+                    for (unsigned k = 0; k < NumRegs; ++k)
+                        acc[k] = vec_add_16(acc[k], column[k]);
+                }
+                for (int i = 0; i < int(removed.size()); ++i)
+                {
+                    IndexType       index  = removed[i];
+                    const IndexType offset = HalfDimensions * index + j * TileHeight;
+                    auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
+
+                    for (unsigned k = 0; k < NumRegs; ++k)
+                        acc[k] = vec_sub_16(acc[k], column[k]);
+                }
+
+                for (IndexType k = 0; k < NumRegs; k++)
+                    vec_store(&entryTile[k], acc[k]);
+            }
+
+            for (IndexType j = 0; j < PSQTBuckets / PsqtTileHeight; ++j)
+            {
+                auto entryTilePsqt = reinterpret_cast<psqt_vec_t*>(
+                  &entry.psqtAccumulation[Perspective][j * PsqtTileHeight]);
 
                 for (std::size_t k = 0; k < NumPsqtRegs; ++k)
-                    psqt[k] = vec_add_psqt_32(psqt[k], columnPsqt[k]);
-            }
-            for (int i = 0; i < int(removed.size()); ++i)
-            {
-                IndexType       index  = removed[i];
-                const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
-                auto columnPsqt        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
+                    psqt[k] = entryTilePsqt[k];
+
+                for (int i = 0; i < int(added.size()); ++i)
+                {
+                    IndexType       index  = added[i];
+                    const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
+                    auto columnPsqt        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
+
+                    for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                        psqt[k] = vec_add_psqt_32(psqt[k], columnPsqt[k]);
+                }
+                for (int i = 0; i < int(removed.size()); ++i)
+                {
+                    IndexType       index  = removed[i];
+                    const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
+                    auto columnPsqt        = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offset]);
+
+                    for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                        psqt[k] = vec_sub_psqt_32(psqt[k], columnPsqt[k]);
+                }
 
                 for (std::size_t k = 0; k < NumPsqtRegs; ++k)
-                    psqt[k] = vec_sub_psqt_32(psqt[k], columnPsqt[k]);
+                    vec_store_psqt(&entryTilePsqt[k], psqt[k]);
             }
-
-            for (std::size_t k = 0; k < NumPsqtRegs; ++k)
-                vec_store_psqt(&entryTilePsqt[k], psqt[k]);
         }
-
 #else
 
         for (const auto index : added)
