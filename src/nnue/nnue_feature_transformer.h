@@ -661,7 +661,20 @@ class FeatureTransformer {
 
         Square ksq = pos.square<KING>(Perspective);
 
-        auto& entry = (*cache)[ksq];
+        auto& entry0 = (*cache)[ksq * 2];
+        auto& entry1 = (*cache)[ksq * 2 + 1];
+        Bitboard bb0 = entry0.byColorBB[Perspective][WHITE] | entry0.byColorBB[Perspective][BLACK];
+        Bitboard bb1 = entry1.byColorBB[Perspective][WHITE] | entry1.byColorBB[Perspective][BLACK];
+
+        if (bb0 && !bb1) // Prevent getting stuck always using entry0
+        {
+            entry1 = entry0;
+            bb1    = bb0;
+        }
+
+        int b0 = popcount(bb0 ^ pos.pieces());
+        int b1 = popcount(bb1 ^ pos.pieces());
+        auto& entry = b0 <= b1 ? entry0 : entry1;
 
         auto& accumulator                     = pos.state()->*accPtr;
         accumulator.computed[Perspective]     = true;

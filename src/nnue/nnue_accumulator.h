@@ -84,9 +84,9 @@ struct AccumulatorCaches {
                 entry.clear(biases);
         }
 
-        Entry& operator[](Square sq) { return entries[sq]; }
+        Entry& operator[](int id) { return entries[id]; }
 
-        std::array<Entry, SQUARE_NB> entries;
+        std::array<Entry, 2 * SQUARE_NB> entries;
     };
 
     template<typename Networks>
