@@ -54,10 +54,10 @@ struct AccumulatorCaches {
     struct alignas(CacheLineSize) Cache {
 
         struct alignas(CacheLineSize) Entry {
-            BiasType       accumulation[COLOR_NB][Size];
-            PSQTWeightType psqtAccumulation[COLOR_NB][PSQTBuckets];
-            Bitboard       byColorBB[COLOR_NB][COLOR_NB];
-            Bitboard       byTypeBB[COLOR_NB][PIECE_TYPE_NB];
+            BiasType       accumulation[Size];
+            PSQTWeightType psqtAccumulation[PSQTBuckets];
+            Bitboard       byColorBB[COLOR_NB];
+            Bitboard       byTypeBB[PIECE_TYPE_NB];
 
             // To initialize a refresh entry, we set all its bitboards empty,
             // so we put the biases in the accumulation, without any weights on top
@@ -66,17 +66,16 @@ struct AccumulatorCaches {
                 std::memset(byColorBB, 0, sizeof(byColorBB));
                 std::memset(byTypeBB, 0, sizeof(byTypeBB));
 
-                std::memcpy(accumulation[WHITE], biases, Size * sizeof(BiasType));
-                std::memcpy(accumulation[BLACK], biases, Size * sizeof(BiasType));
-
+                std::memcpy(accumulation, biases, Size * sizeof(BiasType));
                 std::memset(psqtAccumulation, 0, sizeof(psqtAccumulation));
             }
         };
 
         template<typename Network>
         void clear(const Network& network) {
-            for (auto& entry : entries)
-                entry.clear(network.featureTransformer->biases);
+            for (auto& entries1D : entries)
+                for (auto& entry : entries1D)
+                    entry.clear(network.featureTransformer->biases);
         }
 
         void clear(const BiasType* biases) {
@@ -84,9 +83,9 @@ struct AccumulatorCaches {
                 entry.clear(biases);
         }
 
-        Entry& operator[](Square sq) { return entries[sq]; }
+        std::array<Entry, SQUARE_NB>& operator[](Color perspective) { return entries[perspective]; }
 
-        std::array<Entry, SQUARE_NB> entries;
+        std::array<std::array<Entry, SQUARE_NB>, COLOR_NB> entries;
     };
 
     template<typename Networks>
