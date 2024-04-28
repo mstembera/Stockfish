@@ -543,32 +543,19 @@ class FeatureTransformer {
 
                     for (IndexType i = 0; states_to_update[i]; ++i)
                     {
-                        // Difference calculation for the deactivated/activated features
-                        int l0 = 0;
-                        for (; l0 < int(std::min(removed[i].size(), added[i].size())); ++l0)
-                        {
-                            const IndexType offsetR = HalfDimensions * removed[i][l0] + j * TileHeight;
-                            auto columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
-                            const IndexType offsetA = HalfDimensions * added[i][l0] + j * TileHeight;
-                            auto columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
-
-                            for (IndexType k = 0; k < NumRegs; ++k)
-                                acc[k] = vec_add_16(vec_sub_16(acc[k], columnR[k]), columnA[k]);
-                        }
-
                         // Difference calculation for the deactivated features
-                        for (int l = l0; l < int(removed[i].size()); ++l)
+                        for (const auto index : removed[i])
                         {
-                            const IndexType offset = HalfDimensions * removed[i][l] + j * TileHeight;
+                            const IndexType offset = HalfDimensions * index + j * TileHeight;
                             auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
                             for (IndexType k = 0; k < NumRegs; ++k)
                                 acc[k] = vec_sub_16(acc[k], column[k]);
                         }
 
                         // Difference calculation for the activated features
-                        for (int l = l0; l < int(added[i].size()); ++l)
+                        for (const auto index : added[i])
                         {
-                            const IndexType offset = HalfDimensions * added[i][l] + j * TileHeight;
+                            const IndexType offset = HalfDimensions * index + j * TileHeight;
                             auto column = reinterpret_cast<const vec_t*>(&weights[offset]);
                             for (IndexType k = 0; k < NumRegs; ++k)
                                 acc[k] = vec_add_16(acc[k], column[k]);
