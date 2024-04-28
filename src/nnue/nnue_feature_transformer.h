@@ -707,6 +707,8 @@ class FeatureTransformer {
         if (!psqtOnly)
             for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
             {
+                auto accTile =
+                  reinterpret_cast<vec_t*>(&accumulator.accumulation[Perspective][j * TileHeight]);
                 auto entryTile =
                   reinterpret_cast<vec_t*>(&entry.accumulation[Perspective][j * TileHeight]);
                 for (IndexType k = 0; k < NumRegs; ++k)
@@ -746,10 +748,14 @@ class FeatureTransformer {
 
                 for (IndexType k = 0; k < NumRegs; k++)
                     vec_store(&entryTile[k], acc[k]);
+                for (IndexType k = 0; k < NumRegs; k++)
+                    vec_store(&accTile[k], acc[k]);
             }
 
         for (IndexType j = 0; j < PSQTBuckets / PsqtTileHeight; ++j)
         {
+            auto accTilePsqt = reinterpret_cast<psqt_vec_t*>(
+              &accumulator.psqtAccumulation[Perspective][j * PsqtTileHeight]);
             auto entryTilePsqt = reinterpret_cast<psqt_vec_t*>(
               &entry.psqtAccumulation[Perspective][j * PsqtTileHeight]);
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
@@ -776,6 +782,8 @@ class FeatureTransformer {
 
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                 vec_store_psqt(&entryTilePsqt[k], psqt[k]);
+            for (std::size_t k = 0; k < NumPsqtRegs; ++k)
+                vec_store_psqt(&accTilePsqt[k], psqt[k]);
         }
 
 #else
@@ -805,17 +813,15 @@ class FeatureTransformer {
                 entry.psqtAccumulation[Perspective][k] += psqtWeights[index * PSQTBuckets + k];
         }
 
-#endif
-
         // The accumulator of the refresh entry has been updated.
         // Now copy its content to the actual accumulator we were refreshing
-
         if (!psqtOnly)
             std::memcpy(accumulator.accumulation[Perspective], entry.accumulation[Perspective],
                         sizeof(BiasType) * HalfDimensions);
 
         std::memcpy(accumulator.psqtAccumulation[Perspective], entry.psqtAccumulation[Perspective],
                     sizeof(int32_t) * PSQTBuckets);
+#endif
 
         for (Color c : {WHITE, BLACK})
             entry.byColorBB[Perspective][c] = pos.pieces(c);
