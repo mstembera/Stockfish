@@ -659,8 +659,8 @@ class FeatureTransformer {
                                           AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         assert(cache != nullptr);
 
-        Square ksq = pos.square<KING>(Perspective);
-        auto& entry = (*cache)[Perspective][ksq];
+        Square ksq  = pos.square<KING>(Perspective);
+        auto& entry = (*cache)[ksq][Perspective];
 
         FeatureSet::IndexList removed, added;
         for (Color c : {WHITE, BLACK})
