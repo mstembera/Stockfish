@@ -660,6 +660,13 @@ class FeatureTransformer {
                                           bool psqtOnly) const {
         assert(cache != nullptr);
 
+#ifdef VECTOR
+        // Gcc-10.2 unnecessarily spills AVX2 registers if this array
+        // is defined in the VECTOR code below, once in each branch
+        vec_t                 acc[NumRegs];
+        psqt_vec_t            psqt[NumPsqtRegs];
+#endif
+
         Square                ksq   = pos.square<KING>(Perspective);
         auto&                 entry = (*cache)[ksq];
         FeatureSet::IndexList removed, added;
@@ -701,8 +708,6 @@ class FeatureTransformer {
         accumulator.computedPSQT[Perspective] = true;
 
 #ifdef VECTOR
-        vec_t      acc[NumRegs];
-        psqt_vec_t psqt[NumPsqtRegs];
 
         if (!psqtOnly)
             for (IndexType j = 0; j < HalfDimensions / TileHeight; ++j)
