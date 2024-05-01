@@ -125,6 +125,7 @@ class ValueList {
 
    public:
     std::size_t size() const { return size_; }
+    void        clear() { size_ = 0; }
     void        push_back(const T& value) { values_[size_++] = value; }
     const T*    begin() const { return values_; }
     const T*    end() const { return values_ + size_; }
