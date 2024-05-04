@@ -247,18 +247,18 @@ class AffineTransformSparseInput {
         for (; j < (int)count - 1; j += 2)
         {
             const auto    i0   = nnz[j];
+            const auto    i1   = nnz[j + 1];
             const invec_t in0  = vec_set_32(input32[i0]);
+            const invec_t in1  = vec_set_32(input32[i1]);
             const auto    col0 =
               reinterpret_cast<const invec_t*>(&weights[i0 * OutputDimensions * ChunkSize]);
-            for (IndexType k = 0; k < NumRegs; ++k)
-                vec_add_dpbusd_32(acc[k], in0, col0[k]);
-
-            const auto    i1   = nnz[j + 1];
-            const invec_t in1  = vec_set_32(input32[i1]);
             const auto    col1 =
               reinterpret_cast<const invec_t*>(&weights[i1 * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
+            {
+                vec_add_dpbusd_32(acc[k], in0, col0[k]);
                 vec_add_dpbusd_32(acc[k], in1, col1[k]);
+            }
         }
         for (; j < (int)count; ++j)
         {
