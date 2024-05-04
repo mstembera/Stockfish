@@ -656,7 +656,7 @@ class FeatureTransformer {
         FeatureSet::IndexList removed, added;
 
         if (   (entry.psqtOnly && !psqtOnly)
-            || popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) > pos.count<ALL_PIECES>())
+            || popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) * 3 > pos.count<ALL_PIECES>() * 4)
         {
             entry.clear(biases);
             FeatureSet::append_active_indices<Perspective>(pos, added);
@@ -686,7 +686,7 @@ class FeatureTransformer {
                 }
             }
 
-            if (int(added.size() + removed.size()) > pos.count<ALL_PIECES>() + 3)
+            if (int(added.size() + removed.size()) * 3 > pos.count<ALL_PIECES>() * 4)
             {
                 entry.clear(biases);
                 removed.clear();
