@@ -655,7 +655,8 @@ class FeatureTransformer {
         auto&                 entry = (*cache)[ksq][Perspective];
         FeatureSet::IndexList removed, added;
 
-        if (entry.psqtOnly && !psqtOnly)
+        if (   (entry.psqtOnly && !psqtOnly)
+            || popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) > pos.count<ALL_PIECES>())
         {
             entry.clear(biases);
             FeatureSet::append_active_indices<Perspective>(pos, added);
@@ -683,6 +684,14 @@ class FeatureTransformer {
                         added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
                     }
                 }
+            }
+
+            if (int(added.size() + removed.size()) > pos.count<ALL_PIECES>() + 3)
+            {
+                entry.clear(biases);
+                removed.clear();
+                added.clear();
+                FeatureSet::append_active_indices<Perspective>(pos, added);
             }
         }
 
@@ -809,7 +818,7 @@ class FeatureTransformer {
         for (Color c : {WHITE, BLACK})
             entry.byColorBB[c] = pos.pieces(c);
 
-        for (PieceType pt = PAWN; pt <= KING; ++pt)
+        for (PieceType pt = ALL_PIECES; pt <= KING; ++pt)
             entry.byTypeBB[pt] = pos.pieces(pt);
 
         entry.psqtOnly = psqtOnly;
