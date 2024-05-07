@@ -57,6 +57,9 @@ namespace {
 static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
 
+// Reductions lookup table initialized on thread count change
+std::array<int, MAX_MOVES> reductions;  // [depth or moveNumber]
+
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
     Value futilityMult       = 126 - 46 * noTtCutNode;
@@ -504,12 +507,13 @@ void Search::Worker::clear() {
                 for (auto& h : to)
                     h->fill(-60);
 
-    for (size_t i = 1; i < reductions.size(); ++i)
-        reductions[i] = int((18.93 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
-
     refreshTable.clear(networks);
 }
 
+void Search::Worker::init_search() {
+    for (size_t i = 1; i < reductions.size(); ++i)
+        reductions[i] = int((18.93 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+}
 
 // Main search function for both PV and non-PV nodes.
 template<NodeType nodeType>
@@ -1638,7 +1642,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     return bestValue;
 }
 
-Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
+Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) const {
     int reductionScale = reductions[d] * reductions[mn];
     return (reductionScale + 1318 - delta * 760 / rootDelta) / 1024 + (!i && reductionScale > 1066);
 }

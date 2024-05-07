@@ -50,6 +50,7 @@ class Thread {
     void   idle_loop();
     void   start_searching();
     void   wait_for_search_finished();
+    void   init_search() { worker->init_search(); }
     size_t id() const { return idx; }
 
     std::unique_ptr<Search::Worker> worker;

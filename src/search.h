@@ -247,7 +247,10 @@ class Worker {
 
     bool is_mainthread() const { return thread_idx == 0; }
 
-    // Public because they need to be updatable by the stats
+    // Called by the main thread to initialize search when thread count changes
+    void init_search();
+
+    // Public because they need to be updatible by the stats
     CounterMoveHistory    counterMoves;
     ButterflyHistory      mainHistory;
     CapturePieceToHistory captureHistory;
@@ -266,7 +269,7 @@ class Worker {
     template<NodeType nodeType>
     Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth = 0);
 
-    Depth reduction(bool i, Depth d, int mn, int delta);
+    Depth reduction(bool i, Depth d, int mn, int delta) const;
 
     // Get a pointer to the search manager, only allowed to be called by the
     // main thread.
@@ -293,9 +296,6 @@ class Worker {
     Value     rootDelta;
 
     size_t thread_idx;
-
-    // Reductions lookup table initialized at startup
-    std::array<int, MAX_MOVES> reductions;  // [depth or moveNumber]
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;

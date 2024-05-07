@@ -148,6 +148,7 @@ void ThreadPool::set(Search::SharedState                         sharedState,
         clear();
 
         main_thread()->wait_for_search_finished();
+        main_thread()->init_search();
 
         // Reallocate the hash with the new threadpool size
         sharedState.tt.resize(sharedState.options["Hash"], requested);
