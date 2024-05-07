@@ -629,7 +629,7 @@ class FeatureTransformer {
         assert(cache != nullptr);
 
         Square                ksq   = pos.square<KING>(Perspective);
-        auto&                 entry = (*cache)[ksq][Perspective];
+        auto&                 entry = (*cache)[pos.side_to_move()][Perspective][ksq];
         FeatureSet::IndexList removed, added;
 
         for (Color c : {WHITE, BLACK})
