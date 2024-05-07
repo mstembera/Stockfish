@@ -387,8 +387,18 @@ class FeatureTransformer {
 
         const Square   ksq   = pos.square<KING>(Perspective);
         const auto&    entry = (*cache)[ksq][Perspective];
-        // Lower bound of add/remove changes
-        int refreshCost = popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) + 5;
+        int refreshCost = 4;
+        for (Color c : {WHITE, BLACK})
+        {
+            for (PieceType pt = PAWN; pt <= KING; ++pt)
+            {
+                const Bitboard oldBB    = entry.byColorBB[c] & entry.byTypeBB[pt];
+                const Bitboard newBB    = pos.pieces(c, pt);
+                Bitboard       toRemove = oldBB & ~newBB;
+                Bitboard       toAdd    = newBB & ~oldBB;
+                refreshCost += popcount(toRemove) + popcount(toAdd);
+            }
+        }
         
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
@@ -784,7 +794,7 @@ class FeatureTransformer {
         for (Color c : {WHITE, BLACK})
             entry.byColorBB[c] = pos.pieces(c);
 
-        for (PieceType pt = ALL_PIECES; pt <= KING; ++pt)
+        for (PieceType pt = PAWN; pt <= KING; ++pt)
             entry.byTypeBB[pt] = pos.pieces(pt);
     }
 
