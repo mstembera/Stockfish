@@ -628,8 +628,24 @@ class FeatureTransformer {
                                           AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         assert(cache != nullptr);
 
-        Square                ksq   = pos.square<KING>(Perspective);
-        auto&                 entry = (*cache)[ksq][Perspective];
+        const Square ksq   = pos.square<KING>(Perspective);
+        auto  entries      = &(*cache)[Perspective][3 * ksq];
+        int   bestEID      = 0;
+        for (int i = 1; i < 3; ++i)
+        {
+            // Prevent getting stuck always using the first used entry
+            if (entries[bestEID].byTypeBB[ALL_PIECES] && !entries[i].byTypeBB[ALL_PIECES])
+            {
+                entries[i] = entries[bestEID];
+                bestEID    = i;
+                break;
+            }
+            else if (  popcount(entries[i].byTypeBB[ALL_PIECES] ^ pos.pieces())
+                     < popcount(entries[bestEID].byTypeBB[ALL_PIECES] ^ pos.pieces()))
+                bestEID = i;
+        }
+        auto& entry = entries[bestEID];
+
         FeatureSet::IndexList removed, added;
 
         for (Color c : {WHITE, BLACK})
@@ -769,7 +785,7 @@ class FeatureTransformer {
         for (Color c : {WHITE, BLACK})
             entry.byColorBB[c] = pos.pieces(c);
 
-        for (PieceType pt = PAWN; pt <= KING; ++pt)
+        for (PieceType pt = ALL_PIECES; pt <= KING; ++pt)
             entry.byTypeBB[pt] = pos.pieces(pt);
     }
 
