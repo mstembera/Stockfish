@@ -64,8 +64,8 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
 
     if (   smallNet
         && (   nnue * simpleEval < 0
-            || std::abs(nnue) < 300
-            || nnueComplexity > 3300)) 
+            || 4 * std::abs(nnue) < std::abs(simpleEval)
+            || std::abs(nnue) > 4 * std::abs(simpleEval)))
     {
         nnue = networks.big.evaluate(pos, &caches.big, true, &nnueComplexity);
         smallNet = false;
