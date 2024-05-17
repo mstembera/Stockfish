@@ -388,7 +388,7 @@ class FeatureTransformer {
         const Square   ksq   = pos.square<KING>(Perspective);
         const auto&    entry = (*cache)[ksq][Perspective];
         // Lower bound of add/remove changes
-        int refreshCost = popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) * 2 + 5;
+        int refreshCost = popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) * 3 + 4;
 
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
