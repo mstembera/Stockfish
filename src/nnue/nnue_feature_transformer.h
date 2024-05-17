@@ -675,24 +675,22 @@ class FeatureTransformer {
             for (; i < int(std::min(removed.size(), added.size())) - 1; i += 2)
             {
                 IndexType       indexR0  = removed[i];
-                const IndexType offsetR0 = HalfDimensions * indexR0 + j * TileHeight;
-                auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-                IndexType       indexA0  = added[i];
-                const IndexType offsetA0 = HalfDimensions * indexA0 + j * TileHeight;
-                auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
-
-                for (unsigned k = 0; k < NumRegs; ++k)
-                    acc[k] = vec_add_16(acc[k], vec_sub_16(columnA0[k], columnR0[k]));
-
                 IndexType       indexR1  = removed[i + 1];
+                const IndexType offsetR0 = HalfDimensions * indexR0 + j * TileHeight;
                 const IndexType offsetR1 = HalfDimensions * indexR1 + j * TileHeight;
+                auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
                 auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+                IndexType       indexA0  = added[i];
                 IndexType       indexA1  = added[i + 1];
+                const IndexType offsetA0 = HalfDimensions * indexA0 + j * TileHeight;
                 const IndexType offsetA1 = HalfDimensions * indexA1 + j * TileHeight;
+                auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
                 auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
 
                 for (unsigned k = 0; k < NumRegs; ++k)
-                    acc[k] = vec_add_16(acc[k], vec_sub_16(columnA1[k], columnR1[k]));
+                    acc[k] = vec_add_16(acc[k],
+                                        vec_sub_16(vec_add_16(columnA0[k], columnA1[k]),
+                                                   vec_add_16(columnR0[k], columnR1[k])));
             }
             for (; i < int(std::min(removed.size(), added.size())); ++i)
             {
