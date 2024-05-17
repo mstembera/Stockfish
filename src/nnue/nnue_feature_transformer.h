@@ -388,9 +388,8 @@ class FeatureTransformer {
         const Square   ksq   = pos.square<KING>(Perspective);
         const auto&    entry = (*cache)[ksq][Perspective];
         // Lower bound of add/remove changes
-        int refreshCost = std::min(popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) * 2,
-                                   FeatureSet::refresh_cost(pos));
-        
+        int refreshCost = popcount(entry.byTypeBB[ALL_PIECES] ^ pos.pieces()) * 2 + 5;
+
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
             // This governs when a full feature refresh is needed and how many
