@@ -367,12 +367,10 @@ class FeatureTransformer {
     #else
                 constexpr int shift = 6;
     #endif
-                const vec_t sum0a =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero), shift);
-                const vec_t sum0b =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero), shift);
-                const vec_t sum1a = vec_min_16(in1[j * 2 + 0], One);
-                const vec_t sum1b = vec_min_16(in1[j * 2 + 1], One);
+                const vec_t sum0a = vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero);
+                const vec_t sum0b = vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero);
+                const vec_t sum1a = vec_slli_16(vec_min_16(in1[j * 2 + 0], One), shift);
+                const vec_t sum1b = vec_slli_16(vec_min_16(in1[j * 2 + 1], One), shift);
 
                 const vec_t pa = vec_mulhi_16(sum0a, sum1a);
                 const vec_t pb = vec_mulhi_16(sum0b, sum1b);
@@ -381,6 +379,7 @@ class FeatureTransformer {
             }
 
 #else
+            vec_packus_16(); // intentionally break non SSE compile for testing
 
             for (IndexType j = 0; j < HalfDimensions / 2; ++j)
             {
