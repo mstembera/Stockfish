@@ -278,19 +278,6 @@ class FeatureTransformer {
 #endif
     }
 
-    inline void scale_weights(bool read) const {
-        for (IndexType j = 0; j < InputDimensions; ++j)
-        {
-            WeightType* w = const_cast<WeightType*>(&weights[j * HalfDimensions]);
-            for (IndexType i = 0; i < HalfDimensions; ++i)
-                w[i] = read ? w[i] * 2 : w[i] / 2;
-        }
-
-        BiasType* b = const_cast<BiasType*>(biases);
-        for (IndexType i = 0; i < HalfDimensions; ++i)
-            b[i] = read ? b[i] * 2 : b[i] / 2;
-    }
-
     // Read network parameters
     bool read_parameters(std::istream& stream) {
 
@@ -299,7 +286,6 @@ class FeatureTransformer {
         read_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
         permute_weights(inverse_order_packs);
-        scale_weights(true);
         return !stream.fail();
     }
 
@@ -307,14 +293,12 @@ class FeatureTransformer {
     bool write_parameters(std::ostream& stream) const {
 
         permute_weights(order_packs);
-        scale_weights(false);
 
         write_leb_128<BiasType>(stream, biases, HalfDimensions);
         write_leb_128<WeightType>(stream, weights, HalfDimensions * InputDimensions);
         write_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
         permute_weights(inverse_order_packs);
-        scale_weights(true);
         return !stream.fail();
     }
 
@@ -345,7 +329,7 @@ class FeatureTransformer {
             constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
 
             const vec_t Zero = vec_zero();
-            const vec_t One  = vec_set_16(127 * 2);
+            const vec_t One  = vec_set_16(127);
 
             const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
             const vec_t* in1 =
@@ -354,23 +338,25 @@ class FeatureTransformer {
 
             for (IndexType j = 0; j < NumOutputChunks; ++j)
             {
-                    // What we want to do is multiply inputs in a pairwise manner (after clipping), and then shift right by 9.
-                    // Instead, we shift left by 7, and use mulhi, stripping the bottom 16 bits, effectively shifting right by 16,
-                    // resulting in a net shift of 9 bits. We use mulhi because it maintains the sign of the multiplication (unlike mullo),
-                    // allowing us to make use of packus to clip 2 of the inputs, resulting in a save of 2 "vec_max_16" calls.
-                    // A special case is when we use NEON, where we shift left by 6 instead, because the instruction "vqdmulhq_s16"
-                    // also doubles the return value after the multiplication, adding an extra shift to the left by 1, so we
-                    // compensate by shifting less before the multiplication.
+                // What we want to do is multiply inputs in a pairwise manner (after clipping), and then shift right by 9.
+                // Instead, we shift left by 7, and use mulhi, stripping the bottom 16 bits, effectively shifting right by 16,
+                // resulting in a net shift of 9 bits. We use mulhi because it maintains the sign of the multiplication (unlike mullo),
+                // allowing us to make use of packus to clip 2 of the inputs, resulting in a save of 2 "vec_max_16" calls.
+                // A special case is when we use NEON, where we shift left by 6 instead, because the instruction "vqdmulhq_s16"
+                // also doubles the return value after the multiplication, adding an extra shift to the left by 1, so we
+                // compensate by shifting less before the multiplication.
 
     #if defined(USE_SSE2)
-                constexpr int shift = 7;
+                constexpr int shift = 9;
     #else
-                constexpr int shift = 6;
+                constexpr int shift = 8;
     #endif
-                const vec_t sum0a = vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero);
-                const vec_t sum0b = vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero);
-                const vec_t sum1a = vec_slli_16(vec_min_16(in1[j * 2 + 0], One), shift);
-                const vec_t sum1b = vec_slli_16(vec_min_16(in1[j * 2 + 1], One), shift);
+                const vec_t sum0a =
+                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero), shift);
+                const vec_t sum0b =
+                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero), shift);
+                const vec_t sum1a = vec_min_16(in1[j * 2 + 0], One);
+                const vec_t sum1b = vec_min_16(in1[j * 2 + 1], One);
 
                 const vec_t pa = vec_mulhi_16(sum0a, sum1a);
                 const vec_t pb = vec_mulhi_16(sum0b, sum1b);
