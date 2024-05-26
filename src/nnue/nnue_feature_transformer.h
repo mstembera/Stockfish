@@ -283,12 +283,12 @@ class FeatureTransformer {
         {
             WeightType* w = const_cast<WeightType*>(&weights[j * HalfDimensions]);
             for (IndexType i = 0; i < HalfDimensions; ++i)
-                w[i] = read ? w[i] * 2 : w[i] / 2;
+                w[i] = read ? w[i] * 4 : w[i] / 4;
         }
 
         BiasType* b = const_cast<BiasType*>(biases);
         for (IndexType i = 0; i < HalfDimensions; ++i)
-            b[i] = read ? b[i] * 2 : b[i] / 2;
+            b[i] = read ? b[i] * 4 : b[i] / 4;
     }
 
     // Read network parameters
@@ -345,7 +345,7 @@ class FeatureTransformer {
             constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
 
             const vec_t Zero = vec_zero();
-            const vec_t One  = vec_set_16(127 * 2);
+            const vec_t One  = vec_set_16(127 * 4);
 
             const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
             const vec_t* in1 =
@@ -363,9 +363,9 @@ class FeatureTransformer {
                     // compensate by shifting less before the multiplication.
 
     #if defined(USE_SSE2)
-                constexpr int shift = 7;
+                constexpr int shift = 5;
     #else
-                constexpr int shift = 6;
+                constexpr int shift = 4;
     #endif
                 const vec_t sum0a =
                   vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero), shift);
@@ -387,9 +387,9 @@ class FeatureTransformer {
                 BiasType sum0 = accumulation[static_cast<int>(perspectives[p])][j + 0];
                 BiasType sum1 =
                   accumulation[static_cast<int>(perspectives[p])][j + HalfDimensions / 2];
-                sum0               = std::clamp<BiasType>(sum0, 0, 127 * 2);
-                sum1               = std::clamp<BiasType>(sum1, 0, 127 * 2);
-                output[offset + j] = static_cast<OutputType>(unsigned(sum0 * sum1) / 512);
+                sum0               = std::clamp<BiasType>(sum0, 0, 127 * 4);
+                sum1               = std::clamp<BiasType>(sum1, 0, 127 * 4);
+                output[offset + j] = static_cast<OutputType>(unsigned(sum0 * sum1) / 2048);
             }
 
 #endif
