@@ -326,17 +326,16 @@ class FeatureTransformer {
         update_accumulator<WHITE>(pos, cache);
         update_accumulator<BLACK>(pos, cache);
 
-        const Color perspectives[2]  = {pos.side_to_move(), ~pos.side_to_move()};
         const auto& psqtAccumulation = (pos.state()->*accPtr).psqtAccumulation;
         const auto  psqt =
-          (psqtAccumulation[perspectives[0]][bucket] - psqtAccumulation[perspectives[1]][bucket])
+          (psqtAccumulation[pos.side_to_move()][bucket] - psqtAccumulation[~pos.side_to_move()][bucket])
           / 2;
 
         const auto& accumulation = (pos.state()->*accPtr).accumulation;
 
         for (IndexType p = 0; p < 2; ++p)
         {
-            const IndexType offset = (HalfDimensions / 2) * p;
+            const IndexType offset = (HalfDimensions / 2) * (pos.side_to_move() == ~Color(p));
 
 #if defined(VECTOR)
 
@@ -347,9 +346,9 @@ class FeatureTransformer {
             const vec_t Zero = vec_zero();
             const vec_t One  = vec_set_16(127 * 2);
 
-            const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
+            const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[p][0]));
             const vec_t* in1 =
-              reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
+              reinterpret_cast<const vec_t*>(&(accumulation[p][HalfDimensions / 2]));
             vec_t* out = reinterpret_cast<vec_t*>(output + offset);
 
             for (IndexType j = 0; j < NumOutputChunks; ++j)
