@@ -198,18 +198,21 @@ class AffineTransform {
     #if defined(USE_AVX512)
             using vec_t = __m512i;
         #define vec_setzero _mm512_setzero_si512
+        #define vec_set_16 _mm512_set1_epi16
         #define vec_set_32 _mm512_set1_epi32
         #define vec_add_dpbusd_32 Simd::m512_add_dpbusd_epi32
         #define vec_hadd Simd::m512_hadd
     #elif defined(USE_AVX2)
             using vec_t = __m256i;
         #define vec_setzero _mm256_setzero_si256
+        #define vec_set_16 _mm256_set1_epi16
         #define vec_set_32 _mm256_set1_epi32
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
         #define vec_hadd Simd::m256_hadd
     #elif defined(USE_SSSE3)
             using vec_t = __m128i;
         #define vec_setzero _mm_setzero_si128
+        #define vec_set_16 _mm_set1_epi16
         #define vec_set_32 _mm_set1_epi32
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
         #define vec_hadd Simd::m128_hadd
@@ -228,6 +231,7 @@ class AffineTransform {
             for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = biasvec[k];
 
+            const vec_t Ones = vec_set_16(1);
             for (IndexType i = 0; i < NumChunks; ++i)
             {
                 const vec_t in0 = vec_set_32(input32[i]);
@@ -235,7 +239,7 @@ class AffineTransform {
                   reinterpret_cast<const vec_t*>(&weights[i * OutputDimensions * 4]);
 
                 for (IndexType k = 0; k < NumRegs; ++k)
-                    vec_add_dpbusd_32(acc[k], in0, col0[k]);
+                    vec_add_dpbusd_32(acc[k], in0, col0[k], Ones);
             }
 
             vec_t* outptr = reinterpret_cast<vec_t*>(output);
@@ -243,6 +247,7 @@ class AffineTransform {
                 outptr[k] = acc[k];
 
     #undef vec_setzero
+    #undef vec_set_16
     #undef vec_set_32
     #undef vec_add_dpbusd_32
     #undef vec_hadd
@@ -255,12 +260,14 @@ class AffineTransform {
     #if defined(USE_AVX2)
             using vec_t = __m256i;
         #define vec_setzero _mm256_setzero_si256
+        #define vec_set_16 _mm256_set1_epi16
         #define vec_set_32 _mm256_set1_epi32
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
         #define vec_hadd Simd::m256_hadd
     #elif defined(USE_SSSE3)
             using vec_t = __m128i;
         #define vec_setzero _mm_setzero_si128
+        #define vec_set_16 _mm_set1_epi16
         #define vec_set_32 _mm_set1_epi32
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
         #define vec_hadd Simd::m128_hadd
@@ -275,15 +282,16 @@ class AffineTransform {
             constexpr IndexType NumChunks = PaddedInputDimensions / InputSimdWidth;
             vec_t               sum0      = vec_setzero();
             const auto          row0      = reinterpret_cast<const vec_t*>(&weights[0]);
-
+            const vec_t         Ones      = vec_set_16(1);
             for (int j = 0; j < int(NumChunks); ++j)
             {
                 const vec_t in = inputVector[j];
-                vec_add_dpbusd_32(sum0, in, row0[j]);
+                vec_add_dpbusd_32(sum0, in, row0[j], Ones);
             }
             output[0] = vec_hadd(sum0, biases[0]);
 
     #undef vec_setzero
+    #undef vec_set_16
     #undef vec_set_32
     #undef vec_add_dpbusd_32
     #undef vec_hadd

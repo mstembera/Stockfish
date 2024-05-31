@@ -203,16 +203,19 @@ class AffineTransformSparseInput {
     #if defined(USE_AVX512)
         using invec_t  = __m512i;
         using outvec_t = __m512i;
+        #define vec_set_16 _mm512_set1_epi16
         #define vec_set_32 _mm512_set1_epi32
         #define vec_add_dpbusd_32 Simd::m512_add_dpbusd_epi32
     #elif defined(USE_AVX2)
         using invec_t  = __m256i;
         using outvec_t = __m256i;
+        #define vec_set_16 _mm256_set1_epi16        
         #define vec_set_32 _mm256_set1_epi32
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
     #elif defined(USE_SSSE3)
         using invec_t  = __m128i;
         using outvec_t = __m128i;
+        #define vec_set_16 _mm_set1_epi16
         #define vec_set_32 _mm_set1_epi32
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
     #elif defined(USE_NEON_DOTPROD)
@@ -243,6 +246,7 @@ class AffineTransformSparseInput {
         for (IndexType k = 0; k < NumRegs; ++k)
             acc[k] = biasvec[k];
 
+        const invec_t Ones = vec_set_16(1);
         for (IndexType j = 0; j < count; ++j)
         {
             const auto    i  = nnz[j];
@@ -250,12 +254,13 @@ class AffineTransformSparseInput {
             const auto    col =
               reinterpret_cast<const invec_t*>(&weights[i * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
-                vec_add_dpbusd_32(acc[k], in, col[k]);
+                vec_add_dpbusd_32(acc[k], in, col[k], Ones);
         }
 
         outvec_t* outptr = reinterpret_cast<outvec_t*>(output);
         for (IndexType k = 0; k < NumRegs; ++k)
             outptr[k] = acc[k];
+    #undef vec_set_16
     #undef vec_set_32
     #undef vec_add_dpbusd_32
 #else
