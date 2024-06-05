@@ -76,13 +76,13 @@ m512_hadd128x16_interleave(__m512i sum0, __m512i sum1, __m512i sum2, __m512i sum
     return _mm512_add_epi32(sum0123a, sum0123b);
 }
 
-[[maybe_unused]] static void m512_add_dpbusd_epi32(__m512i& acc, __m512i a, __m512i b) {
+[[maybe_unused]] static void m512_add_dpbusd_epi32(__m512i& acc, __m512i a, __m512i b, [[maybe_unused]] __m512i Ones) {
 
     #if defined(USE_VNNI)
     acc = _mm512_dpbusd_epi32(acc, a, b);
     #else
     __m512i product0 = _mm512_maddubs_epi16(a, b);
-    product0         = _mm512_madd_epi16(product0, _mm512_set1_epi16(1));
+    product0         = _mm512_madd_epi16(product0, Ones);
     acc              = _mm512_add_epi32(acc, product0);
     #endif
 }
@@ -98,13 +98,13 @@ m512_hadd128x16_interleave(__m512i sum0, __m512i sum1, __m512i sum2, __m512i sum
     return _mm_cvtsi128_si32(sum128) + bias;
 }
 
-[[maybe_unused]] static void m256_add_dpbusd_epi32(__m256i& acc, __m256i a, __m256i b) {
+[[maybe_unused]] static void m256_add_dpbusd_epi32(__m256i& acc, __m256i a, __m256i b, [[maybe_unused]] __m256i Ones) {
 
     #if defined(USE_VNNI)
     acc = _mm256_dpbusd_epi32(acc, a, b);
     #else
     __m256i product0 = _mm256_maddubs_epi16(a, b);
-    product0         = _mm256_madd_epi16(product0, _mm256_set1_epi16(1));
+    product0         = _mm256_madd_epi16(product0, Ones);
     acc              = _mm256_add_epi32(acc, product0);
     #endif
 }
@@ -119,10 +119,10 @@ m512_hadd128x16_interleave(__m512i sum0, __m512i sum1, __m512i sum2, __m512i sum
     return _mm_cvtsi128_si32(sum) + bias;
 }
 
-[[maybe_unused]] static void m128_add_dpbusd_epi32(__m128i& acc, __m128i a, __m128i b) {
+[[maybe_unused]] static void m128_add_dpbusd_epi32(__m128i& acc, __m128i a, __m128i b, __m128i Ones) {
 
     __m128i product0 = _mm_maddubs_epi16(a, b);
-    product0         = _mm_madd_epi16(product0, _mm_set1_epi16(1));
+    product0         = _mm_madd_epi16(product0, Ones);
     acc              = _mm_add_epi32(acc, product0);
 }
 
@@ -131,7 +131,7 @@ m512_hadd128x16_interleave(__m512i sum0, __m512i sum1, __m512i sum2, __m512i sum
 #if defined(USE_NEON_DOTPROD)
 
 [[maybe_unused]] static void
-dotprod_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b) {
+dotprod_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b, [[maybe_unused]] int8x16_t) {
 
     acc = vdotq_s32(acc, a, b);
 }
@@ -154,7 +154,7 @@ dotprod_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b) {
 #endif
 
 #if USE_NEON >= 8
-[[maybe_unused]] static void neon_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b) {
+[[maybe_unused]] static void neon_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b, [[maybe_unused]] int8x16_t) {
 
     int16x8_t product0 = vmull_s8(vget_low_s8(a), vget_low_s8(b));
     int16x8_t product1 = vmull_high_s8(a, b);
