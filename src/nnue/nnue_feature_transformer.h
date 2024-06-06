@@ -686,6 +686,15 @@ class FeatureTransformer {
         auto& accumulator                 = pos.state()->*accPtr;
         accumulator.computed[Perspective] = true;
 
+        if (!removed.size() && !added.size())
+        {
+            std::memcpy(accumulator.accumulation[Perspective], entry.accumulation,
+                        sizeof(BiasType) * HalfDimensions);
+            std::memcpy(accumulator.psqtAccumulation[Perspective], entry.psqtAccumulation,
+                        sizeof(int32_t) * PSQTBuckets);
+            return;
+        }
+
 #ifdef VECTOR
         vec_t      acc[NumRegs];
         psqt_vec_t psqt[NumPsqtRegs];
