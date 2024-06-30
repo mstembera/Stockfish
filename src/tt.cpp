@@ -123,6 +123,7 @@ uint8_t TTEntry::relative_age(const uint8_t generation8) const {
     return (GENERATION_CYCLE + generation8 - genBound8) & GENERATION_MASK;
 }
 
+static constexpr int ClusterSize = 3;
 
 // TTWriter is but a very thin wrapper around the pointer
 TTWriter::TTWriter(TTEntry* tte) :
@@ -136,11 +137,16 @@ void TTWriter::write(
     else
     {
         TTEntry* replace = entry;
-        for (int i = 1; i < 3; ++i)
-            if (replace->depth8 - replace->relative_age(generation8) * 2
-                > entry[i].depth8 - entry[i].relative_age(generation8) * 2)
+        int minPScore = entry->depth8 - entry->relative_age(generation8) * 2;
+        for (int i = 1; i < ClusterSize; ++i)
+        {
+            int pScore = entry[i].depth8 - entry[i].relative_age(generation8) * 2;
+            if (pScore < minPScore)
+            {
+                pScore   = minPScore;
                 replace = &entry[i];
-
+            }
+        }
         replace->save(k, v, pv, b, d, m, ev, generation8);
     }
 }
@@ -149,8 +155,6 @@ void TTWriter::write(
 // A TranspositionTable is an array of Cluster, of size clusterCount. Each cluster consists of ClusterSize number
 // of TTEntry. Each non-empty TTEntry contains information on exactly one position. The size of a Cluster should
 // divide the size of a cache line for best performance, as the cacheline is prefetched when possible.
-
-static constexpr int ClusterSize = 3;
 
 struct Cluster {
     TTEntry entry[ClusterSize];
