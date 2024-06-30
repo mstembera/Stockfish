@@ -62,6 +62,7 @@ struct TTEntry {
 
    private:
     friend class TranspositionTable;
+    friend struct TTWriter;
 
     uint16_t key16;
     uint8_t  depth8;
@@ -128,8 +129,20 @@ TTWriter::TTWriter(TTEntry* tte) :
     entry(tte) {}
 
 void TTWriter::write(
-  Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8) {
-    entry->save(k, v, pv, b, d, m, ev, generation8);
+    Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8) {
+
+    if (entry->key16 == uint16_t(k))
+        entry->save(k, v, pv, b, d, m, ev, generation8);
+    else
+    {
+        TTEntry* replace = entry;
+        for (int i = 1; i < 3; ++i)
+            if (replace->depth8 - replace->relative_age(generation8) * 2
+                > entry[i].depth8 - entry[i].relative_age(generation8) * 2)
+                replace = &entry[i];
+
+        replace->save(k, v, pv, b, d, m, ev, generation8);
+    }
 }
 
 
@@ -231,14 +244,7 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
             // After `read()` completes that copy is final, but may be self-inconsistent.
             return {tte[i].is_occupied(), tte[i].read(), TTWriter(&tte[i])};
 
-    // Find an entry to be replaced according to the replacement strategy
-    TTEntry* replace = tte;
-    for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8) * 2
-            > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
-            replace = &tte[i];
-
-    return {false, replace->read(), TTWriter(replace)};
+    return {false, TTData(), TTWriter(tte)};
 }
 
 
