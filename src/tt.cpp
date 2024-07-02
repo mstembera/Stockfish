@@ -62,6 +62,7 @@ struct TTEntry {
 
    private:
     friend class TranspositionTable;
+    friend struct TTWriter;
 
     uint16_t key16;
     uint8_t  depth8;
@@ -122,17 +123,6 @@ uint8_t TTEntry::relative_age(const uint8_t generation8) const {
     return (GENERATION_CYCLE + generation8 - genBound8) & GENERATION_MASK;
 }
 
-
-// TTWriter is but a very thin wrapper around the pointer
-TTWriter::TTWriter(TTEntry* tte) :
-    entry(tte) {}
-
-void TTWriter::write(
-  Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8) {
-    entry->save(k, v, pv, b, d, m, ev, generation8);
-}
-
-
 // A TranspositionTable is an array of Cluster, of size clusterCount. Each cluster consists of ClusterSize number
 // of TTEntry. Each non-empty TTEntry contains information on exactly one position. The size of a Cluster should
 // divide the size of a cache line for best performance, as the cacheline is prefetched when possible.
@@ -146,6 +136,36 @@ struct Cluster {
 
 static_assert(sizeof(Cluster) == 32, "Suboptimal Cluster size");
 
+
+// TTWriter is but a very thin wrapper around the pointer
+TTWriter::TTWriter(TTEntry* tte) :
+    entry(tte) {}
+
+void TTWriter::write(
+  Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8) {
+
+    if (entry->key16 == uint16_t(k))
+        entry->save(k, v, pv, b, d, m, ev, generation8);
+    else
+    {
+        // Make sure we start w/ the first entry in the cluster
+        TTEntry* replace = (TTEntry*)(uint64_t(entry) & ~(sizeof(Cluster) - 1));
+        int minPScore = entry->depth8 - entry->relative_age(generation8) * 2;
+
+        for (int i = 1; i < ClusterSize; ++i)
+        {
+            int pScore = entry[i].depth8 - entry[i].relative_age(generation8) * 2;
+            if (pScore < minPScore)
+            {
+                pScore  = minPScore;
+                replace = &entry[i];
+            }
+        }
+
+        replace->save(k, v, pv, b, d, m, ev, generation8);
+        entry = replace;
+    }
+}
 
 // Sets the size of the transposition table,
 // measured in megabytes. Transposition table consists
@@ -231,14 +251,7 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
             // After `read()` completes that copy is final, but may be self-inconsistent.
             return {tte[i].is_occupied(), tte[i].read(), TTWriter(&tte[i])};
 
-    // Find an entry to be replaced according to the replacement strategy
-    TTEntry* replace = tte;
-    for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8) * 2
-            > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
-            replace = &tte[i];
-
-    return {false, TTData(), TTWriter(replace)};
+    return {false, TTData(), TTWriter(tte)};
 }
 
 
