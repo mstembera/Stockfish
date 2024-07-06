@@ -148,9 +148,9 @@ void TTWriter::write(
         entry->save(k, v, pv, b, d, m, ev, generation8);
     else
     {
-        auto replacement_policy = [&](const TTEntry& e) {
-            return e.depth8 - e.relative_age(generation8) * 2;
-        };
+        auto replacement_policy = [&](const TTEntry& e) { 
+            return   e.depth8 - e.relative_age(generation8) * 2
+                   - (1 << 20) * (e.key16 == uint16_t(k)); };
 
         // Make sure we start w/ the first entry in the cluster
         TTEntry *replace = entry = (TTEntry*)(uint64_t(entry) & ~(sizeof(Cluster) - 1));
