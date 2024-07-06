@@ -148,13 +148,17 @@ void TTWriter::write(
         entry->save(k, v, pv, b, d, m, ev, generation8);
     else
     {
+        auto replacement_policy = [&](const TTEntry& e) {
+            return e.depth8 - e.relative_age(generation8) * 2;
+        };
+
         // Make sure we start w/ the first entry in the cluster
-        TTEntry* replace = (TTEntry*)(uint64_t(entry) & ~(sizeof(Cluster) - 1));
-        int minPScore = entry->depth8 - entry->relative_age(generation8) * 2;
+        TTEntry *replace = entry = (TTEntry*)(uint64_t(entry) & ~(sizeof(Cluster) - 1));
+        int      minPScore       = replacement_policy(entry[0]);
 
         for (int i = 1; i < ClusterSize; ++i)
         {
-            int pScore = entry[i].depth8 - entry[i].relative_age(generation8) * 2;
+            int pScore = replacement_policy(entry[i]);
             if (pScore < minPScore)
             {
                 pScore  = minPScore;
