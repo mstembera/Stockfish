@@ -86,8 +86,7 @@ struct Magic {
     }
 };
 
-extern Magic RookMagics[SQUARE_NB];
-extern Magic BishopMagics[SQUARE_NB];
+extern Magic Magics[SQUARE_NB][2];
 
 constexpr Bitboard square_bb(Square s) {
     assert(is_ok(s));
@@ -229,9 +228,9 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
     switch (Pt)
     {
     case BISHOP :
-        return BishopMagics[s].attacks[BishopMagics[s].index(occupied)];
+        return Magics[s][Pt - BISHOP].attacks[Magics[s][Pt - BISHOP].index(occupied)];
     case ROOK :
-        return RookMagics[s].attacks[RookMagics[s].index(occupied)];
+        return Magics[s][Pt - BISHOP].attacks[Magics[s][Pt - BISHOP].index(occupied)];
     case QUEEN :
         return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
     default :
