@@ -1053,7 +1053,6 @@ bool Position::see_ge(Move m, int threshold) const {
     while (true)
     {
         stm = ~stm;
-        attackers &= occupied;
 
         // If stm has no more attackers then give up: stm loses
         if (!(stmAttackers = attackers & pieces(stm)))
@@ -1121,6 +1120,8 @@ bool Position::see_ge(Move m, int threshold) const {
               // If we "capture" with the king but the opponent still has attackers,
               // reverse the result.
             return (attackers & ~pieces(stm)) ? res ^ 1 : res;
+
+        attackers &= occupied;
     }
 
     return bool(res);
