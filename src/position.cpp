@@ -1071,29 +1071,44 @@ bool Position::see_ge(Move m, int threshold) const {
 
         res ^= 1;
 
-        Bitboard tmpAttackers = stmAttackers & ~pieces(KING);
-        if (QueenValue < res + swap && tmpAttackers)
-            break;
+        Bitboard tmpAttackers = stmAttackers &= ~pieces(KING);
+        if (QueenValue < swap + res)
+        {
+            if (tmpAttackers)
+                break;   
+        }
         else
         {
-            tmpAttackers = tmpAttackers & ~pieces(QUEEN);
-            if (RookValue < res + swap && tmpAttackers)
-                break;
+            tmpAttackers &= ~pieces(QUEEN);
+            if (RookValue < swap + res)
+            {
+                if (tmpAttackers)
+                    break;
+            }
             else
             {
-                tmpAttackers = tmpAttackers & ~pieces(ROOK);
-                if (BishopValue < res + swap && tmpAttackers)
-                    break;
+                tmpAttackers &= ~pieces(ROOK);
+                if (BishopValue < swap + res)
+                {
+                    if (tmpAttackers)
+                        break;
+                }
                 else
                 {
-                    tmpAttackers = tmpAttackers & ~pieces(BISHOP);
-                    if (KnightValue < res + swap && tmpAttackers)
-                        break;
+                    tmpAttackers &= ~pieces(BISHOP);
+                    if (KnightValue < swap + res)
+                    {
+                        if (tmpAttackers)
+                            break;
+                    }
                     else
                     {
-                        tmpAttackers = tmpAttackers & ~pieces(KNIGHT);
-                        if (PawnValue < res + swap && tmpAttackers)
-                            break;
+                        tmpAttackers &= ~pieces(KNIGHT);
+                        if (PawnValue < swap + res)
+                        {
+                            if (tmpAttackers)
+                                break;
+                        }
                     }
                 }
             }
