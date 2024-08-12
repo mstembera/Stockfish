@@ -453,7 +453,7 @@ void Search::Worker::iterative_deepening() {
                 threads.stop = true;
 
             // Stop the search if we have exceeded the totalTime
-            if (elapsedTime > totalTime || !threads.increaseDepth)
+            if (elapsedTime > totalTime || searchAgainCounter > 2)
             {
                 // If we are allowed to ponder do not stop the search now but
                 // keep pondering until the GUI sends "ponderhit" or "stop".
