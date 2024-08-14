@@ -1071,46 +1071,41 @@ bool Position::see_ge(Move m, int threshold) const {
 
         res ^= 1;
 
-        bb = stmAttackers & ~pieces(KING);
-        if (QueenValue < swap + res)
-        {
-            if (bb)
-                break;
-            goto king;
-        }
-        
-        bb &= ~pieces(QUEEN);
-        if (RookValue < swap + res)
-        {
-            if (bb)
-                break;
-            goto queen;
-        }
-        
-        bb &= ~pieces(ROOK);
-        if (BishopValue < swap + res)
-        {
-            if (bb)
-                break;
-            goto rook;
-        }
-        
-        bb &= ~pieces(BISHOP);
-        if (KnightValue < swap + res)
-        {
-            if (bb)
-                break;
-            goto bishop;
-        }
-        
-        bb &= ~pieces(KNIGHT);
         if (PawnValue < swap + res)
         {
-            if (bb)
+            if (stmAttackers & pieces(PAWN))
                 break;
+
+            if (KnightValue < swap + res)
+            {
+                if (stmAttackers & pieces(KNIGHT))
+                    break;
+
+                if (BishopValue < swap + res)
+                {   
+                    if (stmAttackers & pieces(BISHOP))
+                        break;
+
+                    if (RookValue < swap + res)
+                    {
+                        if (stmAttackers & pieces(ROOK))
+                            break;
+
+                        if (QueenValue < swap + res)
+                        {
+                            if (stmAttackers & pieces(QUEEN))
+                                break;
+                            goto king;
+                        }
+                        goto queen;
+                    }
+                    goto rook;
+                }
+                goto bishop;
+            }
             goto knight;
         }
-    
+
         // Locate and remove the next least valuable attacker, and add to
         // the bitboard 'attackers' any X-ray attackers behind it.
         if ((bb = stmAttackers & pieces(PAWN)))
@@ -1118,31 +1113,31 @@ bool Position::see_ge(Move m, int threshold) const {
             occupied ^= least_significant_square_bb(bb);
             attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
             swap = PawnValue - swap;
-            continue;
         }
+        else
 knight:
         if ((bb = stmAttackers & pieces(KNIGHT)))
         {
             occupied ^= least_significant_square_bb(bb);
             swap = KnightValue - swap;
-            continue;
         }
+        else
 bishop:
         if ((bb = stmAttackers & pieces(BISHOP)))
         {
             occupied ^= least_significant_square_bb(bb);
             attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
             swap = BishopValue - swap;
-            continue;
         }
+        else
 rook:
         if ((bb = stmAttackers & pieces(ROOK)))
         {
             occupied ^= least_significant_square_bb(bb);
             attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
             swap = RookValue - swap;
-            continue;
         }
+        else
 queen:
         if ((bb = stmAttackers & pieces(QUEEN)))
         {
@@ -1150,14 +1145,15 @@ queen:
             attackers |= (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
                        | (attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN));
             swap = QueenValue - swap;
-            continue;
         }
+        else
 king:
-        // If we "capture" with the king but the opponent still has attackers,
-        // reverse the result.
-        //return bool(res) ^ bool(attackers & pieces(~stm));
-        res ^= int(bool(attackers & pieces(~stm)));
-        break;
+        {
+            // If we "capture" with the king but the opponent still has attackers,
+            // reverse the result.
+            res ^= int(bool(attackers & pieces(~stm)));
+            break;
+        }
     }
 
     return bool(res);
