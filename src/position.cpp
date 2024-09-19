@@ -467,24 +467,34 @@ void Position::update_slider_blockers(Color c) const {
 
     st->blockersForKing[c] = 0;
     st->pinners[~c]        = 0;
+    
+    // Snipers are sliders that attack 's' after a single blocker is removed
+    Bitboard rookAttacks =   attacks_bb<ROOK>(ksq, pieces());
+    Bitboard bishopAttacks = attacks_bb<BISHOP>(ksq, pieces());
 
-    // Snipers are sliders that attack 's' when a piece and other snipers are removed
-    Bitboard snipers = (  ((attacks_bb<ROOK>(ksq)   ^ attacks_bb<ROOK>(ksq, pieces()))   & pieces(QUEEN, ROOK))
-                        | ((attacks_bb<BISHOP>(ksq) ^ attacks_bb<BISHOP>(ksq, pieces())) & pieces(QUEEN, BISHOP)))
+    Bitboard sliders = (  (rookAttacks & pieces(QUEEN, ROOK))
+                        | (bishopAttacks & pieces(QUEEN, BISHOP)))
                      & pieces(~c);
-    Bitboard occupancy = pieces() ^ snipers;
 
+    Bitboard blockers = (rookAttacks | bishopAttacks) & pieces() & ~sliders;
+
+    Bitboard snipers = (  (attacks_bb<ROOK>(ksq, pieces() & ~blockers)   & pieces(QUEEN, ROOK))
+                        | (attacks_bb<BISHOP>(ksq, pieces() & ~blockers) & pieces(QUEEN, BISHOP)))
+                     & pieces(~c);
+
+    snipers &= ~sliders;
+
+    Bitboard occupancy = pieces() ^ snipers;
+    
     while (snipers)
     {
         Square   sniperSq = pop_lsb(snipers);
         Bitboard b        = between_bb(ksq, sniperSq) & occupancy;
+        assert(b && !more_than_one(b));
 
-        if (b && !more_than_one(b))
-        {
-            st->blockersForKing[c] |= b;
-            if (b & pieces(c))
-                st->pinners[~c] |= sniperSq;
-        }
+        st->blockersForKing[c] |= b;
+        if (b & pieces(c))
+            st->pinners[~c] |= sniperSq;
     }
 }
 
