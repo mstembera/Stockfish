@@ -463,29 +463,20 @@ string Position::fen() const {
 // and the slider pieces of color ~c pinning pieces of color c to the king.
 void Position::update_slider_blockers(Color c) const {
 
-    Square ksq = square<KING>(c);
-
     st->blockersForKing[c] = 0;
     st->pinners[~c]        = 0;
-    
-    // Snipers are sliders that attack 's' after a single blocker is removed
-    Bitboard rookAttacks =   attacks_bb<ROOK>(ksq, pieces());
-    Bitboard bishopAttacks = attacks_bb<BISHOP>(ksq, pieces());
 
-    Bitboard sliders = (  (rookAttacks   & pieces(QUEEN, ROOK))
-                        | (bishopAttacks & pieces(QUEEN, BISHOP)))
+    if (!pieces(~c, BISHOP, ROOK, QUEEN))
+        return;
+
+    Square ksq = square<KING>(c);
+
+    // Snipers are sliders that attack 's' when a piece and other snipers are removed
+    Bitboard snipers = (  (attacks_bb<ROOK>(ksq)   & pieces(QUEEN, ROOK))
+                        | (attacks_bb<BISHOP>(ksq) & pieces(QUEEN, BISHOP)))
                      & pieces(~c);
+    Bitboard occupancy = pieces() ^ snipers;
 
-    Bitboard blockers = (rookAttacks | bishopAttacks) & pieces();
-
-    Bitboard snipers = (  (attacks_bb<ROOK>(ksq, pieces()   ^ blockers) & pieces(QUEEN, ROOK))
-                        | (attacks_bb<BISHOP>(ksq, pieces() ^ blockers) & pieces(QUEEN, BISHOP)))
-                     & pieces(~c);
-
-    snipers &= ~sliders;
-
-    Bitboard occupancy = pieces() ^ (sliders | snipers);
-    
     while (snipers)
     {
         Square   sniperSq = pop_lsb(snipers);
