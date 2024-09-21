@@ -472,18 +472,18 @@ void Position::update_slider_blockers(Color c) const {
     Bitboard snipers = ((attacks_bb<ROOK>(ksq) & pieces(QUEEN, ROOK))
                         | (attacks_bb<BISHOP>(ksq) & pieces(QUEEN, BISHOP)))
                      & pieces(~c);
-    Bitboard occupied = pieces() ^ snipers;
+    Bitboard occupancy = pieces() ^ snipers;
+    snipers &= ~attacks_bb<QUEEN>(ksq, pieces());
 
     while (snipers)
     {
         Square   sniperSq = pop_lsb(snipers);
-        Bitboard between  = between_bb(ksq, sniperSq);
-        Bitboard b        = between & occupied;
+        Bitboard b        = between_bb(ksq, sniperSq) & occupancy;
 
         if (b && !more_than_one(b))
         {
             st->blockersForKing[c] |= b;
-            if (b & pieces(c) && !more_than_one((between ^ sniperSq) & pieces()))
+            if (b & pieces(c))
                 st->pinners[~c] |= sniperSq;
         }
     }
