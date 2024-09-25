@@ -34,15 +34,14 @@ Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
 Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
-Magic RookMagics[SQUARE_NB];
-Magic BishopMagics[SQUARE_NB];
+alignas(64) Magic Magics[SQUARE_NB][2];
 
 namespace {
 
 Bitboard RookTable[0x19000];   // To store rook attacks
 Bitboard BishopTable[0x1480];  // To store bishop attacks
 
-void init_magics(PieceType pt, Bitboard table[], Magic magics[]);
+void init_magics(PieceType pt, Bitboard table[], Magic magics[][2]);
 
 // Returns the bitboard of target square for the given step
 // from the given square. If the step is off the board, returns empty bitboard.
@@ -82,8 +81,8 @@ void Bitboards::init() {
         for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
             SquareDistance[s1][s2] = std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
 
-    init_magics(ROOK, RookTable, RookMagics);
-    init_magics(BISHOP, BishopTable, BishopMagics);
+    init_magics(ROOK, RookTable, Magics);
+    init_magics(BISHOP, BishopTable, Magics);
 
     for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
     {
@@ -142,7 +141,7 @@ Bitboard sliding_attack(PieceType pt, Square sq, Bitboard occupied) {
 // bitboards are used to look up attacks of sliding pieces. As a reference see
 // https://www.chessprogramming.org/Magic_Bitboards. In particular, here we use
 // the so called "fancy" approach.
-void init_magics(PieceType pt, Bitboard table[], Magic magics[]) {
+void init_magics(PieceType pt, Bitboard table[], Magic magics[][2]) {
 
     // Optimal PRNG seeds to pick the correct magics in the shortest time
     int seeds[][RANK_NB] = {{8977, 44560, 54343, 38998, 5731, 95205, 104912, 17020},
@@ -161,13 +160,13 @@ void init_magics(PieceType pt, Bitboard table[], Magic magics[]) {
         // all the attacks for each possible subset of the mask and so is 2 power
         // the number of 1s of the mask. Hence we deduce the size of the shift to
         // apply to the 64 or 32 bits word to get the index.
-        Magic& m = magics[s];
+        Magic& m = magics[s][pt - BISHOP];
         m.mask   = sliding_attack(pt, s, 0) & ~edges;
         m.shift  = (Is64Bit ? 64 : 32) - popcount(m.mask);
 
         // Set the offset for the attacks table of the square. We have individual
         // table sizes for each square with "Fancy Magic Bitboards".
-        m.attacks = s == SQ_A1 ? table : magics[s - 1].attacks + size;
+        m.attacks = s == SQ_A1 ? table : magics[s - 1][pt - BISHOP].attacks + size;
 
         // Use Carry-Rippler trick to enumerate all subsets of masks[s] and
         // store the corresponding sliding attack bitboard in reference[].
