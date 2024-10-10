@@ -733,7 +733,7 @@ class FeatureTransformer {
                     auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
                     for (unsigned k = 0; k < NumRegs; ++k)
-                        acc[k] = vec_add_16(acc[k], vec_sub_16(columnA0[k], vec_add_16(columnR0[k], columnR1[k])));
+                        acc[k] = vec_sub_16(vec_add_16(acc[k], columnA0[k]), vec_add_16(columnR0[k], columnR1[k]));
                 
                     ir += 2;
                     ia += 1;
@@ -752,7 +752,7 @@ class FeatureTransformer {
                     auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
 
                     for (unsigned k = 0; k < NumRegs; ++k)
-                        acc[k] = vec_sub_16(acc[k], vec_sub_16(columnR0[k], vec_add_16(columnA0[k], columnA1[k])));
+                        acc[k] = vec_add_16(vec_sub_16(acc[k], columnR0[k]), vec_add_16(columnA0[k], columnA1[k]));
                 
                     ir += 1;
                     ia += 2;
