@@ -714,74 +714,55 @@ class FeatureTransformer {
             for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = entryTile[k];
 
-            size_t ir = 0, ia = 0;
-            while (   removed.size() + added.size() > 2 + ir + ia
-                   && removed.size() > ir && added.size() > ia
-                   && !(removed.size() == 2 && added.size() == 2))
+            int i = 0;
+            for (; i < int(std::min(removed.size(), added.size())); ++i)
             {
-                if (removed.size() - ir > added.size() - ia)
-                {
-                    IndexType       indexR0  = removed[ir];
-                    IndexType       indexR1  = removed[ir + 1];
-                    const IndexType offsetR0 = HalfDimensions * indexR0 + j * TileHeight;
-                    const IndexType offsetR1 = HalfDimensions * indexR1 + j * TileHeight;
-                    auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-                    auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
-
-                    IndexType       indexA0  = added[ia];
-                    const IndexType offsetA0 = HalfDimensions * indexA0 + j * TileHeight;
-                    auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
-
-                    for (unsigned k = 0; k < NumRegs; ++k)
-                        acc[k] = vec_sub_16(vec_add_16(acc[k], columnA0[k]), vec_add_16(columnR0[k], columnR1[k]));
-                
-                    ir += 2;
-                    ia += 1;
-                }
-                else
-                {
-                    IndexType       indexR0  = removed[ir];
-                    const IndexType offsetR0 = HalfDimensions * indexR0 + j * TileHeight;
-                    auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-
-                    IndexType       indexA0  = added[ia];
-                    IndexType       indexA1  = added[ia + 1];
-                    const IndexType offsetA0 = HalfDimensions * indexA0 + j * TileHeight;
-                    const IndexType offsetA1 = HalfDimensions * indexA1 + j * TileHeight;
-                    auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
-                    auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
-
-                    for (unsigned k = 0; k < NumRegs; ++k)
-                        acc[k] = vec_add_16(vec_sub_16(acc[k], columnR0[k]), vec_add_16(columnA0[k], columnA1[k]));
-                
-                    ir += 1;
-                    ia += 2;
-                }
-            }
-            for (; ir < removed.size() && ia < added.size(); ++ir, ++ia)
-            {
-                IndexType       indexR  = removed[ir];
+                IndexType       indexR  = removed[i];
                 const IndexType offsetR = HalfDimensions * indexR + j * TileHeight;
                 auto            columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
-                IndexType       indexA  = added[ia];
+                IndexType       indexA  = added[i];
                 const IndexType offsetA = HalfDimensions * indexA + j * TileHeight;
                 auto            columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
 
                 for (unsigned k = 0; k < NumRegs; ++k)
                     acc[k] = vec_add_16(acc[k], vec_sub_16(columnA[k], columnR[k]));
             }
-            for (; ir < removed.size(); ++ir)
+            for (; i < int(removed.size()) - 1; i+=2)
             {
-                IndexType       index  = removed[ir];
+                IndexType       index0  = removed[i];
+                IndexType       index1  = removed[i + 1];
+                const IndexType offset0 = HalfDimensions * index0 + j * TileHeight;
+                const IndexType offset1 = HalfDimensions * index1 + j * TileHeight;
+                auto            column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                auto            column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+
+                for (unsigned k = 0; k < NumRegs; ++k)
+                    acc[k] = vec_sub_16(acc[k], vec_add_16(column0[k], column1[k]));
+            }
+            for (; i < int(removed.size()); ++i)
+            {
+                IndexType       index  = removed[i];
                 const IndexType offset = HalfDimensions * index + j * TileHeight;
                 auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
 
                 for (unsigned k = 0; k < NumRegs; ++k)
                     acc[k] = vec_sub_16(acc[k], column[k]);
             }
-            for (; ia < added.size(); ++ia)
+            for (; i < int(added.size()) - 1; i+=2)
             {
-                IndexType       index  = added[ia];
+                IndexType       index0  = added[i];
+                IndexType       index1  = added[i + 1];
+                const IndexType offset0 = HalfDimensions * index0 + j * TileHeight;
+                const IndexType offset1 = HalfDimensions * index1 + j * TileHeight;
+                auto            column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                auto            column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+
+                for (unsigned k = 0; k < NumRegs; ++k)
+                    acc[k] = vec_add_16(acc[k], vec_add_16(column0[k], column1[k]));
+            }
+            for (; i < int(added.size()); ++i)
+            {
+                IndexType       index  = added[i];
                 const IndexType offset = HalfDimensions * index + j * TileHeight;
                 auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
 
@@ -805,7 +786,7 @@ class FeatureTransformer {
             for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                 psqt[k] = entryTilePsqt[k];
 
-            for (size_t i = 0; i < removed.size(); ++i)
+            for (int i = 0; i < int(removed.size()); ++i)
             {
                 IndexType       index  = removed[i];
                 const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
@@ -814,7 +795,7 @@ class FeatureTransformer {
                 for (std::size_t k = 0; k < NumPsqtRegs; ++k)
                     psqt[k] = vec_sub_psqt_32(psqt[k], columnPsqt[k]);
             }
-            for (size_t i = 0; i < added.size(); ++i)
+            for (int i = 0; i < int(added.size()); ++i)
             {
                 IndexType       index  = added[i];
                 const IndexType offset = PSQTBuckets * index + j * PsqtTileHeight;
