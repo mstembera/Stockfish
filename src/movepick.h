@@ -179,9 +179,9 @@ using MajorPieceCorrectionHistory =
 using MinorPieceCorrectionHistory =
   Stats<int16_t, CORRECTION_HISTORY_LIMIT, COLOR_NB, CORRECTION_HISTORY_SIZE>;
 
-// NonPawnCorrectionHistory is addressed by color and non-pawn material positions
+// NonPawnCorrectionHistory is addressed by color and non-pawn material positions for white and black
 using NonPawnCorrectionHistory =
-  Stats<int16_t, CORRECTION_HISTORY_LIMIT, COLOR_NB, CORRECTION_HISTORY_SIZE>;
+  Stats<int16_t, CORRECTION_HISTORY_LIMIT, COLOR_NB, CORRECTION_HISTORY_SIZE, COLOR_NB>;
 
 // ContinuationCorrectionHistory is the combined correction history of a given pair of moves
 using ContinuationCorrectionHistory =

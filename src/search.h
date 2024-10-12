@@ -290,7 +290,7 @@ class Worker {
     MaterialCorrectionHistory     materialCorrectionHistory;
     MajorPieceCorrectionHistory   majorPieceCorrectionHistory;
     MinorPieceCorrectionHistory   minorPieceCorrectionHistory;
-    NonPawnCorrectionHistory      nonPawnCorrectionHistory[COLOR_NB];
+    NonPawnCorrectionHistory      nonPawnCorrectionHistory;
     ContinuationCorrectionHistory continuationCorrectionHistory;
 
    private:
