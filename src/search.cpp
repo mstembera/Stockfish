@@ -86,8 +86,8 @@ Value to_corrected_static_eval(Value v, const Worker& w, const Position& pos, St
     const auto  mcv   = w.materialCorrectionHistory[us][material_index(pos)];
     const auto  macv  = w.majorPieceCorrectionHistory[us][major_piece_index(pos)];
     const auto  micv  = w.minorPieceCorrectionHistory[us][minor_piece_index(pos)];
-    const auto  wnpcv = w.nonPawnCorrectionHistory[us][non_pawn_index<WHITE>(pos)][WHITE];
-    const auto  bnpcv = w.nonPawnCorrectionHistory[us][non_pawn_index<BLACK>(pos)][BLACK];
+    const auto  wnpcv = w.nonPawnCorrectionHistory[us][WHITE][non_pawn_index<WHITE>(pos)];
+    const auto  bnpcv = w.nonPawnCorrectionHistory[us][BLACK][non_pawn_index<BLACK>(pos)];
     int         cntcv = 1;
 
     if (m.is_ok())
@@ -1430,9 +1430,9 @@ moves_loop:  // When in check, search starts here
         thisThread->materialCorrectionHistory[us][material_index(pos)] << bonus * 99 / 128;
         thisThread->majorPieceCorrectionHistory[us][major_piece_index(pos)] << bonus * 157 / 128;
         thisThread->minorPieceCorrectionHistory[us][minor_piece_index(pos)] << bonus * 153 / 128;
-        thisThread->nonPawnCorrectionHistory[us][non_pawn_index<WHITE>(pos)][WHITE]
+        thisThread->nonPawnCorrectionHistory[us][WHITE][non_pawn_index<WHITE>(pos)]
           << bonus * 123 / 128;
-        thisThread->nonPawnCorrectionHistory[us][non_pawn_index<BLACK>(pos)][BLACK]
+        thisThread->nonPawnCorrectionHistory[us][BLACK][non_pawn_index<BLACK>(pos)]
           << bonus * 165 / 128;
 
         if (m.is_ok())
