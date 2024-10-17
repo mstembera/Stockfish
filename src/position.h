@@ -62,6 +62,7 @@ struct StateInfo {
     Bitboard   checkSquares[PIECE_TYPE_NB];
     Piece      capturedPiece;
     int        repetition;
+    bool       dirtySB[COLOR_NB];
 
     // Used by NNUE
     Eval::NNUE::Accumulator<Eval::NNUE::TransformedFeatureDimensionsBig>   accumulatorBig;
@@ -127,6 +128,7 @@ class Position {
     Bitboard attackers_to(Square s) const;
     Bitboard attackers_to(Square s, Bitboard occupied) const;
     void     update_slider_blockers(Color c) const;
+    void     dirty_slider_blockers(Color c) const;
     template<PieceType Pt>
     Bitboard attacks_by(Color c) const;
 
@@ -287,9 +289,26 @@ inline Bitboard Position::attacks_by(Color c) const {
 
 inline Bitboard Position::checkers() const { return st->checkersBB; }
 
-inline Bitboard Position::blockers_for_king(Color c) const { return st->blockersForKing[c]; }
+inline Bitboard Position::blockers_for_king(Color c) const 
+{ 
+    if (st->dirtySB[c])
+        update_slider_blockers(c);
 
-inline Bitboard Position::pinners(Color c) const { return st->pinners[c]; }
+    return st->blockersForKing[c];
+}
+
+inline Bitboard Position::pinners(Color c) const {
+
+    if (st->dirtySB[~c])
+        update_slider_blockers(~c);
+
+    return st->pinners[c];
+}
+
+inline void Position::dirty_slider_blockers(Color c) const {
+
+    st->dirtySB[c] = true;
+}
 
 inline Bitboard Position::check_squares(PieceType pt) const { return st->checkSquares[pt]; }
 

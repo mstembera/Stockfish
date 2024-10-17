@@ -315,8 +315,8 @@ void Position::set_castling_right(Color c, Square rfrom) {
 // Sets king attacks to detect if a move gives check
 void Position::set_check_info() const {
 
-    update_slider_blockers(WHITE);
-    update_slider_blockers(BLACK);
+    dirty_slider_blockers(WHITE);
+    dirty_slider_blockers(BLACK);
 
     Square ksq = square<KING>(~sideToMove);
 
@@ -467,6 +467,7 @@ void Position::update_slider_blockers(Color c) const {
 
     st->blockersForKing[c] = 0;
     st->pinners[~c]        = 0;
+    st->dirtySB[c]         = false;
 
     // Snipers are sliders that attack 's' when a piece and other snipers are removed
     Bitboard snipers = ((attacks_bb<ROOK>(ksq) & pieces(QUEEN, ROOK))
