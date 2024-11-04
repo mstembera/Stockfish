@@ -473,7 +473,8 @@ class FeatureTransformer {
     // It computes the accumulator of the next position, or updates the
     // current position's accumulator if CurrentOnly is true.
     template<Color Perspective, bool CurrentOnly>
-    void update_accumulator_incremental(const Position& pos, StateInfo* computed) const {
+    void update_accumulator_incremental(const Position& pos, StateInfo* computed,
+                                        AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         assert((computed->*accPtr).computed[Perspective]);
         assert(computed->next != nullptr);
 
@@ -515,19 +516,88 @@ class FeatureTransformer {
             const IndexType offsetA  = HalfDimensions * added[0];
             auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
 
+            constexpr int MaxIndex = 64 * 11 * 32; // PS_NB * 32
+
             if (removed.size() == 1)
-            {
-                for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
-                    accOut[i] = vec_add_16(vec_sub_16(accIn[i], columnR0[i]), columnA[i]);
+            {   
+                Key reverseKey = make_key(added[0] * MaxIndex + removed[0]) >> (64 - 12);
+                auto& reverse_arEntry = (*cache)[reverseKey];
+
+                if (reverse_arEntry.removed == added[0] && reverse_arEntry.added == removed[0])
+                {
+                    vec_t* arWeights = (vec_t*) reverse_arEntry.weights;
+                    for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
+                        accOut[i] = vec_sub_16(accIn[i], arWeights[i]);
+                }
+                else
+                {
+                    Key key = make_key(removed[0] * MaxIndex + added[0]) >> (64 - 12);
+                    auto& arEntry = (*cache)[key];
+                    vec_t* arWeights = (vec_t*)arEntry.weights;
+
+                    if (arEntry.removed == removed[0] && arEntry.added == added[0])
+                    {
+                        for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
+                            accOut[i] = vec_add_16(accIn[i], arWeights[i]);
+                    }
+                    else
+                    {
+                        arEntry.removed = removed[0];
+                        arEntry.added   = added[0];
+
+                        for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t) - 1; i += 2)
+                        {
+                            vec_t ar0 = vec_sub_16(columnA[i], columnR0[i]);
+                            vec_t ar1 = vec_sub_16(columnA[i + 1], columnR0[i + 1]);
+                            accOut[i  ]   = vec_add_16(accIn[i], ar0);
+                            accOut[i + 1] = vec_add_16(accIn[i + 1], ar1);
+                            arWeights[i]     = ar0;
+                            arWeights[i + 1] = ar1;
+                        }
+                    }
+                }
             }
             else
             {
                 const IndexType offsetR1 = HalfDimensions * removed[1];
                 auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
 
-                for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
-                    accOut[i] = vec_sub_16(vec_add_16(accIn[i], columnA[i]),
-                                           vec_add_16(columnR0[i], columnR1[i]));
+                Key reverseKey = make_key(added[0] * MaxIndex + removed[0]) >> (64 - 12);
+                auto& reverse_arEntry = (*cache)[reverseKey];
+
+                if (reverse_arEntry.removed == added[0] && reverse_arEntry.added == removed[0])
+                {
+                    vec_t* arWeights = (vec_t*)reverse_arEntry.weights;
+                    for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
+                        accOut[i] = vec_sub_16(vec_sub_16(accIn[i], arWeights[i]), columnR1[i]);
+                }
+                else
+                {
+                    Key key = make_key(removed[0] * MaxIndex + added[0]) >> (64 - 12);
+                    auto& arEntry = (*cache)[key];
+                    vec_t* arWeights = (vec_t*)arEntry.weights;
+
+                    if (arEntry.removed == removed[0] && arEntry.added == added[0])
+                    {
+                        for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++i)
+                            accOut[i] = vec_sub_16(vec_add_16(accIn[i], arWeights[i]), columnR1[i]);
+                    }
+                    else
+                    {
+                        arEntry.removed = removed[0];
+                        arEntry.added   = added[0];
+
+                        for (IndexType i = 0; i < HalfDimensions * sizeof(WeightType) / sizeof(vec_t) - 1; i += 2)
+                        {
+                            vec_t ar0 = vec_sub_16(columnA[i], columnR0[i]);
+                            vec_t ar1 = vec_sub_16(columnA[i + 1], columnR0[i + 1]);
+                            accOut[i]     = vec_sub_16(vec_add_16(accIn[i], ar0), columnR1[i]);
+                            accOut[i + 1] = vec_sub_16(vec_add_16(accIn[i + 1], ar1), columnR1[i + 1]);
+                            arWeights[i]     = ar0;
+                            arWeights[i + 1] = ar1;
+                        }
+                    }
+                }
             }
 
             auto accPsqtIn = reinterpret_cast<const psqt_vec_t*>(
@@ -663,7 +733,7 @@ class FeatureTransformer {
         (next->*accPtr).computed[Perspective] = true;
 
         if (!CurrentOnly && next != pos.state())
-            update_accumulator_incremental<Perspective, false>(pos, next);
+            update_accumulator_incremental<Perspective, false>(pos, next, cache);
     }
 
     template<Color Perspective>
@@ -841,7 +911,7 @@ class FeatureTransformer {
         StateInfo* oldest = try_find_computed_accumulator<Perspective>(pos);
 
         if ((oldest->*accPtr).computed[Perspective] && oldest != pos.state())
-            update_accumulator_incremental<Perspective, true>(pos, oldest);
+            update_accumulator_incremental<Perspective, true>(pos, oldest, cache);
         else
             update_accumulator_refresh_cache<Perspective>(pos, cache);
     }
@@ -855,7 +925,7 @@ class FeatureTransformer {
         if ((oldest->*accPtr).computed[Perspective] && oldest != pos.state())
             // Start from the oldest computed accumulator, update all the
             // accumulators up to the current position.
-            update_accumulator_incremental<Perspective, false>(pos, oldest);
+            update_accumulator_incremental<Perspective, false>(pos, oldest, cache);
         else
             update_accumulator_refresh_cache<Perspective>(pos, cache);
     }

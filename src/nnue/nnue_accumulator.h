@@ -29,6 +29,7 @@
 namespace Stockfish::Eval::NNUE {
 
 using BiasType       = std::int16_t;
+using WeightType     = std::int16_t;
 using PSQTWeightType = std::int32_t;
 using IndexType      = std::uint32_t;
 
@@ -78,16 +79,29 @@ struct AccumulatorCaches {
             for (auto& entries1D : entries)
                 for (auto& entry : entries1D)
                     entry.clear(network.featureTransformer->biases);
-        }
 
-        void clear(const BiasType* biases) {
-            for (auto& entry : entries)
-                entry.clear(biases);
+            for (auto& ar_entry : ar_entries)
+                ar_entry.clear();
         }
 
         std::array<Entry, COLOR_NB>& operator[](Square sq) { return entries[sq]; }
 
         std::array<std::array<Entry, COLOR_NB>, SQUARE_NB> entries;
+
+        struct alignas(CacheLineSize) AREntry {
+
+            WeightType weights[Size];
+            IndexType removed, added;
+
+            void clear()
+            { 
+                removed = added = ~0;
+            }
+        };
+
+        AREntry& operator[](int key) { return ar_entries[key]; }
+
+        std::array<AREntry, 1 << 12> ar_entries;
     };
 
     template<typename Networks>
