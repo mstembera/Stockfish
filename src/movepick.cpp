@@ -286,7 +286,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([]() { return true; }))
+        if ((!skipQuiets || depth > 1) && select < Next > ([]() { return true; }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
