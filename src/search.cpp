@@ -331,6 +331,7 @@ void Search::Worker::iterative_deepening() {
                 Depth adjustedDepth =
                   std::max(1, rootDepth - failedHighCnt - 3 * (searchAgainCounter + 1) / 4);
                 rootDelta = beta - alpha;
+                rootDeltaInverse = ((1ULL << 32) + rootDelta - 1) / rootDelta;
                 bestValue = search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
 
                 // Bring the best move to the front. It is critical that sorting
@@ -1000,7 +1001,8 @@ moves_loop:  // When in check, search starts here
                 mp.skip_quiet_moves();
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r / 1024;
+            assert(r >= 0);
+            int lmrDepth = newDepth - unsigned(r) / 1024;
 
             if (capture || givesCheck)
             {
@@ -1707,7 +1709,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
 
 Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) const {
     int reductionScale = reductions[d] * reductions[mn];
-    return (reductionScale + 1304 - delta * 814 / rootDelta) + (!i && reductionScale > 1423) * 1135;
+    return (reductionScale + 1304 - uint64_t(delta * 814 * rootDeltaInverse) / (1ULL << 32)) + (!i && reductionScale > 1423) * 1135;
 }
 
 // elapsed() returns the time elapsed since the search started. If the
