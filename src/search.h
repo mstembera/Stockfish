@@ -327,13 +327,12 @@ class Worker {
     RootMoves rootMoves;
     Depth     rootDepth, completedDepth;
     Value     rootDelta;
-    uint64_t  rootDeltaInverse;
 
     size_t                    threadIdx;
     NumaReplicatedAccessToken numaAccessToken;
 
     // Reductions lookup table initialized at startup
-    std::array<int, MAX_MOVES> reductions;  // [depth or moveNumber]
+    std::array<int8_t, MAX_MOVES> reductions;  // [depth or moveNumber]
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;
