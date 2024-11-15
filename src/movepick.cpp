@@ -324,6 +324,6 @@ top:
     return Move::none();  // Silence warning
 }
 
-void MovePicker::skip_quiet_moves() { skipQuiets = true; }
+void MovePicker::skip_quiet_moves() { skipQuiets = depth <= 10; }
 
 }  // namespace Stockfish
