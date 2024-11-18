@@ -247,7 +247,7 @@ top:
     case GOOD_CAPTURE :
         if (select<Next>([&]() {
                 // Move losing capture to endBadCaptures to be tried later
-                return pos.see_ge(*cur, -cur->value / 18 - 75) ? true
+                return pos.see_ge(*cur, -cur->value / 18 - 75 * (depth == 1)) ? true
                                                           : (*endBadCaptures++ = *cur, false);
             }))
             return *(cur - 1);
@@ -286,7 +286,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([]() { return true; }))
+        if ((!skipQuiets || depth > 1) && select<Next>([]() { return true; }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
