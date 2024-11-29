@@ -276,18 +276,11 @@ top:
                 if ((cur - 1)->value > -7998)
                     return *(cur - 1);
 
-                if ((cur - 1)->value <= quiet_sort_threshold(depth))
-                {
-                    // Bad quiet but more good ones may remain
-                    *endBadQuiets++ = *(cur - 1);
-                    beginBadQuiets  = cur;
-                }
-                else
-                {
-                    // Remaining quiets are bad
-                    beginBadQuiets = cur - 1;
-                    break;
-                }
+                *endBadQuiets++ = *(cur - 1);
+                beginBadQuiets  = cur;
+
+                if ((cur - 1)->value >= quiet_sort_threshold(depth))
+                    break; // Remaining quiets are bad
             }
         }
 
