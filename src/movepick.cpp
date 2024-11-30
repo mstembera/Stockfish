@@ -269,15 +269,13 @@ top:
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets)
+        if (!skipQuiets && select<Next>([]() { return true; }))
         {
-            if (select<Next>([&]() {
-                return cur->value > -7998 ? true
-                                          : (*endBadQuiets++ = *cur, false );
-                }))
+            if ((cur - 1)->value > -6500)
                 return *(cur - 1);
 
-            beginBadQuiets = cur;
+            // Remaining quiets are bad
+            beginBadQuiets = cur - 1;
         }
 
         // Prepare the pointers to loop over the bad captures
