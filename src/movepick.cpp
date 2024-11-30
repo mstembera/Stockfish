@@ -271,7 +271,7 @@ top:
     case GOOD_QUIET :
         if (!skipQuiets && select<Next>([]() { return true; }))
         {
-            if ((cur - 1)->value > -6500)
+            if ((cur - 1)->value > -9500)
                 return *(cur - 1);
 
             // Remaining quiets are bad
