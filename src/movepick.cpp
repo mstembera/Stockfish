@@ -232,7 +232,7 @@ top:
         endMoves             = generate<CAPTURES>(pos, cur);
 
         cur->value = 50000;
-        if (endMoves > cur + 1)
+        if (endMoves - cur > 1)
         {
             score<CAPTURES>();        
             partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
@@ -258,7 +258,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             cur->value = 50000;
-            if (endMoves > cur + 1)
+            if (endMoves - cur > 1)
             {
                 score<QUIETS>();
                 partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
@@ -306,7 +306,7 @@ top:
         cur      = moves;
         endMoves = generate<EVASIONS>(pos, cur);
 
-        if (endMoves > cur + 1)
+        if (endMoves - cur > 1)
         {
             score<EVASIONS>();
             partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
