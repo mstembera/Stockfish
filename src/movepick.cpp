@@ -257,7 +257,7 @@ top:
             cur      = endBadCaptures;
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
-            cur->value = 50000;
+            cur->value = 0;
             if (endMoves - cur > 1)
             {
                 score<QUIETS>();
