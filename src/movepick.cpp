@@ -231,8 +231,12 @@ top:
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
 
-        score<CAPTURES>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        cur->value = 50000;
+        if (endMoves > cur + 1)
+        {
+            score<CAPTURES>();        
+            partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        }
         ++stage;
         goto top;
 
@@ -253,8 +257,12 @@ top:
             cur      = endBadCaptures;
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
-            score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            cur->value = 50000;
+            if (endMoves > cur + 1)
+            {
+                score<QUIETS>();
+                partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            }
         }
 
         ++stage;
@@ -298,8 +306,11 @@ top:
         cur      = moves;
         endMoves = generate<EVASIONS>(pos, cur);
 
-        score<EVASIONS>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        if (endMoves > cur + 1)
+        {
+            score<EVASIONS>();
+            partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        }
         ++stage;
         [[fallthrough]];
 
