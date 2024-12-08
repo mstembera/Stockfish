@@ -46,6 +46,7 @@ namespace Stockfish {
 namespace Zobrist {
 
 Key psq[PIECE_NB][SQUARE_NB];
+Key psqFromTo[PIECE_NB][SQUARE_NB][SQUARE_NB];
 Key enpassant[FILE_NB];
 Key castling[CASTLING_RIGHT_NB];
 Key side, noPawns;
@@ -117,8 +118,14 @@ void Position::init() {
     PRNG rng(1070372);
 
     for (Piece pc : Pieces)
+    {
         for (Square s = SQ_A1; s <= SQ_H8; ++s)
             Zobrist::psq[pc][s] = rng.rand<Key>();
+
+        for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
+            for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
+                Zobrist::psqFromTo[pc][s1][s2] = Zobrist::psq[pc][s1] ^ Zobrist::psq[pc][s2];
+    }
 
     for (File f = FILE_A; f <= FILE_H; ++f)
         Zobrist::enpassant[f] = rng.rand<Key>();
@@ -139,7 +146,7 @@ void Position::init() {
                 if ((type_of(pc) != PAWN) && (attacks_bb(type_of(pc), s1, 0) & s2))
                 {
                     Move move = Move(s1, s2);
-                    Key  key  = Zobrist::psq[pc][s1] ^ Zobrist::psq[pc][s2] ^ Zobrist::side;
+                    Key  key  = Zobrist::psqFromTo[pc][s1][s2] ^ Zobrist::side;
                     int  i    = H1(key);
                     while (true)
                     {
@@ -727,9 +734,9 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
         Square rfrom, rto;
         do_castling<true>(us, from, to, rfrom, rto);
 
-        k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
-        st->majorPieceKey ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
-        st->nonPawnKey[us] ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+        k ^= Zobrist::psqFromTo[captured][rfrom][rto];
+        st->majorPieceKey ^= Zobrist::psqFromTo[captured][rfrom][rto];
+        st->nonPawnKey[us] ^= Zobrist::psqFromTo[captured][rfrom][rto];
         captured = NO_PIECE;
     }
 
@@ -782,7 +789,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
     }
 
     // Update hash key
-    k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+    k ^= Zobrist::psqFromTo[pc][from][to];
 
     // Reset en passant square
     if (st->epSquare != SQ_NONE)
@@ -855,7 +862,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
         }
 
         // Update pawn hash key
-        st->pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+        st->pawnKey ^= Zobrist::psqFromTo[pc][from][to];
 
         // Reset rule 50 draw counter
         st->rule50 = 0;
@@ -863,19 +870,19 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 
     else
     {
-        st->nonPawnKey[us] ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+        st->nonPawnKey[us] ^= Zobrist::psqFromTo[pc][from][to];
 
         if (type_of(pc) == KING)
         {
-            st->majorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
-            st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+            st->majorPieceKey ^= Zobrist::psqFromTo[pc][from][to];
+            st->minorPieceKey ^= Zobrist::psqFromTo[pc][from][to];
         }
 
         else if (type_of(pc) == QUEEN || type_of(pc) == ROOK)
-            st->majorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+            st->majorPieceKey ^= Zobrist::psqFromTo[pc][from][to];
 
         else
-            st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+            st->minorPieceKey ^= Zobrist::psqFromTo[pc][from][to];
     }
 
     // Set capture piece
@@ -1074,7 +1081,7 @@ Key Position::key_after(Move m) const {
     if (captured)
         k ^= Zobrist::psq[captured][to];
 
-    k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[pc][from];
+    k ^= Zobrist::psqFromTo[pc][to][from];
 
     return (captured || type_of(pc) == PAWN) ? k : adjust_key50<true>(k);
 }
