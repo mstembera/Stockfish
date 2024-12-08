@@ -58,8 +58,9 @@ constexpr Bitboard Rank8BB = Rank1BB << (8 * 7);
 extern uint8_t PopCnt16[1 << 16];
 extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
 
-extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard SquareBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
@@ -112,7 +113,7 @@ inline Bitboard operator&(Square s, Bitboard b) { return b & s; }
 inline Bitboard operator|(Square s, Bitboard b) { return b | s; }
 inline Bitboard operator^(Square s, Bitboard b) { return b ^ s; }
 
-inline Bitboard operator|(Square s1, Square s2) { return square_bb(s1) | s2; }
+inline Bitboard operator|(Square s1, Square s2) { return SquareBB[s1][s2]; }
 
 constexpr bool more_than_one(Bitboard b) { return b & (b - 1); }
 
