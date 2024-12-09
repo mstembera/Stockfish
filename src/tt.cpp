@@ -238,16 +238,7 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
             > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
             replace = &tte[i];
 
-    constexpr TTData emptyData = {
-        Move::none(),
-        VALUE_NONE,
-        VALUE_NONE,
-        DEPTH_ENTRY_OFFSET,
-        BOUND_NONE,
-        false
-    };
-
-    return {false, emptyData, TTWriter(replace)};
+    return {false, TTData(), TTWriter(replace)};
 }
 
 
