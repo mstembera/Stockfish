@@ -46,11 +46,11 @@ struct Cluster;
 
 // A copy of the data already in the entry (possibly collided). `probe` may be racy, resulting in inconsistent data.
 struct TTData {
-    Move  move  = Move::none();
-    Value value = VALUE_NONE, eval = VALUE_NONE;
-    Depth depth = DEPTH_ENTRY_OFFSET;
-    Bound bound = BOUND_NONE;
-    bool  is_pv = false;
+    Move  move;
+    Value value, eval;
+    Depth depth;
+    Bound bound;
+    bool  is_pv;
 };
 
 
