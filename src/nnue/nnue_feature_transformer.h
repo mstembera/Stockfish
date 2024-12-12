@@ -569,19 +569,48 @@ class FeatureTransformer {
                 for (IndexType j = 0; j < NumRegs; ++j)
                     acc[j] = vec_load(&accTileIn[j]);
 
-                // Difference calculation for the deactivated features
-                for (const auto index : removed)
+                // Difference calculation for the deactivated/activated features
+                int l = 0;
+                for (; l < int(std::min(removed.size(), added.size())); ++l)
                 {
-                    const IndexType offset = HalfDimensions * index + i * TileHeight;
+                    const IndexType offsetR = HalfDimensions * removed[l] + i * TileHeight;
+                    auto            columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
+                    const IndexType offsetA = HalfDimensions * added[l] + i * TileHeight;
+                    auto            columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+
+                    for (IndexType k = 0; k < NumRegs; ++k)
+                        acc[k] = vec_add_16(vec_sub_16(acc[k], columnR[k]), columnA[k]);
+                }
+
+                for (; l < int(removed.size()) - 1; l += 2)
+                {
+                    const IndexType offset0 = HalfDimensions * removed[l] + i * TileHeight;
+                    auto            column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                    const IndexType offset1 = HalfDimensions * removed[l + 1] + i * TileHeight;
+                    auto            column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+                    for (IndexType j = 0; j < NumRegs; ++j)
+                        acc[j] = vec_sub_16(vec_sub_16(acc[j], column0[j]), column1[j]);
+                }
+                for (; l < int(removed.size()); ++l)
+                {
+                    const IndexType offset = HalfDimensions * removed[l] + i * TileHeight;
                     auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
                     for (IndexType j = 0; j < NumRegs; ++j)
                         acc[j] = vec_sub_16(acc[j], column[j]);
                 }
 
-                // Difference calculation for the activated features
-                for (const auto index : added)
+                for (; l < int(added.size()) - 1; l += 2)
                 {
-                    const IndexType offset = HalfDimensions * index + i * TileHeight;
+                    const IndexType offset0 = HalfDimensions * added[l] + i * TileHeight;
+                    auto            column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
+                    const IndexType offset1 = HalfDimensions * added[l + 1] + i * TileHeight;
+                    auto            column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
+                    for (IndexType j = 0; j < NumRegs; ++j)
+                        acc[j] = vec_add_16(vec_add_16(acc[j], column0[j]), column1[j]);
+                }
+                for (; l < int(added.size()); ++l)
+                {
+                    const IndexType offset = HalfDimensions * added[l] + i * TileHeight;
                     auto            column = reinterpret_cast<const vec_t*>(&weights[offset]);
                     for (IndexType j = 0; j < NumRegs; ++j)
                         acc[j] = vec_add_16(acc[j], column[j]);
