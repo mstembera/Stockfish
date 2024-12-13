@@ -702,23 +702,43 @@ class FeatureTransformer {
         accumulator.computed[Perspective] = true;
 
 #ifdef VECTOR
-        if (removed.size() == 1 && added.size() == 1)
+        if (   (removed.size() == 1 && added.size() == 1)
+            || (removed.size() == 2 && added.size() == 2))
         {
             auto accTile = reinterpret_cast<vec_t*>(&accumulator.accumulation[Perspective][0]);
             auto entryTile = reinterpret_cast<vec_t*>(&entry.accumulation[0]);
 
-            IndexType       indexR  = removed[0];
-            const IndexType offsetR = HalfDimensions * indexR;
-            auto            columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
-            IndexType       indexA  = added[0];
-            const IndexType offsetA = HalfDimensions * indexA;
-            auto            columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+            IndexType       indexR0  = removed[0];
+            const IndexType offsetR0 = HalfDimensions * indexR0;
+            auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+            IndexType       indexA0  = added[0];
+            const IndexType offsetA0 = HalfDimensions * indexA0;
+            auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
-            for (IndexType k = 0; k < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++k)
+            if (removed.size() == 1)
             {
-                vec_t acc = vec_add_16(entryTile[k], vec_sub_16(columnA[k], columnR[k]));
-                entryTile[k] = acc;
-                accTile[k]   = acc;
+                for (IndexType k = 0; k < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++k)
+                {
+                    vec_t acc    = vec_add_16(vec_sub_16(entryTile[k], columnR0[k]), columnA0[k]);
+                    entryTile[k] = acc;
+                    accTile[k]   = acc;
+                }
+            }
+            else
+            {
+                IndexType       indexR1  = removed[1];
+                const IndexType offsetR1 = HalfDimensions * indexR1;
+                auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+                IndexType       indexA1  = added[1];
+                const IndexType offsetA1 = HalfDimensions * indexA1;
+                auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
+                
+                for (IndexType k = 0; k < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++k)
+                {
+                    vec_t acc = vec_add_16(vec_add_16(vec_sub_16(vec_sub_16(entryTile[k], columnR0[k]), columnR1[k]), columnA0[k]), columnA1[k]);
+                    entryTile[k] = acc;
+                    accTile[k]   = acc;
+                }
             }
         }
         else
