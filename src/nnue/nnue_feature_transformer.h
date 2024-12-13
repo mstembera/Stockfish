@@ -711,10 +711,27 @@ class FeatureTransformer {
               reinterpret_cast<vec_t*>(&accumulator.accumulation[Perspective][j * TileHeight]);
             auto entryTile = reinterpret_cast<vec_t*>(&entry.accumulation[j * TileHeight]);
 
-            for (IndexType k = 0; k < NumRegs; ++k)
-                acc[k] = entryTile[k];
-
             int i = 0;
+            if (removed.size() && added.size())
+            {
+                IndexType       indexR  = removed[i];
+                const IndexType offsetR = HalfDimensions * indexR + j * TileHeight;
+                auto            columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
+                IndexType       indexA  = added[i];
+                const IndexType offsetA = HalfDimensions * indexA + j * TileHeight;
+                auto            columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+
+                for (unsigned k = 0; k < NumRegs; ++k)
+                    acc[k] = vec_add_16(entryTile[k], vec_sub_16(columnA[k], columnR[k]));
+
+                i = 1;
+            }
+            else
+            {
+                for (IndexType k = 0; k < NumRegs; ++k)
+                    acc[k] = entryTile[k];
+            }
+            
             for (; i < int(std::min(removed.size(), added.size())); ++i)
             {
                 IndexType       indexR  = removed[i];
