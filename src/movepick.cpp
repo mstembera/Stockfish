@@ -70,6 +70,17 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         }
 }
 
+void insertion_sort(ExtMove* begin, ExtMove* end) {
+
+    for (ExtMove* p = end - 2; p >= begin; --p)
+    {
+        ExtMove tmp = *p, *q;
+        for (q = p; q + 1 < end && tmp < *(q + 1); ++q)
+            *q = *(q + 1);
+        *q = tmp;    
+    }
+}
+
 }  // namespace
 
 
@@ -232,7 +243,7 @@ top:
         endMoves             = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        insertion_sort(cur, endMoves);
         ++stage;
         goto top;
 
@@ -299,7 +310,7 @@ top:
         endMoves = generate<EVASIONS>(pos, cur);
 
         score<EVASIONS>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        insertion_sort(cur, endMoves);
         ++stage;
         [[fallthrough]];
 
