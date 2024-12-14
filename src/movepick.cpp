@@ -72,13 +72,13 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
 void insertion_sort(ExtMove* begin, ExtMove* end) {
 
-    for (ExtMove* p = end - 2; p >= begin; --p)
+    for (ExtMove* p = begin + 1; p < end; ++p)
     {
-        if (*p < *(p + 1))
+        if (*(p - 1) < *p)
         {
             ExtMove tmp = *p, *q;
-            for (q = p; q + 1 < end && tmp < *(q + 1); ++q)
-                *q = *(q + 1);
+            for (q = p; q != begin && *(q - 1) < tmp; --q)
+                *q = *(q - 1);
             *q = tmp;
         }
     }
