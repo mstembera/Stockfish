@@ -74,10 +74,13 @@ void insertion_sort(ExtMove* begin, ExtMove* end) {
 
     for (ExtMove* p = end - 2; p >= begin; --p)
     {
-        ExtMove tmp = *p, *q;
-        for (q = p; q + 1 < end && tmp < *(q + 1); ++q)
-            *q = *(q + 1);
-        *q = tmp;    
+        if (*p < *(p + 1))
+        {
+            ExtMove tmp = *p, *q;
+            for (q = p; q + 1 < end && tmp < *(q + 1); ++q)
+                *q = *(q + 1);
+            *q = tmp;
+        }
     }
 }
 
