@@ -702,8 +702,8 @@ class FeatureTransformer {
         accumulator.computed[Perspective] = true;
 
 #ifdef VECTOR
-        if (   (removed.size() == 1 && added.size() == 1)
-            || (removed.size() == 2 && added.size() == 2))
+        if (   (removed.size() == 1 || removed.size() == 2)
+            && (removed.size() == added.size())) [[likely]]
         {
             auto accTile = reinterpret_cast<vec_t*>(&accumulator.accumulation[Perspective][0]);
             auto entryTile = reinterpret_cast<vec_t*>(&entry.accumulation[0]);
@@ -719,7 +719,7 @@ class FeatureTransformer {
             {
                 for (IndexType k = 0; k < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++k)
                 {
-                    vec_t acc    = vec_add_16(vec_sub_16(entryTile[k], columnR0[k]), columnA0[k]);
+                    vec_t acc    = vec_add_16(entryTile[k], vec_sub_16(columnA0[k], columnR0[k]));
                     entryTile[k] = acc;
                     accTile[k]   = acc;
                 }
@@ -735,13 +735,13 @@ class FeatureTransformer {
                 
                 for (IndexType k = 0; k < HalfDimensions * sizeof(WeightType) / sizeof(vec_t); ++k)
                 {
-                    vec_t acc = vec_add_16(vec_add_16(vec_sub_16(vec_sub_16(entryTile[k], columnR0[k]), columnR1[k]), columnA0[k]), columnA1[k]);
+                    vec_t acc = vec_add_16(entryTile[k], vec_sub_16(vec_add_16(columnA0[k], columnA1[k]), vec_add_16(columnR0[k], columnR1[k])));
                     entryTile[k] = acc;
                     accTile[k]   = acc;
                 }
             }
         }
-        else
+        else [[unlikely]]
         {
             vec_t      acc[NumRegs];
 
