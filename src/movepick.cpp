@@ -160,9 +160,6 @@ void MovePicker::score() {
             m.value += 2 * (*pawnHistory)[pawn_structure_index(pos)][pc][to];
             m.value += (*continuationHistory[0])[pc][to];
             m.value += (*continuationHistory[1])[pc][to];
-            m.value += (*continuationHistory[2])[pc][to];
-            m.value += (*continuationHistory[3])[pc][to];
-            m.value += (*continuationHistory[5])[pc][to];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
@@ -181,6 +178,13 @@ void MovePicker::score() {
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);
+
+            if (std::abs(m.value) < 20000)
+            {
+                m.value += (*continuationHistory[2])[pc][to];
+                m.value += (*continuationHistory[3])[pc][to];
+                m.value += (*continuationHistory[5])[pc][to];
+            }
         }
 
         else  // Type == EVASIONS
