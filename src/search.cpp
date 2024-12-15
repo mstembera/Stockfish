@@ -278,7 +278,7 @@ void Search::Worker::iterative_deepening() {
     for (int pl = 0; pl < LOW_PLY_HISTORY_SIZE - 2; ++pl)
         for (int ft = 0; ft < SQUARE_NB * SQUARE_NB; ++ft)
         {
-            lowPlyHistory[pl][ft] = lowPlyHistory[pl + 2][ft];
+            lowPlyHistory[pl][ft] = lowPlyHistory[pl + 2][ft] / 2;
             lowPlyHistory[pl + 2][ft] = 0;
         }
 
