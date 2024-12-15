@@ -275,7 +275,12 @@ void Search::Worker::iterative_deepening() {
 
     int searchAgainCounter = 0;
 
-    lowPlyHistory.fill(0);
+    for (int pl = 0; pl < LOW_PLY_HISTORY_SIZE - 2; ++pl)
+        for (int ft = 0; ft < SQUARE_NB * SQUARE_NB; ++ft)
+        {
+            lowPlyHistory[pl][ft] = lowPlyHistory[pl + 2][ft];
+            lowPlyHistory[pl + 2][ft] = 0;
+        }
 
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (++rootDepth < MAX_PLY && !threads.stop
