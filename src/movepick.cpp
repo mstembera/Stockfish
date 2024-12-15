@@ -64,10 +64,11 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         {
             ExtMove tmp = *p, *q;
             *p          = *sortedEnd;
-            for (q = sortedEnd++; q > begin + 1 && *(q - 2) < tmp; q -= 2)
+            for (q = sortedEnd++; q > begin + 2 && *(q - 3) < tmp; q -= 3)
             {
                 *q       = *(q - 1);
                 *(q - 1) = *(q - 2);
+                *(q - 2) = *(q - 3);
             }
             for ( ; q > begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
