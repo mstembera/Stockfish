@@ -59,12 +59,12 @@ enum Stages {
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
+    for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
         if (p->value >= limit)
         {
             ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q > begin + 2 && *(q - 3) < tmp; q -= 3)
+            *p          = *sortedEnd;
+            for (q = sortedEnd++; q > begin + 2 && *(q - 3) < tmp; q -= 3)
             {
                 *q       = *(q - 1);
                 *(q - 1) = *(q - 2);
@@ -218,7 +218,7 @@ Move MovePicker::select(Pred filter) {
 // picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move() {
 
-    auto quiet_threshold = [](Depth d) { return -3560 * d; };
+    auto quiet_threshold = [](Depth d) { return -3700 * d; };
 
 top:
     switch (stage)
