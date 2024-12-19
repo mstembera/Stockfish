@@ -1071,10 +1071,7 @@ Key Position::key_after(Move m) const {
     Piece  captured = piece_on(to);
     Key    k        = st->key ^ Zobrist::side;
 
-    if (captured)
-        k ^= Zobrist::psq[captured][to];
-
-    k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[pc][from];
+    k ^= Zobrist::psq[captured][to] ^ Zobrist::psq[pc][to] ^ Zobrist::psq[pc][from];
 
     return (captured || type_of(pc) == PAWN) ? k : adjust_key50<true>(k);
 }
