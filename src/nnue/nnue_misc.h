@@ -56,8 +56,7 @@ struct AccumulatorCaches;
 std::string trace(Position& pos, const Networks& networks, AccumulatorCaches& caches);
 void        hint_common_parent_position(const Position&    pos,
                                         const Networks&    networks,
-                                        AccumulatorCaches& caches,
-                                        bool               isPV);
+                                        AccumulatorCaches& caches);
 
 }  // namespace Stockfish::Eval::NNUE
 }  // namespace Stockfish
