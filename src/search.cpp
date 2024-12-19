@@ -595,7 +595,7 @@ Value Search::Worker::search(
             || ss->ply >= MAX_PLY)
             return (ss->ply >= MAX_PLY && !ss->inCheck)
                    ? evaluate(networks[numaAccessToken], pos, refreshTable,
-                              thisThread->optimism[us])
+                              thisThread->optimism[us], PvNode)
                    : value_draw(thisThread->nodes);
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
@@ -725,7 +725,7 @@ Value Search::Worker::search(
     {
         // Providing the hint that this node's accumulator will be used often
         // brings significant Elo gain (~13 Elo).
-        Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable);
+        Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable, PvNode);
         unadjustedStaticEval = eval = ss->staticEval;
     }
     else if (ss->ttHit)
@@ -734,9 +734,9 @@ Value Search::Worker::search(
         unadjustedStaticEval = ttData.eval;
         if (!is_valid(unadjustedStaticEval))
             unadjustedStaticEval =
-              evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
+              evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us], PvNode);
         else if (PvNode)
-            Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable);
+            Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable, PvNode);
 
         ss->staticEval = eval =
           to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos, ss);
@@ -749,7 +749,7 @@ Value Search::Worker::search(
     else
     {
         unadjustedStaticEval =
-          evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
+          evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us], PvNode);
         ss->staticEval = eval =
           to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos, ss);
 
@@ -918,7 +918,7 @@ Value Search::Worker::search(
             }
         }
 
-        Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable);
+        Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable, PvNode);
     }
 
 moves_loop:  // When in check, search starts here
@@ -1511,7 +1511,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     // Step 2. Check for an immediate draw or maximum ply reached
     if (pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
         return (ss->ply >= MAX_PLY && !ss->inCheck)
-               ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us])
+               ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us], PvNode)
                : VALUE_DRAW;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
@@ -1543,7 +1543,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             unadjustedStaticEval = ttData.eval;
             if (!is_valid(unadjustedStaticEval))
                 unadjustedStaticEval =
-                  evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
+                  evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us], PvNode);
             ss->staticEval = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos, ss);
 
@@ -1557,7 +1557,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             // In case of null move search, use previous static eval with opposite sign
             unadjustedStaticEval =
               (ss - 1)->currentMove != Move::null()
-                ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us])
+                ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us], PvNode)
                 : -(ss - 1)->staticEval;
             ss->staticEval = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos, ss);
