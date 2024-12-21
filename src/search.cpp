@@ -1261,8 +1261,8 @@ moves_loop:  // When in check, search starts here
 
         if (rootNode)
         {
-            RootMove& rm =
-              *std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+            auto rmIt = std::find(thisThread->rootMoves.begin(), thisThread->rootMoves.end(), move);
+            RootMove& rm = *rmIt;
 
             rm.effort += nodes - nodeCount;
 
@@ -1302,7 +1302,22 @@ moves_loop:  // When in check, search starts here
                 // This information is used for time management. In MultiPV mode,
                 // we must take care to only do this for the first PV line.
                 if (moveCount > 1 && !thisThread->pvIdx)
-                    ++thisThread->bestMoveChanges;
+                {
+                    bool incBMC = true;
+                    if (rm.pv.size() >= 3)
+                    {
+                        const RootMove& previousBest = *std::max_element(thisThread->rootMoves.begin(), rmIt);
+
+                        if (previousBest.pv.size() >= 3)
+                        {
+                            if (   rm.pv[0] == previousBest.pv[2]
+                                && previousBest.pv[0] == rm.pv[2])
+                                incBMC = false;
+                        }
+                    }
+                    
+                    thisThread->bestMoveChanges += incBMC;
+                }
             }
             else
                 // All other moves but the PV, are set to the lowest value: this
