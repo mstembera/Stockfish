@@ -1311,7 +1311,7 @@ moves_loop:  // When in check, search starts here
                         if (previousBest.pv.size() >= 3)
                         {
                             if (   rm.pv[0] == previousBest.pv[2]
-                                && previousBest.pv[0] == rm.pv[2])
+                                && rm.pv[2] == previousBest.pv[0])
                                 incBMC = false;
                         }
                     }
