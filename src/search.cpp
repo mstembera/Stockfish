@@ -1440,17 +1440,23 @@ moves_loop:  // When in check, search starts here
 
         auto bonus = std::clamp(int(bestValue - ss->staticEval) * depth / 8,
                                 -CORRECTION_HISTORY_LIMIT / 4, CORRECTION_HISTORY_LIMIT / 4);
-        thisThread->pawnCorrectionHistory[us][pawn_structure_index<Correction>(pos)]
-          << bonus * 107 / 128;
-        thisThread->majorPieceCorrectionHistory[us][major_piece_index(pos)] << bonus * 162 / 128;
-        thisThread->minorPieceCorrectionHistory[us][minor_piece_index(pos)] << bonus * 148 / 128;
-        thisThread->nonPawnCorrectionHistory[WHITE][us][non_pawn_index<WHITE>(pos)]
-          << bonus * nonPawnWeight / 128;
-        thisThread->nonPawnCorrectionHistory[BLACK][us][non_pawn_index<BLACK>(pos)]
-          << bonus * nonPawnWeight / 128;
+        if (bonus)
+        {
+            thisThread->pawnCorrectionHistory[us][pawn_structure_index<Correction>(pos)]
+              << bonus * 107 / 128;
+            thisThread->majorPieceCorrectionHistory[us][major_piece_index(pos)]
+              << bonus * 162 / 128;
+            thisThread->minorPieceCorrectionHistory[us][minor_piece_index(pos)]
+              << bonus * 148 / 128;
+            thisThread->nonPawnCorrectionHistory[WHITE][us][non_pawn_index<WHITE>(pos)]
+              << bonus * nonPawnWeight / 128;
+            thisThread->nonPawnCorrectionHistory[BLACK][us][non_pawn_index<BLACK>(pos)]
+              << bonus * nonPawnWeight / 128;
 
-        if (m.is_ok())
-            (*(ss - 2)->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()] << bonus;
+            if (m.is_ok())
+                (*(ss - 2)->continuationCorrectionHistory)[pos.piece_on(m.to_sq())][m.to_sq()]
+                  << bonus;
+        }
     }
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
@@ -1840,6 +1846,9 @@ void update_all_stats(const Position&      pos,
 // Updates histories of the move pairs formed by moves
 // at ply -1, -2, -3, -4, and -6 with current move.
 void update_continuation_histories(Stack* ss, Piece pc, Square to, int bonus) {
+    if (!bonus)
+        return;
+
     static constexpr std::array<ConthistBonus, 5> conthist_bonuses = {
       {{1, 1024}, {2, 571}, {3, 339}, {4, 500}, {6, 592}}};
 
