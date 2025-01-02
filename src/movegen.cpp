@@ -194,13 +194,18 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
     if (b)
     {
-        b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
-        
-        if (b)
-        {
-            Bitboard occupied  = pos.pieces() & ~square_bb(ksq);
-            Bitboard attackers = pos.pieces(~Us, ROOK, QUEEN);
+        const Bitboard occupied = pos.pieces() ^ square_bb(ksq);
 
+        if (!more_than_one(b))
+        {           
+            if (pos.attackers_to(lsb(b), occupied) & pos.pieces(~Us))
+                b = 0;
+        }
+        else
+        {
+            b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
+
+            Bitboard attackers = pos.pieces(~Us, ROOK, QUEEN);
             while (attackers && b)
                 b &= ~attacks_bb<ROOK>(pop_lsb(attackers), occupied);
 
