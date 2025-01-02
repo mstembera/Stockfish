@@ -194,38 +194,19 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
     if (b)
     {
-        b &= ~pos.attacks_by<PAWN>(~Us);
-
-        if (popcount(b) > 2)
+        b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
+        
+        if (b)
         {
-            b &= ~(pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
+            Bitboard occupied  = pos.pieces() & ~square_bb(ksq);
+            Bitboard attackers = pos.pieces(~Us, ROOK, QUEEN);
 
-            if (b)
-            {
-                Bitboard occupiedMask = ~square_bb(ksq);
-                if (b)
-                {
-                    b &= ~pos.attacks_by<ROOK>(~Us, occupiedMask);
-                    if (b)
-                    {
-                        b &= ~pos.attacks_by<QUEEN>(~Us, occupiedMask);
-                        if (b)
-                            b &= ~pos.attacks_by<BISHOP>(~Us, occupiedMask);
-                    }
-                }
-            }
-        }
-        else
-        {
-            Bitboard occupied = pos.pieces() & ~square_bb(ksq);
-            Bitboard bb = b;
-            while (bb)
-            {
-                Square s = pop_lsb(bb);
-                if (pos.attackers_to(s, occupied) & pos.pieces(~Us))
-                    b ^= s;
+            while (attackers && b)
+                b &= ~attacks_bb<ROOK>(pop_lsb(attackers), occupied);
 
-            }
+            attackers = pos.pieces(~Us, BISHOP, QUEEN);
+            while (attackers && b)
+                b &= ~attacks_bb<BISHOP>(pop_lsb(attackers), occupied);
         }
     }
 
