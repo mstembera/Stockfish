@@ -192,28 +192,8 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
     Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS ? ~pos.pieces(Us) : target);
 
-    if (b)
-    {
-        const Bitboard occupied = pos.pieces() ^ square_bb(ksq);
-
-        if (!more_than_one(b))
-        {           
-            if (pos.attackers_to(lsb(b), occupied) & pos.pieces(~Us))
-                b = 0;
-        }
-        else
-        {
-            b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
-
-            Bitboard attackers = pos.pieces(~Us, ROOK, QUEEN);
-            while (attackers && b)
-                b &= ~attacks_bb<ROOK>(pop_lsb(attackers), occupied);
-
-            attackers = pos.pieces(~Us, BISHOP, QUEEN);
-            while (attackers && b)
-                b &= ~attacks_bb<BISHOP>(pop_lsb(attackers), occupied);
-        }
-    }
+    // Filter illegal squares attacked by pawns
+    b &= ~pos.attacks_by<PAWN>(~Us);
 
     while (b)
         *moveList++ = Move(ksq, pop_lsb(b));
