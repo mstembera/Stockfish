@@ -68,6 +68,7 @@ extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 struct Magic {
     Bitboard  mask;
     Bitboard* attacks;
+    Bitboard  attacks0;
 #ifndef USE_PEXT
     Bitboard magic;
     unsigned shift;
@@ -88,7 +89,11 @@ struct Magic {
 #endif
     }
 
-    Bitboard attacks_bb(Bitboard occupied) const { return attacks[index(occupied)]; }
+    Bitboard attacks_bb(Bitboard occupied) const {
+        
+        Bitboard b = attacks[index(occupied)];
+        return occupied & mask ? b : attacks0;
+    }
 };
 
 extern Magic Magics[SQUARE_NB][2];

@@ -191,6 +191,8 @@ void init_magics(PieceType pt, Bitboard table[], Magic magics[][2]) {
             b = (b - m.mask) & m.mask;
         } while (b);
 
+        m.attacks0 = m.attacks[0];
+
 #ifndef USE_PEXT
         PRNG rng(seeds[Is64Bit][rank_of(s)]);
 
