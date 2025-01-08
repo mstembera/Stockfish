@@ -506,8 +506,8 @@ bool Position::attackers_to_exist(Square s, Bitboard occupied, Color c) const {
      return ((  (pawn_attacks_bb(~c, s) & pieces(PAWN))
               | (attacks_bb<KNIGHT>(s)  & pieces(KNIGHT))
               | (attacks_bb<KING>(s)    & pieces(KING))) & pieces(c))
-          || ((attacks_bb<ROOK>(s)   & pieces(c, ROOK,   QUEEN)) && (attacks_bb<ROOK>(s, occupied)   & pieces(c, ROOK,   QUEEN)))
-          || ((attacks_bb<BISHOP>(s) & pieces(c, BISHOP, QUEEN)) && (attacks_bb<BISHOP>(s, occupied) & pieces(c, BISHOP, QUEEN)));
+          || (attacks_bb<ROOK>(s, occupied)   & pieces(c, ROOK,   QUEEN))
+          || (attacks_bb<BISHOP>(s, occupied) & pieces(c, BISHOP, QUEEN));
 }
 
 // Tests whether a pseudo-legal move is legal
