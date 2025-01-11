@@ -493,21 +493,21 @@ void Position::update_slider_blockers(Color c) const {
 // Slider attacks use the occupied bitboard to indicate occupancy.
 Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
 
-    return (pawn_attacks_bb(BLACK, s) & pieces(WHITE, PAWN))
-         | (pawn_attacks_bb(WHITE, s) & pieces(BLACK, PAWN))
-         | (attacks_bb<KNIGHT>(s) & pieces(KNIGHT))
-         | (attacks_bb<ROOK>(s, occupied) & pieces(ROOK, QUEEN))
-         | (attacks_bb<BISHOP>(s, occupied) & pieces(BISHOP, QUEEN))
-         | (attacks_bb<KING>(s) & pieces(KING));
+     return (attacks_bb<ROOK>(s, occupied) & pieces(ROOK, QUEEN))
+          | (attacks_bb<BISHOP>(s, occupied) & pieces(BISHOP, QUEEN))
+          | (pawn_attacks_bb(BLACK, s) & pieces(WHITE, PAWN))
+          | (pawn_attacks_bb(WHITE, s) & pieces(BLACK, PAWN))
+          | (attacks_bb<KNIGHT>(s) & pieces(KNIGHT))
+          | (attacks_bb<KING>(s) & pieces(KING));
 }
 
 bool Position::attackers_to_exist(Square s, Bitboard occupied, Color c) const {
 
-     return ((attacks_bb<ROOK>(s)   & pieces(c, ROOK,   QUEEN)) && (attacks_bb<ROOK>(s, occupied)   & pieces(c, ROOK,   QUEEN)))
-         || ((attacks_bb<BISHOP>(s) & pieces(c, BISHOP, QUEEN)) && (attacks_bb<BISHOP>(s, occupied) & pieces(c, BISHOP, QUEEN)))
-         || ((  (pawn_attacks_bb(~c, s) & pieces(PAWN))
+     return ((  (pawn_attacks_bb(~c, s) & pieces(PAWN))
               | (attacks_bb<KNIGHT>(s)  & pieces(KNIGHT))
-              | (attacks_bb<KING>(s)    & pieces(KING))) & pieces(c));
+              | (attacks_bb<KING>(s)    & pieces(KING))) & pieces(c))
+          || ((attacks_bb<ROOK>(s)   & pieces(c, ROOK,   QUEEN)) && (attacks_bb<ROOK>(s, occupied)   & pieces(c, ROOK,   QUEEN)))
+          || ((attacks_bb<BISHOP>(s) & pieces(c, BISHOP, QUEEN)) && (attacks_bb<BISHOP>(s, occupied) & pieces(c, BISHOP, QUEEN)));
 }
 
 // Tests whether a pseudo-legal move is legal
