@@ -37,11 +37,11 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
-#if (USE_AVX2)
+#if (USE_SSE41)
 alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint16_t, 16>, 65536> lookup_indices = []() {
-      std::array<std::array<std::uint16_t, 16>, 65536> v{};
-      for (unsigned i = 1; i < 65536; ++i)
+  std::array<std::array<std::uint8_t, 8>, 256> lookup_indices = []() {
+      std::array<std::array<std::uint8_t, 8>, 256> v{};
+      for (unsigned i = 0; i < 256; ++i)
       {
           std::uint64_t j = i, k = 0;
           while (j)
@@ -53,7 +53,7 @@ alignas(CacheLineSize) static inline const
 alignas(CacheLineSize) static inline const
   std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
       std::array<std::array<std::uint16_t, 8>, 256> v{};
-      for (unsigned i = 1; i < 256; ++i)
+      for (unsigned i = 0; i < 256; ++i)
       {
           std::uint64_t j = i, k = 0;
           while (j)
@@ -62,17 +62,16 @@ alignas(CacheLineSize) static inline const
       return v;
   }();
 #endif
-
 #if (USE_SSSE3 | (USE_NEON >= 8))
 // Find indices of nonzero numbers in an int32_t array
 template<const IndexType InputDimensions>
 void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_out) {
     #if defined(USE_SSSE3)
         #if defined(USE_AVX512)
-    using vecIn_t = __m512i;
+    using vec_t = __m512i;
             #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
         #elif defined(USE_AVX2)
-    using vecIn_t = __m256i;
+    using vec_t = __m256i;
             #if defined(USE_VNNI) && !defined(USE_AVXVNNI)
                 #define vec_nnz(a) _mm256_cmpgt_epi32_mask(a, _mm256_setzero_si256())
             #else
@@ -81,113 +80,73 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
                       _mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
             #endif
         #elif defined(USE_SSSE3)
-    using vecIn_t = __m128i;
+    using vec_t = __m128i;
             #define vec_nnz(a) \
                 _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
         #endif
+    using vec128_t = __m128i;
+        #define vec128_zero _mm_setzero_si128()
+        #define vec128_set_16(a) _mm_set1_epi16(a)
+    #if (USE_SSE41)
+        #define vec128_load(a) _mm_cvtepi8_epi16(_mm_cvtsi64_si128 (a))
+    #else
+        #define vec128_load(a) _mm_load_si128(a)
     #endif
-
-    #if defined(USE_AVX2)
-    using vecOut_t = __m256i;
-        #define vecOut_zero _mm256_setzero_si256()
-        #define vecOut_set_16(a) _mm256_set1_epi16(a)
-        #define vecOut_load(a) _mm256_load_si256(a)
-        #define vecOut_storeu(a, b) _mm256_storeu_si256(a, b)
-        #define vecOut_add(a, b) _mm256_add_epi16(a, b)
-    #elif defined(USE_SSSE3)
-    using vecOut_t = __m128i;
-        #define vecOut_zero _mm_setzero_si128()
-        #define vecOut_set_16(a) _mm_set1_epi16(a)
-        #define vecOut_load(a) _mm_load_si128(a)
-        #define vecOut_storeu(a, b) _mm_storeu_si128(a, b)
-        #define vecOut_add(a, b) _mm_add_epi16(a, b)
+        #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
+        #define vec128_add(a, b) _mm_add_epi16(a, b)
     #elif defined(USE_NEON)
-    using vecIn_t                     = uint32x4_t;
-    constexpr std::uint32_t Mask[4] = {1, 2, 4, 8};
+    using vec_t                        = uint32x4_t;
+    static const std::uint32_t Mask[4] = {1, 2, 4, 8};
         #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
-    using vec128_t                  = uint16x8_t;
-        #define vecOut_zero vdupq_n_u16(0)
-        #define vecOut_set_16(a) vdupq_n_u16(a)
-        #define vecOut_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
-        #define vecOut_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
-        #define vecOut_add(a, b) vaddq_u16(a, b)
+    using vec128_t                     = uint16x8_t;
+        #define vec128_zero vdupq_n_u16(0)
+        #define vec128_set_16(a) vdupq_n_u16(a)
+        #define vec128_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
+        #define vec128_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
+        #define vec128_add(a, b) vaddq_u16(a, b)
     #endif
-#endif
-
-#if (USE_AVX2)
-
-    constexpr IndexType InputSimdWidth = sizeof(vecIn_t) / sizeof(std::int32_t);
-    // Inputs are processed InputSimdWidth at a time and outputs are processed 16 at a time so we process in chunks of max(InputSimdWidth, 16)
-    constexpr IndexType ChunkSize       = std::max<IndexType>(InputSimdWidth, 16);
-    constexpr IndexType NumChunks       = InputDimensions / ChunkSize;
-    constexpr IndexType InputsPerChunk  = ChunkSize / InputSimdWidth;
-    constexpr IndexType OutputsPerChunk = ChunkSize / 16;
-
-    const auto     inputVector = reinterpret_cast<const vecIn_t*>(input);
-    IndexType      count       = 0;
-    vecOut_t       base        = vecOut_zero;
-    const vecOut_t increment   = vecOut_set_16(16);
-    for (IndexType i = 0; i < NumChunks; ++i)
-    {
-        // bitmask of nonzero values in this chunk
-        unsigned nnz = 0;
-        for (IndexType j = 0; j < InputsPerChunk; ++j)
-        {
-            const vecIn_t inputChunk = inputVector[i * InputsPerChunk + j];
-            nnz |= unsigned(vec_nnz(inputChunk)) << (j * InputSimdWidth);
-        }
-        for (IndexType j = 0; j < OutputsPerChunk; ++j)
-        {
-            const unsigned lookup  = (nnz >> (j * 16)) & 0xFFFF;
-            const vecOut_t offsets = vecOut_load(reinterpret_cast<const vecOut_t*>(&lookup_indices[lookup]));
-            vecOut_storeu(reinterpret_cast<vecOut_t*>(out + count), vecOut_add(base, offsets));
-            count += popcount(lookup);
-            base = vecOut_add(base, increment);
-        }
-    }
-    count_out = count;    
-
-#elif (USE_SSSE3 | (USE_NEON >= 8))
-
-    constexpr IndexType InputSimdWidth = sizeof(vecIn_t) / sizeof(std::int32_t);
+    constexpr IndexType InputSimdWidth = sizeof(vec_t) / sizeof(std::int32_t);
     // Inputs are processed InputSimdWidth at a time and outputs are processed 8 at a time so we process in chunks of max(InputSimdWidth, 8)
     constexpr IndexType ChunkSize       = std::max<IndexType>(InputSimdWidth, 8);
     constexpr IndexType NumChunks       = InputDimensions / ChunkSize;
     constexpr IndexType InputsPerChunk  = ChunkSize / InputSimdWidth;
     constexpr IndexType OutputsPerChunk = ChunkSize / 8;
 
-    const auto     inputVector = reinterpret_cast<const vecIn_t*>(input);
+    const auto     inputVector = reinterpret_cast<const vec_t*>(input);
     IndexType      count       = 0;
-    vecOut_t       base        = vecOut_zero;
-    const vecOut_t increment   = vecOut_set_16(8);
+    vec128_t       base        = vec128_zero;
+    const vec128_t increment   = vec128_set_16(8);
     for (IndexType i = 0; i < NumChunks; ++i)
     {
         // bitmask of nonzero values in this chunk
         unsigned nnz = 0;
         for (IndexType j = 0; j < InputsPerChunk; ++j)
         {
-            const vecIn_t inputChunk = inputVector[i * InputsPerChunk + j];
+            const vec_t inputChunk = inputVector[i * InputsPerChunk + j];
             nnz |= unsigned(vec_nnz(inputChunk)) << (j * InputSimdWidth);
         }
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
             const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
-            const vecOut_t offsets = vecOut_load(reinterpret_cast<const vecOut_t*>(&lookup_indices[lookup]));
-            vecOut_storeu(reinterpret_cast<vecOut_t*>(out + count), vecOut_add(base, offsets));
+        #if (USE_SSE41)
+            const vec128_t offsets = vec128_load(*reinterpret_cast<const int64_t*>(&lookup_indices[lookup]));
+        #else
+            const vec128_t offsets = vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
+        #endif
+            vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
             count += popcount(lookup);
-            base = vecOut_add(base, increment);
+            base = vec128_add(base, increment);
         }
     }
     count_out = count;
-#endif
-
-#undef vec_nnz
-#undef vecOut_zero
-#undef vecOut_set_16
-#undef vecOut_load
-#undef vecOut_storeu
-#undef vecOut_add
 }
+    #undef vec_nnz
+    #undef vec128_zero
+    #undef vec128_set_16
+    #undef vec128_load
+    #undef vec128_storeu
+    #undef vec128_add
+#endif
 
 // Sparse input implementation
 template<IndexType InDims, IndexType OutDims>
