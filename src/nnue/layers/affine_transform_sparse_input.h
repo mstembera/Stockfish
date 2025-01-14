@@ -37,7 +37,19 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
-#if (USE_SSSE3 | (USE_NEON >= 8))
+#if (USE_SSE41)
+alignas(CacheLineSize) static inline const
+  std::array<std::array<std::uint8_t, 8>, 256> lookup_indices = []() {
+      std::array<std::array<std::uint8_t, 8>, 256> v{};
+      for (unsigned i = 0; i < 256; ++i)
+      {
+          std::uint64_t j = i, k = 0;
+          while (j)
+              v[i][k++] = pop_lsb(j);
+      }
+      return v;
+  }();
+#elif (USE_SSSE3 | (USE_NEON >= 8))
 alignas(CacheLineSize) static inline const
   std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
       std::array<std::array<std::uint16_t, 8>, 256> v{};
@@ -49,7 +61,8 @@ alignas(CacheLineSize) static inline const
       }
       return v;
   }();
-
+#endif
+#if (USE_SSSE3 | (USE_NEON >= 8))
 // Find indices of nonzero numbers in an int32_t array
 template<const IndexType InputDimensions>
 void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_out) {
@@ -74,7 +87,11 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec128_t = __m128i;
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
+    #if (USE_SSE41)
+        #define vec128_load(a) _mm_cvtepi8_epi16(_mm_load_si128(a))
+    #else
         #define vec128_load(a) _mm_load_si128(a)
+    #endif
         #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
         #define vec128_add(a, b) _mm_add_epi16(a, b)
     #elif defined(USE_NEON)
