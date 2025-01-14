@@ -88,7 +88,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
     #if (USE_SSE41)
-        #define vec128_load(a) _mm_cvtepi8_epi16(_mm_cvtsi64_si128 (a))
+        #define vec128_load(a) _mm_cvtepi8_epi16(_mm_loadl_epi64(a))
     #else
         #define vec128_load(a) _mm_load_si128(a)
     #endif
@@ -128,11 +128,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
             const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
-        #if (USE_SSE41)
-            const vec128_t offsets = vec128_load(*reinterpret_cast<const int64_t*>(&lookup_indices[lookup]));
-        #else
             const vec128_t offsets = vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
-        #endif
             vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
             count += popcount(lookup);
             base = vec128_add(base, increment);
