@@ -37,32 +37,24 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
-#if (USE_SSE41)
-alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint8_t, 8>, 256> lookup_indices = []() {
-      std::array<std::array<std::uint8_t, 8>, 256> v{};
-      for (unsigned i = 0; i < 256; ++i)
-      {
-          std::uint64_t j = i, k = 0;
-          while (j)
-              v[i][k++] = pop_lsb(j);
-      }
-      return v;
-  }();
-#elif (USE_SSSE3 | (USE_NEON >= 8))
-alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
-      std::array<std::array<std::uint16_t, 8>, 256> v{};
-      for (unsigned i = 0; i < 256; ++i)
-      {
-          std::uint64_t j = i, k = 0;
-          while (j)
-              v[i][k++] = pop_lsb(j);
-      }
-      return v;
-  }();
-#endif
 #if (USE_SSSE3 | (USE_NEON >= 8))
+    #if (USE_SSE41)
+    using lookupUint = std::uint8_t;
+    #else
+    using lookupUint = std::uint16_t;
+    #endif
+alignas(CacheLineSize) static inline const
+  std::array<std::array<lookupUint, 8>, 256> lookup_indices = []() {
+      std::array<std::array<lookupUint, 8>, 256> v{};
+      for (unsigned i = 0; i < 256; ++i)
+      {
+          std::uint64_t j = i, k = 0;
+          while (j)
+              v[i][k++] = pop_lsb(j);
+      }
+      return v;
+  }();
+
 // Find indices of nonzero numbers in an int32_t array
 template<const IndexType InputDimensions>
 void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_out) {
