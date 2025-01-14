@@ -39,8 +39,8 @@ namespace Stockfish::Eval::NNUE::Layers {
 
 #if (USE_AVX2)
 alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint8_t, 16>, 65536> lookup_indices = []() {
-      std::array<std::array<std::uint8_t, 16>, 65536> v{};
+  std::array<std::array<std::uint16_t, 16>, 65536> lookup_indices = []() {
+      std::array<std::array<std::uint16_t, 16>, 65536> v{};
       for (unsigned i = 1; i < 65536; ++i)
       {
           std::uint64_t j = i, k = 0;
@@ -91,7 +91,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vecOut_t = __m256i;
         #define vecOut_zero _mm256_setzero_si256()
         #define vecOut_set_16(a) _mm256_set1_epi16(a)
-        #define vecOut_load(a) _mm256_cvtepi8_epi16(_mm_load_si128(a))
+        #define vecOut_load(a) _mm256_load_si256(a)
         #define vecOut_storeu(a, b) _mm256_storeu_si256(a, b)
         #define vecOut_add(a, b) _mm256_add_epi16(a, b)
     #elif defined(USE_SSSE3)
@@ -139,7 +139,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
             const unsigned lookup  = (nnz >> (j * 16)) & 0xFFFF;
-            const vecOut_t offsets = vecOut_load(reinterpret_cast<const __m128i*>(&lookup_indices[lookup]));
+            const vecOut_t offsets = vecOut_load(reinterpret_cast<const vecOut_t*>(&lookup_indices[lookup]));
             vecOut_storeu(reinterpret_cast<vecOut_t*>(out + count), vecOut_add(base, offsets));
             count += popcount(lookup);
             base = vecOut_add(base, increment);
