@@ -46,7 +46,7 @@ namespace Stockfish::Eval::NNUE::Layers {
 alignas(CacheLineSize) static inline const
   std::array<std::array<lookupUint, 8>, 256> lookup_indices = []() {
       std::array<std::array<lookupUint, 8>, 256> v{};
-      for (unsigned i = 0; i < 256; ++i)
+      for (unsigned i = 1; i < 256; ++i)
       {
           std::uint64_t j = i, k = 0;
           while (j)
@@ -80,7 +80,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
     #if (USE_SSE41)
-        #define vec128_load(a) _mm_cvtepi8_epi16(_mm_loadl_epi64(a))
+        #define vec128_load(a) _mm_cvtepu8_epi16(_mm_loadl_epi64(a))
     #else
         #define vec128_load(a) _mm_load_si128(a)
     #endif
