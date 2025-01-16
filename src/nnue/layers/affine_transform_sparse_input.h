@@ -37,11 +37,20 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
+#if !defined(USE_SSE41)
+    Intentionally break non SSE41 compilation just for fishtest testing
+#endif
+
 #if (USE_SSSE3 | (USE_NEON >= 8))
+    #if (USE_SSE41)
+    using lookupUint = std::uint8_t;
+    #else
+    using lookupUint = std::uint16_t;
+    #endif
 alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
-      std::array<std::array<std::uint16_t, 8>, 256> v{};
-      for (unsigned i = 0; i < 256; ++i)
+  std::array<std::array<lookupUint, 8>, 256> lookup_indices = []() {
+      std::array<std::array<lookupUint, 8>, 256> v{};
+      for (unsigned i = 1; i < 256; ++i)
       {
           std::uint64_t j = i, k = 0;
           while (j)
@@ -74,7 +83,11 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec128_t = __m128i;
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
+    #if (USE_SSE41)
+        #define vec128_load(a) _mm_cvtepu8_epi16(_mm_loadl_epi64(a))
+    #else
         #define vec128_load(a) _mm_load_si128(a)
+    #endif
         #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
         #define vec128_add(a, b) _mm_add_epi16(a, b)
     #elif defined(USE_NEON)
@@ -110,9 +123,8 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         }
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
-            const auto lookup = (nnz >> (j * 8)) & 0xFF;
-            const auto offsets =
-              vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
+            const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
+            const vec128_t offsets = vec128_load(reinterpret_cast<const vec128_t*>(&lookup_indices[lookup]));
             vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
             count += popcount(lookup);
             base = vec128_add(base, increment);
