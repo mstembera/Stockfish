@@ -57,17 +57,19 @@ enum Stages {
 
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
-void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+ExtMove* partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
+    ExtMove* sortedEnd = begin;
+    for (ExtMove* p = begin; p < end; ++p)
         if (p->value >= limit)
         {
             ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            *p          = *sortedEnd;
+            for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
         }
+    return sortedEnd;
 }
 
 }  // namespace
@@ -251,10 +253,10 @@ top:
         if (!skipQuiets)
         {
             cur      = endBadCaptures;
-            endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
+            endMoves = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+            endMoves = beginBadQuiets = partial_insertion_sort(cur, endMoves, std::max(quiet_threshold(depth), -7998));
         }
 
         ++stage;
@@ -262,13 +264,7 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([]() { return true; }))
-        {
-            if ((cur - 1)->value > -7998 || (cur - 1)->value <= quiet_threshold(depth))
-                return *(cur - 1);
-
-            // Remaining quiets are bad
-            beginBadQuiets = cur - 1;
-        }
+            return *(cur - 1);
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
@@ -281,9 +277,15 @@ top:
         if (select([]() { return true; }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over the bad quiets
-        cur      = beginBadQuiets;
-        endMoves = endBadQuiets;
+        if (!skipQuiets)
+        {
+            // Prepare the pointers to loop over the bad quiets
+            cur      = beginBadQuiets;
+            endMoves = endBadQuiets;
+
+            if (quiet_threshold(depth) < -7998)
+                partial_insertion_sort(cur, endMoves, quiet_threshold(depth));
+        }
 
         ++stage;
         [[fallthrough]];
