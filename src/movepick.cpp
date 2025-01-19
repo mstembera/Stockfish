@@ -215,7 +215,7 @@ Move MovePicker::select(Pred filter) {
 Move MovePicker::next_move() {
 
     constexpr int good_quiet_threshold = -8000;
-    auto sort_quiet_threshold = [](Depth d) { return -3360 * d; };
+    auto sort_quiet_threshold = [](Depth d) { return -3760 * d; };
 
 top:
     switch (stage)
