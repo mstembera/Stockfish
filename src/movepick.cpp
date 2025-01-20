@@ -270,7 +270,13 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([]() { return true; }))
-            return *(cur - 1);
+        {
+            if ((cur - 1)->value > GoodQuietThreshold)
+                return *(cur - 1);
+
+            // Remaining quiets are bad
+            beginBadQuiets = cur - 1;
+        }
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
