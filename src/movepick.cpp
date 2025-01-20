@@ -57,12 +57,10 @@ enum Stages {
 
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
-ExtMove* partial_insertion_sort(ExtMove* begin,
-                                ExtMove* end,
-                                int      sortLimit = std::numeric_limits<int>::min(),
-                                int      badLimit = std::numeric_limits<int>::min()) {
+ExtMove* partial_insertion_sort(ExtMove* begin, ExtMove* end, int sortLimit) {
 
-    for (ExtMove *sortedEnd = begin, *p = begin; p < end; ++p)
+    ExtMove* sortedEnd = begin;
+    for (ExtMove* p = begin; p < end; ++p)
         if (p->value >= sortLimit)
         {
             ExtMove tmp = *p, *q;
@@ -71,10 +69,8 @@ ExtMove* partial_insertion_sort(ExtMove* begin,
                 *q = *(q - 1);
             *q = tmp;
         }
-        else if (p->value <= badLimit)
-            std::swap(*p--, *--end);
 
-    return end;
+    return sortedEnd;
 }
 
 }  // namespace
@@ -219,8 +215,7 @@ Move MovePicker::select(Pred filter) {
 // picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move() {
 
-    constexpr int GoodQuietThreshold = -8000;
-    auto sort_quiet_threshold = [](Depth d) { return -3550 * d; };
+    auto sort_quiet_threshold = [](Depth d) { return -3560 * d; };
 
 top:
     switch (stage)
@@ -240,7 +235,7 @@ top:
         endMoves             = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
-        partial_insertion_sort(cur, endMoves);
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
         ++stage;
         goto top;
 
@@ -262,7 +257,7 @@ top:
             endMoves = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            endMoves = beginBadQuiets = partial_insertion_sort(cur, endMoves, sort_quiet_threshold(depth), GoodQuietThreshold);
+            endMoves = beginBadQuiets = partial_insertion_sort(cur, endMoves, sort_quiet_threshold(depth));
         }
 
         ++stage;
@@ -270,13 +265,7 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([]() { return true; }))
-        {
-            if ((cur - 1)->value > GoodQuietThreshold)
-                return *(cur - 1);
-
-            // Remaining quiets are bad
-            beginBadQuiets = cur - 1;
-        }
+            return *(cur - 1);
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
@@ -307,7 +296,7 @@ top:
         endMoves = generate<EVASIONS>(pos, cur);
 
         score<EVASIONS>();
-        partial_insertion_sort(cur, endMoves);
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
         ++stage;
         [[fallthrough]];
 
