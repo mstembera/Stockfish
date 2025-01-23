@@ -26,14 +26,9 @@
 
 namespace Stockfish {
 
+#ifndef USE_POPCNT
 uint8_t PopCnt16[1 << 16];
-uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
-
-Bitboard LineBB[SQUARE_NB][SQUARE_NB];
-Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
-Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
-Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
-
+#endif
 alignas(64) Magic Magics[SQUARE_NB][2];
 
 namespace {
@@ -42,13 +37,6 @@ Bitboard RookTable[0x19000];   // To store rook attacks
 Bitboard BishopTable[0x1480];  // To store bishop attacks
 
 void init_magics(PieceType pt, Bitboard table[], Magic magics[][2]);
-
-// Returns the bitboard of target square for the given step
-// from the given square. If the step is off the board, returns empty bitboard.
-Bitboard safe_destination(Square s, int step) {
-    Square to = Square(s + step);
-    return is_ok(to) && distance(s, to) <= 2 ? square_bb(to) : Bitboard(0);
-}
 }
 
 // Returns an ASCII representation of a bitboard suitable
@@ -74,45 +62,24 @@ std::string Bitboards::pretty(Bitboard b) {
 // startup and relies on global objects to be already zero-initialized.
 void Bitboards::init() {
 
+#ifndef USE_POPCNT
     for (unsigned i = 0; i < (1 << 16); ++i)
         PopCnt16[i] = uint8_t(std::bitset<16>(i).count());
-
-    for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
-        for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
-            SquareDistance[s1][s2] = std::max(distance<File>(s1, s2), distance<Rank>(s1, s2));
+#endif
 
     init_magics(ROOK, RookTable, Magics);
     init_magics(BISHOP, BishopTable, Magics);
-
-    for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
-    {
-        PawnAttacks[WHITE][s1] = pawn_attacks_bb<WHITE>(square_bb(s1));
-        PawnAttacks[BLACK][s1] = pawn_attacks_bb<BLACK>(square_bb(s1));
-
-        for (int step : {-9, -8, -7, -1, 1, 7, 8, 9})
-            PseudoAttacks[KING][s1] |= safe_destination(s1, step);
-
-        for (int step : {-17, -15, -10, -6, 6, 10, 15, 17})
-            PseudoAttacks[KNIGHT][s1] |= safe_destination(s1, step);
-
-        PseudoAttacks[QUEEN][s1] = PseudoAttacks[BISHOP][s1] = attacks_bb<BISHOP>(s1, 0);
-        PseudoAttacks[QUEEN][s1] |= PseudoAttacks[ROOK][s1]  = attacks_bb<ROOK>(s1, 0);
-
-        for (PieceType pt : {BISHOP, ROOK})
-            for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
-            {
-                if (PseudoAttacks[pt][s1] & s2)
-                {
-                    LineBB[s1][s2] = (attacks_bb(pt, s1, 0) & attacks_bb(pt, s2, 0)) | s1 | s2;
-                    BetweenBB[s1][s2] =
-                      (attacks_bb(pt, s1, square_bb(s2)) & attacks_bb(pt, s2, square_bb(s1)));
-                }
-                BetweenBB[s1][s2] |= s2;
-            }
-    }
 }
 
 namespace {
+
+// Returns the bitboard of target square for the given step
+// from the given square. If the step is off the board, returns empty bitboard.
+Bitboard safe_destination(Square s, int step) {
+
+    Square to = Square(s + step);
+    return is_ok(to) && distance(s, to) <= 2 ? square_bb(to) : Bitboard(0);
+}
 
 Bitboard sliding_attack(PieceType pt, Square sq, Bitboard occupied) {
 
