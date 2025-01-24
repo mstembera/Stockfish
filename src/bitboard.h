@@ -103,49 +103,49 @@ static constexpr std::array<std::array<Bitboard, SQUARE_NB>, PIECE_TYPE_NB> Pseu
         for (const int step : {-9, -8, -7, -1, 1, 7, 8, 9})
         {
             Square to = Square(s + step);
-            if (is_ok(to) && constexpr_distance(s, to) < 2)
+            if (is_ok(to) && constexpr_distance(s, to) == 1)
                 arr[KING][s] |= to;
         }
         for (const int step : {-17, -15, -10, -6, 6, 10, 15, 17})
         {
             Square to = Square(s + step);
-            if (is_ok(to) && constexpr_distance(s, to) < 3)
+            if (is_ok(to) && constexpr_distance(s, to) == 2)
                 arr[KNIGHT][s] |= to;
         }
-        {
-            for (Square to = s + NORTH_EAST;
-                 is_ok(to) && file_of(s) <= file_of(to) && rank_of(s) < rank_of(to);
-                 to += NORTH_EAST)
-                arr[BISHOP][s] |= to;
 
-            for (Square to = s + SOUTH_WEST;
-                 is_ok(to) && file_of(s) > file_of(to) && rank_of(s) > rank_of(to);
-                 to += SOUTH_WEST)
-                arr[BISHOP][s] |= to;
+        for (Square to = s + NORTH_EAST;
+                is_ok(to) && file_of(s) <= file_of(to) && rank_of(s) < rank_of(to);
+                to += NORTH_EAST)
+            arr[BISHOP][s] |= to;
 
-            for (Square to = s + NORTH_WEST;
-                 is_ok(to) && file_of(s) > file_of(to) && rank_of(s) < rank_of(to);
-                 to += NORTH_WEST)
-                arr[BISHOP][s] |= to;
+        for (Square to = s + SOUTH_WEST;
+                is_ok(to) && file_of(s) > file_of(to) && rank_of(s) > rank_of(to);
+                to += SOUTH_WEST)
+            arr[BISHOP][s] |= to;
 
-            for (Square to = s + SOUTH_EAST;
-                 is_ok(to) && file_of(s) < file_of(to) && rank_of(s) > rank_of(to);
-                 to += SOUTH_EAST)
-                arr[BISHOP][s] |= to;
-        }
-        {
-            for (Square to = s + NORTH; is_ok(to) && rank_of(s) < rank_of(to); to += NORTH)
-                arr[ROOK][s] |= to;
+        for (Square to = s + NORTH_WEST;
+                is_ok(to) && file_of(s) > file_of(to) && rank_of(s) < rank_of(to);
+                to += NORTH_WEST)
+            arr[BISHOP][s] |= to;
 
-            for (Square to = s + SOUTH; is_ok(to) && rank_of(s) > rank_of(to); to += SOUTH)
-                arr[ROOK][s] |= to;
+        for (Square to = s + SOUTH_EAST;
+                is_ok(to) && file_of(s) < file_of(to) && rank_of(s) > rank_of(to);
+                to += SOUTH_EAST)
+            arr[BISHOP][s] |= to;
+        
 
-            for (Square to = s + EAST; is_ok(to) && file_of(s) < file_of(to); to += EAST)
-                arr[ROOK][s] |= to;
+        for (Square to = s + NORTH; is_ok(to) && rank_of(s) < rank_of(to); to += NORTH)
+            arr[ROOK][s] |= to;
 
-            for (Square to = s + WEST; is_ok(to) && file_of(s) > file_of(to); to += WEST)
-                arr[ROOK][s] |= to;
-        }
+        for (Square to = s + SOUTH; is_ok(to) && rank_of(s) > rank_of(to); to += SOUTH)
+            arr[ROOK][s] |= to;
+
+        for (Square to = s + EAST; is_ok(to) && file_of(s) < file_of(to); to += EAST)
+            arr[ROOK][s] |= to;
+
+        for (Square to = s + WEST; is_ok(to) && file_of(s) > file_of(to); to += WEST)
+            arr[ROOK][s] |= to;
+        
         arr[QUEEN][s] = arr[BISHOP][s] | arr[ROOK][s];
     }
 

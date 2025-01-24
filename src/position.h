@@ -374,6 +374,49 @@ inline void Position::do_move(Move m, StateInfo& newSt, const TranspositionTable
 
 inline StateInfo* Position::state() const { return st; }
 
+namespace {
+
+static constexpr Piece Pieces[] = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
+                                   B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
+}  // namespace
+
+namespace Zobrist {
+
+static constexpr std::array<std::array<Key, SQUARE_NB>, PIECE_NB> psq = []() constexpr {
+    std::array<std::array<Key, SQUARE_NB>, PIECE_NB> arr{};
+
+    PRNG rng(1070372ULL);
+    for (Piece pc : Pieces)
+        for (Square s = SQ_A1; s <= SQ_H8; ++s)
+            arr[pc][s] = rng.rand<Key>();
+
+    return arr;
+}();
+
+static constexpr std::array<Key, FILE_NB> enpassant = []() constexpr {
+    std::array<Key, FILE_NB> arr{};
+
+    PRNG rng(0xee8217d8f57f0feeULL);
+    for (File f = FILE_A; f <= FILE_H; ++f)
+        arr[f] = rng.rand<Key>();
+
+    return arr;
+}();
+
+static constexpr std::array<Key, CASTLING_RIGHT_NB> castling = []() constexpr {
+    std::array<Key, CASTLING_RIGHT_NB> arr{};
+
+    PRNG rng(0x8f89e65a1965ef23ULL);
+    for (int cr = NO_CASTLING; cr <= ANY_CASTLING; ++cr)
+        arr[cr] = rng.rand<Key>();
+
+    return arr;
+}();
+
+static constexpr Key side = PRNG(0x8edcb4c38357affeULL).rand<Key>();
+static constexpr Key noPawns = PRNG(0x9f4a862e2e3f5d3cULL).rand<Key>();
+}
+
 }  // namespace Stockfish
 
 #endif  // #ifndef POSITION_H_INCLUDED

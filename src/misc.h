@@ -248,32 +248,32 @@ class PRNG {
 
     uint64_t s;
 
-    uint64_t rand64() {
+    constexpr uint64_t rand64() {
 
         s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
-        return s * 2685821657736338717LL;
+        return s * 2685821657736338717ULL;
     }
 
    public:
-    PRNG(uint64_t seed) :
+    constexpr PRNG(uint64_t seed) :
         s(seed) {
         assert(seed);
     }
 
     template<typename T>
-    T rand() {
+    constexpr T rand() {
         return T(rand64());
     }
 
     // Special generator used to fast init magic numbers.
     // Output values only have 1/8th of their bits set on average.
     template<typename T>
-    T sparse_rand() {
+    constexpr T sparse_rand() {
         return T(rand64() & rand64() & rand64());
     }
 };
 
-inline uint64_t mul_hi64(uint64_t a, uint64_t b) {
+constexpr uint64_t mul_hi64(uint64_t a, uint64_t b) {
 #if defined(__GNUC__) && defined(IS_64BIT)
     __extension__ using uint128 = unsigned __int128;
     return (uint128(a) * uint128(b)) >> 64;
