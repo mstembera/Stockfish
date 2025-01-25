@@ -476,11 +476,22 @@ class FeatureTransformer {
 
    private:
     template<Color Perspective>
-    StateInfo* try_find_computed_accumulator(const Position& pos) const {
+    StateInfo*
+    try_find_computed_accumulator(const Position&                           pos,
+                                  AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         // Look for a usable accumulator of an earlier position. We keep track
         // of the estimated gain in terms of features to be added/subtracted.
-        StateInfo* st   = pos.state();
-        int        gain = FeatureSet::refresh_cost(pos);
+        StateInfo* st   = pos.state(); 
+        const Square   ksq   = pos.square<KING>(Perspective);
+        const auto&    entry = (*cache)[ksq];
+        const Bitboard cacheBBW = entry[Perspective].byColorBB[WHITE];
+        const Bitboard cacheBBB = entry[Perspective].byColorBB[BLACK];
+        const Bitboard posBBW   = pos.pieces(WHITE);
+        const Bitboard posBBB   = pos.pieces(BLACK);
+
+        // Not exact but an estimate
+        int gain = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 8;
+
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
             // This governs when a full feature refresh is needed and how many
@@ -817,7 +828,7 @@ class FeatureTransformer {
                             AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         if ((pos.state()->*accPtr).computed[Perspective])
             return;
-        StateInfo* oldest = try_find_computed_accumulator<Perspective>(pos);
+        StateInfo* oldest = try_find_computed_accumulator<Perspective>(pos, cache);
 
         if ((oldest->*accPtr).computed[Perspective] && oldest != pos.state())
             // Start from the oldest computed accumulator, update all the
