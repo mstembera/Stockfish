@@ -490,7 +490,7 @@ class FeatureTransformer {
         const Bitboard posBBB   = pos.pieces(BLACK);
 
         // Not exact but an estimate
-        int gain = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 8;
+        int gain = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 4;
 
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
