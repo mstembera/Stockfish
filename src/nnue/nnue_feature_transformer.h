@@ -490,7 +490,7 @@ class FeatureTransformer {
         const Bitboard posBBB   = pos.pieces(BLACK);
 
         // Not exact but an estimate
-        int refreshCost = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 1;
+        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 2 + 1;
 
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
