@@ -478,7 +478,7 @@ class FeatureTransformer {
     template<Color Perspective>
     StateInfo*
     try_find_computed_accumulator(const Position&                           pos,
-                                  AccumulatorCaches::Cache<HalfDimensions>* cache) const {
+                                  const AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         // Look for a usable accumulator of an earlier position. We keep track
         // of the estimated gain in terms of features to be added/subtracted.
         StateInfo* st   = pos.state(); 
@@ -490,7 +490,7 @@ class FeatureTransformer {
         const Bitboard posBBB   = pos.pieces(BLACK);
 
         // Not exact but an estimate
-        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 3 / 2;
+        int refreshCost = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 1;
 
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
