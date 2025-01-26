@@ -490,14 +490,14 @@ class FeatureTransformer {
         const Bitboard posBBB   = pos.pieces(BLACK);
 
         // Not exact but an estimate
-        int gain = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 4;
+        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 3 / 2;
 
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
             // This governs when a full feature refresh is needed and how many
             // updates are better than just one full refresh.
             if (FeatureSet::requires_refresh(st, Perspective)
-                || (gain -= FeatureSet::update_cost(st) + 1) < 0)
+                || (refreshCost -= FeatureSet::update_cost(st) + 1) < 0)
                 break;
             st = st->previous;
         }
