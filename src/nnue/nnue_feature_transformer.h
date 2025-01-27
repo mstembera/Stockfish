@@ -661,9 +661,12 @@ class FeatureTransformer {
         auto&                 entry = (*cache)[ksq][Perspective];
         FeatureSet::IndexList removed, added;
 
-        if (  popcount(entry.byColorBB[WHITE] ^ pos.pieces(WHITE))
-            + popcount(entry.byColorBB[BLACK] ^ pos.pieces(BLACK))
-            > pos.count<ALL_PIECES>() + 2)
+        int diffCnt = 0;
+        for (Color c : {WHITE, BLACK})
+            for (PieceType pt = PAWN; pt <= KING; ++pt)
+                diffCnt += popcount((entry.byColorBB[c] & entry.byTypeBB[pt]) ^ pos.pieces(c, pt));
+
+        if (diffCnt > pos.count<ALL_PIECES>() + 1)
         {
             entry.clear(biases);
             for (Color c : {WHITE, BLACK})
