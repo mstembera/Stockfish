@@ -657,31 +657,49 @@ class FeatureTransformer {
                                           AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         assert(cache != nullptr);
 
-        Square                ksq   = pos.square<KING>(Perspective);
+        const Square          ksq   = pos.square<KING>(Perspective);
         auto&                 entry = (*cache)[ksq][Perspective];
         FeatureSet::IndexList removed, added;
 
-        for (Color c : {WHITE, BLACK})
+        if (  popcount(entry.byColorBB[WHITE] ^ pos.pieces(WHITE))
+            + popcount(entry.byColorBB[BLACK] ^ pos.pieces(BLACK))
+            > pos.count<ALL_PIECES>() + 2)
         {
-            for (PieceType pt = PAWN; pt <= KING; ++pt)
-            {
-                const Piece    piece    = make_piece(c, pt);
-                const Bitboard oldBB    = entry.byColorBB[c] & entry.byTypeBB[pt];
-                const Bitboard newBB    = pos.pieces(c, pt);
-                Bitboard       toRemove = oldBB & ~newBB;
-                Bitboard       toAdd    = newBB & ~oldBB;
+            entry.clear(biases);
+            for (Color c : {WHITE, BLACK})
+                for (PieceType pt = PAWN; pt <= KING; ++pt)
+                {
+                    const Piece piece = make_piece(c, pt);
+                    Bitboard    toAdd = pos.pieces(c, pt);
+                    while (toAdd)
+                    {
+                        Square sq = pop_lsb(toAdd);
+                        added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
+                }
+        }
+        else
+        {
+            for (Color c : {WHITE, BLACK})
+                for (PieceType pt = PAWN; pt <= KING; ++pt)
+                {
+                    const Piece    piece    = make_piece(c, pt);
+                    const Bitboard oldBB    = entry.byColorBB[c] & entry.byTypeBB[pt];
+                    const Bitboard newBB    = pos.pieces(c, pt);
+                    Bitboard       toRemove = oldBB & ~newBB;
+                    Bitboard       toAdd    = newBB & ~oldBB;
 
-                while (toRemove)
-                {
-                    Square sq = pop_lsb(toRemove);
-                    removed.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    while (toRemove)
+                    {
+                        Square sq = pop_lsb(toRemove);
+                        removed.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
+                    while (toAdd)
+                    {
+                        Square sq = pop_lsb(toAdd);
+                        added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
                 }
-                while (toAdd)
-                {
-                    Square sq = pop_lsb(toAdd);
-                    added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
-                }
-            }
         }
 
         auto& accumulator                 = pos.state()->*accPtr;
