@@ -144,8 +144,6 @@ using psqt_vec_t = int32x4_t;
 #else
     #undef VECTOR
 
-Intentionally break non vector compile just for fishtest testing.
-
 #endif
 
 // Returns the inverse of a permutation
@@ -663,12 +661,9 @@ class FeatureTransformer {
         auto&                 entry = (*cache)[ksq][Perspective];
         FeatureSet::IndexList removed, added;
 
-        int diffCnt = 0;
-        for (Color c : {WHITE, BLACK})
-            for (PieceType pt = PAWN; pt <= KING; ++pt)
-                diffCnt += popcount((entry.byColorBB[c] & entry.byTypeBB[pt]) ^ pos.pieces(c, pt));
-
-        if (diffCnt > pos.count<ALL_PIECES>() + 1)
+        if (  popcount(entry.byColorBB[WHITE] ^ pos.pieces(WHITE))
+            + popcount(entry.byColorBB[BLACK] ^ pos.pieces(BLACK))
+            > pos.count<ALL_PIECES>() + 3)
         {
             entry.clear(biases);
             for (Color c : {WHITE, BLACK})
@@ -723,8 +718,8 @@ class FeatureTransformer {
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = entryTile[k];
 
-            int i = 0;
-            for (; i < int(std::min(removed.size(), added.size())); ++i)
+            std::size_t i = 0;
+            for (; i < std::min(removed.size(), added.size()); ++i)
             {
                 IndexType       indexR  = removed[i];
                 const IndexType offsetR = HalfDimensions * indexR + j * Tiling::TileHeight;
@@ -736,19 +731,7 @@ class FeatureTransformer {
                 for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                     acc[k] = vec_add_16(acc[k], vec_sub_16(columnA[k], columnR[k]));
             }
-            for (; i < int(removed.size()) - 1; i += 2)
-            {
-                IndexType       index0  = removed[i];
-                const IndexType offset0 = HalfDimensions * index0 + j * Tiling::TileHeight;
-                auto*           column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
-                IndexType       index1  = removed[i + 1];
-                const IndexType offset1 = HalfDimensions * index1 + j * Tiling::TileHeight;
-                auto*           column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
-
-                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                    acc[k] = vec_sub_16(acc[k], vec_add_16(column0[k], column1[k]));
-            }
-            for (; i < int(removed.size()); ++i)
+            for (; i < removed.size(); ++i)
             {
                 IndexType       index  = removed[i];
                 const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
@@ -757,19 +740,7 @@ class FeatureTransformer {
                 for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                     acc[k] = vec_sub_16(acc[k], column[k]);
             }
-            for (; i < int(added.size()) - 1; i += 2)
-            {
-                IndexType       index0  = added[i];
-                const IndexType offset0 = HalfDimensions * index0 + j * Tiling::TileHeight;
-                auto*           column0 = reinterpret_cast<const vec_t*>(&weights[offset0]);
-                IndexType       index1  = added[i + 1];
-                const IndexType offset1 = HalfDimensions * index1 + j * Tiling::TileHeight;
-                auto*           column1 = reinterpret_cast<const vec_t*>(&weights[offset1]);
-
-                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                    acc[k] = vec_add_16(acc[k], vec_add_16(column0[k], column1[k]));
-            }
-            for (; i < int(added.size()); ++i)
+            for (; i < added.size(); ++i)
             {
                 IndexType       index  = added[i];
                 const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
