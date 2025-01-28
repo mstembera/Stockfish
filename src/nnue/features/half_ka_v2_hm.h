@@ -121,6 +121,7 @@ class HalfKAv2_hm {
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
     using IndexList                                = ValueList<IndexType, MaxActiveDimensions>;
+    using IndexListSigned                          = ValueList<int, 2 * MaxActiveDimensions>;
 
     // Index of a feature for a given king position and another piece on some square
     template<Color Perspective>
