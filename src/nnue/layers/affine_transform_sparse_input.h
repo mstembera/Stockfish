@@ -35,11 +35,12 @@
   This file contains the definition for a fully connected layer (aka affine transform) with block sparse input.
 */
 
-namespace Stockfish::Eval::NNUE::Layers {
 
-#if (!defined(USE_SSSE3) && !(USE_NEON >= 8))
-    "Intentionally break non ssse3 or neon compilation just for fishtest testing"
+#if !defined(USE_SSE41)
+    "Intentionally break compilation for unaffected architectures just for fishtest testing."
 #endif
+
+namespace Stockfish::Eval::NNUE::Layers {
 
 #if (USE_SSSE3 | (USE_NEON >= 8))
 static constexpr int lsb_index64[64] = {
@@ -71,11 +72,12 @@ alignas(CacheLineSize) static constexpr struct OffsetIndices {
                 offset_indices[i][k++] = constexpr_lsb(j);
                 j &= j - 1;
             }
-            std::uint64_t populatedCnt = k;
+            [[maybe_unused]] std::uint64_t usedCnt = k;
             while (k < 8)
                 offset_indices[i][k++] = 0;
-
-            offset_indices[i][7] |= populatedCnt << 3;
+        #if (USE_SSE41)
+            offset_indices[i][7] |= usedCnt << 3;
+        #endif
         }
     }
 
@@ -112,7 +114,6 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #endif
         #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
         #define vec128_add(a, b) _mm_add_epi16(a, b)
-        #define vec128_and(a, b) _mm_and_si128(a, b)
     #elif defined(USE_NEON)
     using vec_t                        = uint32x4_t;
     static const std::uint32_t Mask[4] = {1, 2, 4, 8};
@@ -123,7 +124,6 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #define vec128_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
         #define vec128_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
         #define vec128_add(a, b) vaddq_u16(a, b)
-        #define vec128_and(a, b) vandq_u16(a, b)
     #endif
     constexpr IndexType InputSimdWidth = sizeof(vec_t) / sizeof(std::int32_t);
     // Inputs are processed InputSimdWidth at a time and outputs are processed 8 at a time so we process in chunks of max(InputSimdWidth, 8)
@@ -136,7 +136,6 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     IndexType      count       = 0;
     vec128_t       base        = vec128_zero;
     const vec128_t increment   = vec128_set_16(8);
-    const vec128_t lookupMask  = vec128_set_16(0x7);
     for (IndexType i = 0; i < NumChunks; ++i)
     {
         // bitmask of nonzero values in this chunk
@@ -149,9 +148,16 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
             const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
-            const vec128_t offsets = vec128_and(vec128_load(reinterpret_cast<const vec128_t*>(&Lookup.offset_indices[lookup])), lookupMask);
+        #if (USE_SSE41)
+            const uint64_t offsets64 = *reinterpret_cast<const uint64_t*>(&Lookup.offset_indices[lookup]);
+            const vec128_t offsets = _mm_cvtepu8_epi16(_mm_set1_epi64x(offsets64 & 0x0707070707070707ULL));
             vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
-            count += Lookup.offset_indices[lookup][7] >> 3;
+            count += (offsets64 >> 59);
+        #else
+            const vec128_t offsets = vec128_load(reinterpret_cast<const vec128_t*>(&Lookup.offset_indices[lookup]));
+            vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
+            count += popcount(lookup);
+        #endif
             base = vec128_add(base, increment);
         }
     }
