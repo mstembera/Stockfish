@@ -152,10 +152,13 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         for (IndexType j = 0; j < OutputsPerChunk; ++j)
         {
             const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
-            const vec128_t offsets =
-              vec128_load(reinterpret_cast<const vec128_t*>(&Lookup.offset_indices[lookup]));
-            vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
-            count += Lookup.popcount(lookup);
+            if (lookup)
+            {
+                const vec128_t offsets =
+                  vec128_load(reinterpret_cast<const vec128_t*>(&Lookup.offset_indices[lookup]));
+                vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
+                count += Lookup.popcount(lookup);
+            }
             base = vec128_add(base, increment);
         }
     }
