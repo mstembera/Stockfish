@@ -37,7 +37,7 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
-#if (!defined(USE_SSSE3) && !(USE_NEON >= 8))
+#if !defined(USE_SSSE3)
     "Intentionally break non ssse3 or neon compilation just for fishtest testing"
 #endif
 
@@ -72,18 +72,17 @@ alignas(CacheLineSize) static constexpr struct OffsetIndices {
                 j &= j - 1;
             }
 
-            // Store the population count in the last element
-            // which is unused except for index 255.
-            offset_indices[i][7] = i == 255 ? 7 : std::uint8_t(k);
-
-            while (k < 7)
+            // Store the population count in the high 5 bits of the first element
+            offset_indices[i][0] |= k << 3;
+            
+            while (k < 8)
                 offset_indices[i][k++] = 0;
         }
     }
 
     constexpr unsigned popcount(unsigned index) const {
 
-        return offset_indices[index][7] + (index == 255);
+        return offset_indices[index][0] >> 3;
     }
 
 } Lookup;
@@ -113,9 +112,9 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
         #if (USE_SSE41)
-            #define vec128_load(a) _mm_cvtepu8_epi16(_mm_loadl_epi64(a))
+            #define vec128_load(a) _mm_and_si128(_mm_cvtepu8_epi16(_mm_loadl_epi64(a)), _mm_set1_epi16(0x7))
         #else
-            #define vec128_load(a) _mm_load_si128(a)
+            #define vec128_load(a) _mm_and_si128(_mm_load_si128(a), _mm_set1_epi16(0x7))
         #endif
         #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
         #define vec128_add(a, b) _mm_add_epi16(a, b)
@@ -126,7 +125,7 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec128_t                     = uint16x8_t;
         #define vec128_zero vdupq_n_u16(0)
         #define vec128_set_16(a) vdupq_n_u16(a)
-        #define vec128_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
+        #define vec128_load(a) vandq_u16(vld1q_u16(reinterpret_cast<const std::uint16_t*>(a)), vdupq_n_u16(0x7))
         #define vec128_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
         #define vec128_add(a, b) vaddq_u16(a, b)
     #endif
