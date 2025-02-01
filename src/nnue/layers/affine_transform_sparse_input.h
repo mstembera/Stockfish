@@ -37,6 +37,10 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
+#if !defined(USE_PEXT)
+"Intentionally break non ssse3 compilation just for fishtest testing"
+#endif
+
 #if (USE_SSSE3 | (USE_NEON >= 8))
 static constexpr int lsb_index64[64] = {
   0,  47, 1,  56, 48, 27, 2,  60, 57, 49, 41, 37, 28, 16, 3,  61, 54, 58, 35, 52, 50, 42,
@@ -51,16 +55,28 @@ constexpr int constexpr_lsb(uint64_t bb) {
 
 alignas(CacheLineSize) static constexpr struct OffsetIndices {
 
-    #if (USE_SSE41)
+    #if defined(USE_PEXT)
+    std::uint32_t offset_indices[256];
+    #elif defined(USE_SSE41)
     std::uint8_t offset_indices[256][8];
     #else
     std::uint16_t offset_indices[256][8];
     #endif
 
-    constexpr OffsetIndices() :
-        offset_indices() {
+    constexpr OffsetIndices() : offset_indices() {
+
         for (int i = 0; i < 256; ++i)
         {
+        #if defined(USE_PEXT)
+             offset_indices[i] = 0;
+             std::uint64_t j = i, shift = 0;
+             while (j)
+             {
+                 offset_indices[i] |= constexpr_lsb(j) << shift;
+                 j &= j - 1;
+                 shift += 4;
+             }
+        #else
             std::uint64_t j = i, k = 0;
             while (j)
             {
@@ -69,6 +85,7 @@ alignas(CacheLineSize) static constexpr struct OffsetIndices {
             }
             while (k < 8)
                 offset_indices[i][k++] = 0;
+        #endif
         }
     }
 
@@ -98,7 +115,9 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
     using vec128_t = __m128i;
         #define vec128_zero _mm_setzero_si128()
         #define vec128_set_16(a) _mm_set1_epi16(a)
-        #if (USE_SSE41)
+        #if defined(USE_PEXT)
+            #define vec128_load(a) _mm_cvtepu8_epi16(_mm_cvtsi64_si128(_pdep_u64(a, 0x0F0F0F0F0F0F0F0FULL)))
+        #elif defined(USE_SSE41)
             #define vec128_load(a) _mm_cvtepu8_epi16(_mm_loadl_epi64(a))
         #else
             #define vec128_load(a) _mm_load_si128(a)
@@ -140,7 +159,11 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
         {
             const unsigned lookup = (nnz >> (j * 8)) & 0xFF;
             const vec128_t offsets =
+            #if defined(USE_PEXT)
+              vec128_load(Lookup.offset_indices[lookup]);
+            #else
               vec128_load(reinterpret_cast<const vec128_t*>(&Lookup.offset_indices[lookup]));
+            #endif
             vec128_storeu(reinterpret_cast<vec128_t*>(out + count), vec128_add(base, offsets));
             count += popcount(lookup);
             base = vec128_add(base, increment);
