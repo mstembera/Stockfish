@@ -480,7 +480,7 @@ class FeatureTransformer {
         // Look for a usable accumulator of an earlier position. We keep track
         // of the estimated gain in terms of features to be added/subtracted.
         StateInfo* st   = pos.state();
-        int        gain = FeatureSet::refresh_cost(pos) * 2 / 3;
+        int        gain = FeatureSet::refresh_cost(pos) - 6;
         while (st->previous && !(st->*accPtr).computed[Perspective])
         {
             // This governs when a full feature refresh is needed and how many
