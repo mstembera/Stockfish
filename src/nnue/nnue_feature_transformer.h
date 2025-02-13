@@ -700,9 +700,9 @@ class FeatureTransformer {
         accumulator.computed[Perspective] = true;
 
 #ifdef VECTOR
-        const bool combineLast3 = std::abs((int)removed.size() - (int)added.size()) == 1 && removed.size() + added.size() >= 3;
+        const bool combine2R1A = removed.size() > added.size() && added.size();
+        const bool combine1R2A = removed.size() < added.size() && removed.size();
         vec_t      acc[Tiling::NumRegs];
-        psqt_vec_t psqt[Tiling::NumPsqtRegs];
 
         for (IndexType j = 0; j < HalfDimensions / Tiling::TileHeight; ++j)
         {
@@ -713,86 +713,72 @@ class FeatureTransformer {
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = entryTile[k];
 
-            int i = 0;
-            for (; i < (int)std::min(removed.size(), added.size()) - 1 - combineLast3; i += 2)
+            int ri = 0, ai = 0;
+            if (combine2R1A)
             {
-                IndexType       indexR0  = removed[i];
-                const IndexType offsetR0 = HalfDimensions * indexR0 + j * Tiling::TileHeight;
-                auto*           columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-                IndexType       indexR1  = removed[i + 1];
-                const IndexType offsetR1 = HalfDimensions * indexR1 + j * Tiling::TileHeight;
-                auto*           columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+                for (; ri < (int)removed.size() - 1 && ai < (int)added.size(); ri += 2, ++ai)
+                {
+                    IndexType       indexR0 = removed[ri];
+                    const IndexType offsetR0 = HalfDimensions * indexR0 + j * Tiling::TileHeight;
+                    auto*           columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+                    IndexType       indexR1 = removed[ri + 1];
+                    const IndexType offsetR1 = HalfDimensions * indexR1 + j * Tiling::TileHeight;
+                    auto*           columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+                    IndexType       indexA0  = added[ai];
+                    const IndexType offsetA0 = HalfDimensions * indexA0 + j * Tiling::TileHeight;
+                    auto*           columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
 
-                IndexType       indexA0  = added[i];
-                const IndexType offsetA0 = HalfDimensions * indexA0 + j * Tiling::TileHeight;
-                auto*           columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
-                IndexType       indexA1  = added[i + 1];
-                const IndexType offsetA1 = HalfDimensions * indexA1 + j * Tiling::TileHeight;
-                auto*           columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
-
-                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                    acc[k] = vec_add_16(vec_sub_16(acc[k], vec_add_16(columnR0[k], columnR1[k])), vec_add_16(columnA0[k], columnA1[k]));
+                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                        acc[k] = vec_sub_16(vec_add_16(acc[k], columnA0[k]), vec_add_16(columnR0[k], columnR1[k]));
+                }
             }
-            for (; i < (int)std::min(removed.size(), added.size()) - combineLast3; ++i)
+            else if (combine1R2A)
             {
-                IndexType       indexR  = removed[i];
+                for (; ri < (int)removed.size() && ai < (int)added.size() - 1; ri++, ai += 2)
+                {
+                    IndexType       indexR0  = removed[ri];
+                    const IndexType offsetR0 = HalfDimensions * indexR0 + j * Tiling::TileHeight;
+                    auto*           columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+                    IndexType       indexA0  = added[ai];
+                    const IndexType offsetA0 = HalfDimensions * indexA0 + j * Tiling::TileHeight;
+                    auto*           columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
+                    IndexType       indexA1  = added[ai + 1];
+                    const IndexType offsetA1 = HalfDimensions * indexA1 + j * Tiling::TileHeight;
+                    auto*           columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
+
+                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                        acc[k] = vec_add_16(vec_sub_16(acc[k], columnR0[k]), vec_add_16(columnA0[k], columnA1[k]));
+                }
+            }
+            for (; ri < (int)removed.size() && ai < (int)added.size(); ++ri, ++ai)
+            {
+                IndexType       indexR  = removed[ri];
                 const IndexType offsetR = HalfDimensions * indexR + j * Tiling::TileHeight;
                 auto*           columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
-                IndexType       indexA  = added[i];
+                IndexType       indexA  = added[ai];
                 const IndexType offsetA = HalfDimensions * indexA + j * Tiling::TileHeight;
                 auto*           columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
 
                 for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                     acc[k] = vec_add_16(acc[k], vec_sub_16(columnA[k], columnR[k]));
             }
-            if (combineLast3)
+            for (; ri < (int)removed.size(); ++ri)
             {
-                IndexType       indexR  = removed[i];
-                const IndexType offsetR = HalfDimensions * indexR + j * Tiling::TileHeight;
-                auto*           columnR = reinterpret_cast<const vec_t*>(&weights[offsetR]);
-                IndexType       indexA  = added[i];
-                const IndexType offsetA = HalfDimensions * indexA + j * Tiling::TileHeight;
-                auto*           columnA = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+                IndexType       index  = removed[ri];
+                const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
+                auto*           column = reinterpret_cast<const vec_t*>(&weights[offset]);
 
-                if (removed.size() > added.size())
-                {
-                    IndexType       indexR2  = removed[i + 1];
-                    const IndexType offsetR2 = HalfDimensions * indexR2 + j * Tiling::TileHeight;
-                    auto*           columnR2 = reinterpret_cast<const vec_t*>(&weights[offsetR2]);
-
-                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                        acc[k] = vec_sub_16(vec_add_16(acc[k], columnA[k]), vec_add_16(columnR[k], columnR2[k]));
-                }
-                else
-                {
-                    IndexType       indexA2  = added[i + 1];
-                    const IndexType offsetA2 = HalfDimensions * indexA2 + j * Tiling::TileHeight;
-                    auto*           columnA2 = reinterpret_cast<const vec_t*>(&weights[offsetA2]);
-
-                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                        acc[k] = vec_add_16(vec_sub_16(acc[k], columnR[k]), vec_add_16(columnA[k], columnA2[k]));
-                }
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = vec_sub_16(acc[k], column[k]);
             }
-            else
+            for (; ai < (int)added.size(); ++ai)
             {
-                for (; i < (int)removed.size(); ++i)
-                {
-                    IndexType       index  = removed[i];
-                    const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
-                    auto*           column = reinterpret_cast<const vec_t*>(&weights[offset]);
+                IndexType       index  = added[ai];
+                const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
+                auto*           column = reinterpret_cast<const vec_t*>(&weights[offset]);
 
-                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                        acc[k] = vec_sub_16(acc[k], column[k]);
-                }
-                for (; i < (int)added.size(); ++i)
-                {
-                    IndexType       index  = added[i];
-                    const IndexType offset = HalfDimensions * index + j * Tiling::TileHeight;
-                    auto*           column = reinterpret_cast<const vec_t*>(&weights[offset]);
-
-                    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                        acc[k] = vec_add_16(acc[k], column[k]);
-                }
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = vec_add_16(acc[k], column[k]);
             }
 
             for (IndexType k = 0; k < Tiling::NumRegs; k++)
@@ -801,6 +787,7 @@ class FeatureTransformer {
                 vec_store(&accTile[k], acc[k]);
         }
 
+        psqt_vec_t psqt[Tiling::NumPsqtRegs];
         for (IndexType j = 0; j < PSQTBuckets / Tiling::PsqtTileHeight; ++j)
         {
             auto* accTilePsqt = reinterpret_cast<psqt_vec_t*>(
