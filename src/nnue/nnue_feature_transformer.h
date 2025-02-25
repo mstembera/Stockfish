@@ -877,7 +877,7 @@ class FeatureTransformer {
         const Bitboard posBBB   = pos.pieces(BLACK);
 
         // Not exact but an estimate
-        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 2;
+        int refreshCost = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB) + 10;
 
         // Look for a usable already computed accumulator of an earlier position.
         // Always try to do an incremental update as most accumulators will be reusable.
