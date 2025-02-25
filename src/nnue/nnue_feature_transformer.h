@@ -867,7 +867,7 @@ class FeatureTransformer {
         if ((st->*accPtr).computed[Perspective])
             return;  // nothing to do
         
-        auto update_cost = [](const StateInfo* si) { return si->dirtyPiece.dirty_num; };
+        auto update_cost = [](const StateInfo* si) { return si->dirtyPiece.dirty_num + 1; };
 
         const Square   ksq      = pos.square<KING>(Perspective);
         const auto&    entry    = (*cache)[ksq];
@@ -896,7 +896,7 @@ class FeatureTransformer {
                     // move. We expect that we will need these accumulators later anyway, so
                     // computing them now will save some work.
                     update_accumulator_incremental<Perspective, BACKWARDS>(
-                      pos.square<KING>(Perspective), st, pos.state());
+                      ksq, st, pos.state());
                 return;
             }
             st = st->previous;
@@ -904,7 +904,7 @@ class FeatureTransformer {
 
         // Start from the oldest computed accumulator, update all the
         // accumulators up to the current position.
-        update_accumulator_incremental<Perspective>(pos.square<KING>(Perspective), pos.state(), st);
+        update_accumulator_incremental<Perspective>(ksq, pos.state(), st);
     }
 
     template<IndexType Size>
