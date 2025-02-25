@@ -866,17 +866,37 @@ class FeatureTransformer {
         StateInfo* st = pos.state();
         if ((st->*accPtr).computed[Perspective])
             return;  // nothing to do
+        
+        auto update_cost = [](const StateInfo* si) { return si->dirtyPiece.dirty_num; };
+
+        const Square   ksq      = pos.square<KING>(Perspective);
+        const auto&    entry    = (*cache)[ksq];
+        const Bitboard cacheBBW = entry[Perspective].byColorBB[WHITE];
+        const Bitboard cacheBBB = entry[Perspective].byColorBB[BLACK];
+        const Bitboard posBBW   = pos.pieces(WHITE);
+        const Bitboard posBBB   = pos.pieces(BLACK);
+
+        // Not exact but an estimate
+        int refreshCost = popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB);
 
         // Look for a usable already computed accumulator of an earlier position.
         // Always try to do an incremental update as most accumulators will be reusable.
         do
         {
             if (   FeatureSet::requires_refresh(st, Perspective)
+                || ((refreshCost -= update_cost(st)) < 0)
                 || !st->previous
                 || st->previous->next != st)
             {
                 // compute accumulator from scratch for this position
                 update_accumulator_refresh_cache<Perspective>(pos, cache);
+                if (st != pos.state())
+                    // when computing an accumulator from scratch we can use it to
+                    // efficiently compute the accumulator backwards, until we get to a king
+                    // move. We expect that we will need these accumulators later anyway, so
+                    // computing them now will save some work.
+                    update_accumulator_incremental<Perspective, BACKWARDS>(
+                      pos.square<KING>(Perspective), st, pos.state());
                 return;
             }
             st = st->previous;
