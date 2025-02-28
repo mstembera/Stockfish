@@ -228,12 +228,12 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
 #ifdef USE_SSE2
      
     const __m128i vKey  = _mm_set1_epi16(key16);
-    const __m128i eKeys = _mm_set1_epi64x(uint64_t(tte[0].key16) | uint64_t(tte[1].key16) << 16 | uint64_t(tte[2].key16) << 32);
+    const __m128i eKeys = _mm_setr_epi16(tte[0].key16, tte[1].key16, tte[2].key16, 0, 0, 0, 0, 0);
     const int   matches = _mm_movemask_epi8(_mm_cmpeq_epi16(vKey, eKeys)) & 0x3F;
 
     if (matches)
     {
-        int idx = lsb(matches) / 2;
+        unsigned idx = unsigned(lsb(matches)) / 2;
         return {tte[idx].is_occupied(), tte[idx].read(), TTWriter(&tte[idx])};
     }
 
