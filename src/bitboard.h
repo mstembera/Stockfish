@@ -192,23 +192,14 @@ inline bool aligned(Square s1, Square s2, Square s3) { return line_bb(s1, s2) & 
 
 // distance() functions return the distance between x and y, defined as the
 // number of steps for a king in x to reach y.
-
 template<typename T1 = Square>
-inline int distance(Square x, Square y);
-
-template<>
-inline int distance<File>(Square x, Square y) {
-    return std::abs(file_of(x) - file_of(y));
-}
-
-template<>
-inline int distance<Rank>(Square x, Square y) {
-    return std::abs(rank_of(x) - rank_of(y));
-}
-
-template<>
-inline int distance<Square>(Square x, Square y) {
-    return SquareDistance[x][y];
+constexpr inline int distance(Square x, Square y) {
+    if constexpr (std::is_same_v<T1, File>)
+        return std::abs(file_of(x) - file_of(y));
+    else if constexpr (std::is_same_v<T1, Rank>)
+        return std::abs(rank_of(x) - rank_of(y));
+    else
+        return SquareDistance[x][y];
 }
 
 inline int edge_distance(File f) { return std::min(f, File(FILE_H - f)); }
