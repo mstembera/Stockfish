@@ -870,11 +870,25 @@ class FeatureTransformer {
         if ((st->*accPtr).computed[Perspective])
             return;  // nothing to do
 
+        auto update_cost = [](const StateInfo* si) { return si->dirtyPiece.dirty_num + 1; };
+
+        const Square   ksq      = pos.square<KING>(Perspective);
+        const auto&    entry    = (*cache)[ksq];
+        const Bitboard cacheBBW = entry[Perspective].byColorBB[WHITE];
+        const Bitboard cacheBBB = entry[Perspective].byColorBB[BLACK];
+        const Bitboard posBBW   = pos.pieces(WHITE);
+        const Bitboard posBBB   = pos.pieces(BLACK);
+
+        // Not exact but an estimate
+        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 7 / 4 + 8;
+
         // Look for a usable already computed accumulator of an earlier position.
         // Always try to do an incremental update as most accumulators will be reusable.
         do
         {
-            if (FeatureSet::requires_refresh(st, Perspective) || !st->previous
+            if (   FeatureSet::requires_refresh(st, Perspective) 
+                || ((refreshCost -= update_cost(st)) < 0)
+                || !st->previous
                 || st->previous->next != st)
             {
                 // compute accumulator from scratch for this position
@@ -885,7 +899,7 @@ class FeatureTransformer {
                     // move. We expect that we will need these accumulators later anyway, so
                     // computing them now will save some work.
                     update_accumulator_incremental<Perspective, BACKWARDS>(
-                      pos.square<KING>(Perspective), st, pos.state());
+                      ksq, st, pos.state());
                 return;
             }
             st = st->previous;
@@ -893,7 +907,7 @@ class FeatureTransformer {
 
         // Start from the oldest computed accumulator, update all the
         // accumulators up to the current position.
-        update_accumulator_incremental<Perspective>(pos.square<KING>(Perspective), pos.state(), st);
+        update_accumulator_incremental<Perspective>(ksq, pos.state(), st);
     }
 
     template<IndexType Size>
