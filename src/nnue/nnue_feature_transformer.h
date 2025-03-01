@@ -149,6 +149,8 @@ using psqt_vec_t = int32x4_t;
 #else
     #undef VECTOR
 
+"Intentionally break non vector compile just for fishtest testing."
+
 #endif
 
 // Returns the inverse of a permutation
@@ -673,31 +675,50 @@ class FeatureTransformer {
                                           AccumulatorCaches::Cache<HalfDimensions>* cache) const {
         assert(cache != nullptr);
 
-        Square                ksq   = pos.square<KING>(Perspective);
+        const Square          ksq   = pos.square<KING>(Perspective);
         auto&                 entry = (*cache)[ksq][Perspective];
         FeatureSet::IndexList removed, added;
 
-        for (Color c : {WHITE, BLACK})
+        if (  popcount(entry.byColorBB[WHITE] ^ pos.pieces(WHITE))
+            + popcount(entry.byColorBB[BLACK] ^ pos.pieces(BLACK))
+            > pos.count<ALL_PIECES>() + 3)
         {
-            for (PieceType pt = PAWN; pt <= KING; ++pt)
-            {
-                const Piece    piece    = make_piece(c, pt);
-                const Bitboard oldBB    = entry.byColorBB[c] & entry.byTypeBB[pt];
-                const Bitboard newBB    = pos.pieces(c, pt);
-                Bitboard       toRemove = oldBB & ~newBB;
-                Bitboard       toAdd    = newBB & ~oldBB;
+            for (Color c : {WHITE, BLACK})
+                for (PieceType pt = PAWN; pt <= KING; ++pt)
+                {
+                    const Piece piece = make_piece(c, pt);
+                    Bitboard    toAdd = pos.pieces(c, pt);
+                    while (toAdd)
+                    {
+                        Square sq = pop_lsb(toAdd);
+                        added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
+                }
 
-                while (toRemove)
+            entry.clear(biases);
+        }
+        else
+        {
+            for (Color c : {WHITE, BLACK})
+                for (PieceType pt = PAWN; pt <= KING; ++pt)
                 {
-                    Square sq = pop_lsb(toRemove);
-                    removed.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    const Piece    piece    = make_piece(c, pt);
+                    const Bitboard oldBB    = entry.byColorBB[c] & entry.byTypeBB[pt];
+                    const Bitboard newBB    = pos.pieces(c, pt);
+                    Bitboard       toRemove = oldBB & ~newBB;
+                    Bitboard       toAdd    = newBB & ~oldBB;
+
+                    while (toRemove)
+                    {
+                        Square sq = pop_lsb(toRemove);
+                        removed.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
+                    while (toAdd)
+                    {
+                        Square sq = pop_lsb(toAdd);
+                        added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    }
                 }
-                while (toAdd)
-                {
-                    Square sq = pop_lsb(toAdd);
-                    added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
-                }
-            }
         }
 
         auto& accumulator                 = pos.state()->*accPtr;
@@ -873,14 +894,11 @@ class FeatureTransformer {
         auto update_cost = [](const StateInfo* si) { return si->dirtyPiece.dirty_num + 1; };
 
         const Square   ksq      = pos.square<KING>(Perspective);
-        const auto&    entry    = (*cache)[ksq];
-        const Bitboard cacheBBW = entry[Perspective].byColorBB[WHITE];
-        const Bitboard cacheBBB = entry[Perspective].byColorBB[BLACK];
-        const Bitboard posBBW   = pos.pieces(WHITE);
-        const Bitboard posBBB   = pos.pieces(BLACK);
+        const auto&    entry    = (*cache)[ksq][Perspective];
 
-        // Not exact but an estimate
-        int refreshCost = (popcount(cacheBBW ^ posBBW) + popcount(cacheBBB ^ posBBB)) * 5 / 4 + 8;
+        int refreshCost = std::min(  popcount(entry.byColorBB[WHITE] ^ pos.pieces(WHITE))
+                                   + popcount(entry.byColorBB[BLACK] ^ pos.pieces(BLACK)),
+                                   pos.count<ALL_PIECES>() + 3) * 3 / 2 + 4;
 
         // Look for a usable already computed accumulator of an earlier position.
         // Always try to do an incremental update as most accumulators will be reusable.
