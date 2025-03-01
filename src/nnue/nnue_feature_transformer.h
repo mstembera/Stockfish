@@ -745,9 +745,13 @@ class FeatureTransformer {
                     if (write)
                     {
                         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                            entryTile[k] = accTile[k] =
-                                vec_sub_16(vec_add_16(acc[k], columnA[k]),
-                                            vec_add_16(columnR[k], columnR2[k]));
+                        {
+                            acc[k] = vec_sub_16(vec_add_16(acc[k], columnA[k]),
+                                                vec_add_16(columnR[k], columnR2[k]));
+                            vec_store(&entryTile[k], acc[k]);
+                        }
+                        for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                            vec_store(&accTile[k], acc[k]);
                     }
                     else
                     {
@@ -776,9 +780,13 @@ class FeatureTransformer {
                     if (write)
                     {
                         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                            entryTile[k] = accTile[k] =
-                            vec_add_16(vec_sub_16(acc[k], columnR[k]),
-                                        vec_add_16(columnA[k], columnA2[k]));
+                        {
+                            acc[k] = vec_add_16(vec_sub_16(acc[k], columnR[k]),
+                                                vec_add_16(columnA[k], columnA2[k]));
+                            vec_store(&entryTile[k], acc[k]);
+                        }
+                        for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                            vec_store(&accTile[k], acc[k]);
                     }
                     else
                     {
@@ -802,7 +810,12 @@ class FeatureTransformer {
                     if (write)
                     {
                         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                            entryTile[k] = accTile[k] = vec_add_16(acc[k], vec_sub_16(columnA[k], columnR[k]));
+                        {
+                            acc[k] = vec_add_16(acc[k], vec_sub_16(columnA[k], columnR[k]));
+                            vec_store(&entryTile[k], acc[k]);
+                        }
+                        for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                            vec_store(&accTile[k], acc[k]);
                     }
                     else
                     {
@@ -820,7 +833,12 @@ class FeatureTransformer {
                     if (write)
                     {
                         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                            entryTile[k] = accTile[k] = vec_sub_16(acc[k], column[k]);
+                        {
+                            acc[k] = vec_sub_16(acc[k], column[k]);
+                            vec_store(&entryTile[k], acc[k]);
+                        }
+                        for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                            vec_store(&accTile[k], acc[k]);
                     }
                     else
                     {
@@ -838,7 +856,12 @@ class FeatureTransformer {
                     if (write)
                     {
                         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
-                            entryTile[k] = accTile[k] = vec_add_16(acc[k], column[k]);
+                        {
+                            acc[k] = vec_add_16(acc[k], column[k]);
+                            vec_store(&entryTile[k], acc[k]);
+                        }
+                        for (IndexType k = 0; k < Tiling::NumRegs; k++)
+                            vec_store(&accTile[k], acc[k]);
                     }
                     else
                     {
