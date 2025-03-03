@@ -60,14 +60,44 @@ enum Stages {
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
+    {
         if (p->value >= limit)
         {
-            ExtMove tmp = *p, *q;
+            ExtMove tmp = *p;
             *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
-                *q = *(q - 1);
-            *q = tmp;
+
+            // Use binary search to find insertion point
+            if (sortedEnd - begin > 16)
+            {
+                ExtMove* low  = begin;
+                ExtMove* high = sortedEnd - 1;
+
+                while (low <= high)
+                {
+                    ExtMove* mid = low + (high - low) / 2;
+                    if (*mid < tmp)
+                        high = mid - 1;
+                    else
+                        low = mid + 1;
+                }
+
+                ExtMove* q = sortedEnd;
+                while (q > low)
+                {
+                    *q = *(q - 1);
+                    --q;
+                }
+                *low = tmp;
+            }
+            else
+            {
+                ExtMove* q;
+                for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+                    *q = *(q - 1);
+                *q = tmp;
+            }
         }
+    }
 }
 
 }  // namespace
