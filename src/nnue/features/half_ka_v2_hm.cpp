@@ -60,10 +60,10 @@ void HalfKAv2_hm::append_changed_indices(Square            ksq,
                                          IndexList&        added) {
     for (int i = 0; i < dp.dirty_num; ++i)
     {
-        if (dp.from[i] != SQ_NONE)
-            removed.push_back(make_index<Perspective>(dp.from[i], dp.piece[i], ksq));
-        if (dp.to[i] != SQ_NONE)
-            added.push_back(make_index<Perspective>(dp.to[i], dp.piece[i], ksq));
+        if (dp.pft[i].from != SQ_NONE)
+            removed.push_back(make_index<Perspective>(dp.pft[i].from, dp.pft[i].pc, ksq));
+        if (dp.pft[i].to != SQ_NONE)
+            added.push_back(make_index<Perspective>(dp.pft[i].to, dp.pft[i].pc, ksq));
     }
 }
 
@@ -78,7 +78,7 @@ template void HalfKAv2_hm::append_changed_indices<BLACK>(Square            ksq,
                                                          IndexList&        added);
 
 bool HalfKAv2_hm::requires_refresh(const StateInfo* st, Color perspective) {
-    return st->dirtyPiece.piece[0] == make_piece(perspective, KING);
+    return st->dirtyPiece.pft[0].pc == make_piece(perspective, KING);
 }
 
 }  // namespace Stockfish::Eval::NNUE::Features

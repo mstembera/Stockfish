@@ -771,9 +771,9 @@ void Position::do_move(Move                      m,
         }
 
         dp.dirty_num = 2;  // 1 piece moved, 1 piece captured
-        dp.piece[1]  = captured;
-        dp.from[1]   = capsq;
-        dp.to[1]     = SQ_NONE;
+        dp.pft[1].pc = captured;
+        dp.pft[1].from = capsq;
+        dp.pft[1].to = SQ_NONE;
 
         // Update board and piece lists
         remove_piece(capsq);
@@ -806,9 +806,9 @@ void Position::do_move(Move                      m,
     // Move the piece. The tricky Chess960 castling is handled earlier
     if (m.type_of() != CASTLING)
     {
-        dp.piece[0] = pc;
-        dp.from[0]  = from;
-        dp.to[0]    = to;
+        dp.pft[0].pc = pc;
+        dp.pft[0].from = from;
+        dp.pft[0].to   = to;
 
         move_piece(from, to);
     }
@@ -836,10 +836,10 @@ void Position::do_move(Move                      m,
             put_piece(promotion, to);
 
             // Promoting pawn to SQ_NONE, promoted piece from SQ_NONE
-            dp.to[0]               = SQ_NONE;
-            dp.piece[dp.dirty_num] = promotion;
-            dp.from[dp.dirty_num]  = SQ_NONE;
-            dp.to[dp.dirty_num]    = to;
+            dp.pft[0].to        = SQ_NONE;
+            dp.pft[dp.dirty_num].pc = promotion;
+            dp.pft[dp.dirty_num].from = SQ_NONE;
+            dp.pft[dp.dirty_num].to   = to;
             dp.dirty_num++;
 
             // Update hash keys
@@ -985,12 +985,12 @@ void Position::do_castling(Color us, Square from, Square& to, Square& rfrom, Squ
     if (Do)
     {
         auto& dp     = st->dirtyPiece;
-        dp.piece[0]  = make_piece(us, KING);
-        dp.from[0]   = from;
-        dp.to[0]     = to;
-        dp.piece[1]  = make_piece(us, ROOK);
-        dp.from[1]   = rfrom;
-        dp.to[1]     = rto;
+        dp.pft[0].pc = make_piece(us, KING);
+        dp.pft[0].from = from;
+        dp.pft[0].to = to;
+        dp.pft[1].pc = make_piece(us, ROOK);
+        dp.pft[1].from = rfrom;
+        dp.pft[1].to = rto;
         dp.dirty_num = 2;
     }
 
@@ -1027,7 +1027,7 @@ void Position::do_null_move(StateInfo& newSt, const TranspositionTable& tt) {
     prefetch(tt.first_entry(key()));
 
     st->dirtyPiece.dirty_num               = 0;
-    st->dirtyPiece.piece[0]                = NO_PIECE;  // Avoid checks in UpdateAccumulator()
+    st->dirtyPiece.pft[0].pc               = NO_PIECE;  // Avoid checks in UpdateAccumulator()
     st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
       st->accumulatorSmall.computed[WHITE] = st->accumulatorSmall.computed[BLACK] = false;
 

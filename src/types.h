@@ -281,11 +281,12 @@ struct DirtyPiece {
     // Max 3 pieces can change in one move. A promotion with capture moves
     // both the pawn and the captured piece to SQ_NONE and the piece promoted
     // to from SQ_NONE to the capture square.
-    Piece piece[3];
-
     // From and to squares, which may be SQ_NONE
-    Square from[3];
-    Square to[3];
+    struct {
+        Piece pc;
+        Square from;
+        Square to;
+    } pft[3];
 };
 
     #define ENABLE_INCR_OPERATORS_ON(T) \
