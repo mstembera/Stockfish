@@ -29,6 +29,10 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
+#if !defined(USE_AVX2)
+"Intentionally break non AVX2 compilation for fistest testing."
+#endif
+
 // Clipped ReLU
 template<IndexType InDims>
 class ClippedReLU {
@@ -64,8 +68,24 @@ class ClippedReLU {
 #if defined(USE_AVX2)
         if constexpr (InputDimensions % SimdWidth == 0)
         {
+        #if defined(USE_AVX512)
             constexpr IndexType NumChunks = InputDimensions / SimdWidth;
-            const __m256i       Offsets   = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
+            static const __m512i       Offsets   = _mm512_set_epi32(13, 9, 5, 1, 12, 8, 4, 0, 13, 9, 5, 1, 12, 8, 4, 0);
+            const auto          in        = reinterpret_cast<const __m512i*>(input);
+            const auto          out       = reinterpret_cast<__m256i*>(output);
+            for (IndexType i = 0; i < NumChunks; ++i)
+            {
+                const __m512i words0 =
+                  _mm512_srli_epi16(_mm512_packus_epi32(_mm512_load_si512(&in[i * 2 + 0]),
+                                                        _mm512_load_si512(&in[i * 2 + 1])),
+                                    WeightScaleBits);
+                
+                _mm256_store_si256(&out[i], _mm512_castsi512_si256(_mm512_permutexvar_epi32(
+                                            Offsets, _mm512_packs_epi16(words0, words0))));
+            }
+        #else
+            constexpr IndexType NumChunks = InputDimensions / SimdWidth;
+            static const __m256i       Offsets   = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
             const auto          in        = reinterpret_cast<const __m256i*>(input);
             const auto          out       = reinterpret_cast<__m256i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)
@@ -81,11 +101,12 @@ class ClippedReLU {
                 _mm256_store_si256(&out[i], _mm256_permutevar8x32_epi32(
                                               _mm256_packs_epi16(words0, words1), Offsets));
             }
+        #endif
         }
         else
         {
             constexpr IndexType NumChunks = InputDimensions / (SimdWidth / 2);
-            const __m256i       Offsets   = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
+            static const __m256i       Offsets   = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
             const auto          in        = reinterpret_cast<const __m256i*>(input);
             const auto          out       = reinterpret_cast<__m128i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)

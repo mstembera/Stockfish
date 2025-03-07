@@ -29,10 +29,6 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
-#if !defined(USE_AVX2)
-"Intentionally break compilation for fistest testing."
-#endif
-
 // Clipped ReLU
 template<IndexType InDims>
 class SqrClippedReLU {
@@ -69,29 +65,10 @@ class SqrClippedReLU {
         constexpr IndexType NumChunks = InputDimensions / 16;
 
         static_assert(WeightScaleBits == 6);
-        #if defined(USE_AVX2)
-        const __m256i Offsets = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
-        const auto in = reinterpret_cast<const __m256i*>(input);
-        #else
-        const auto in = reinterpret_cast<const __m128i*>(input);
-        #endif
+        const auto in  = reinterpret_cast<const __m128i*>(input);
         const auto out = reinterpret_cast<__m128i*>(output);
         for (IndexType i = 0; i < NumChunks; ++i)
         {
-        #if defined(USE_AVX2)
-            __m256i words0 =
-              _mm256_packs_epi32(_mm256_load_si256(&in[i * 2 + 0]), _mm256_load_si256(&in[i * 2 + 1]));
-            
-            // We shift by WeightScaleBits * 2 = 12 and divide by 128
-            // which is an additional shift-right of 7, meaning 19 in total.
-            // MulHi strips the lower 16 bits so we need to shift out 3 more to match.
-            words0 = _mm256_srli_epi16(_mm256_mulhi_epi16(words0, words0), 3);
-
-            words0 = _mm256_packs_epi16(words0, words0);
-            words0 = _mm256_permutevar8x32_epi32(words0, Offsets);
-            _mm_store_si128(&out[i], _mm256_castsi256_si128(words0));
-           
-        #else
             __m128i words0 =
               _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1]));
             __m128i words1 =
@@ -104,7 +81,6 @@ class SqrClippedReLU {
             words1 = _mm_srli_epi16(_mm_mulhi_epi16(words1, words1), 3);
 
             _mm_store_si128(&out[i], _mm_packs_epi16(words0, words1));
-        #endif
         }
         constexpr IndexType Start = NumChunks * 16;
 
