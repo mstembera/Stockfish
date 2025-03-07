@@ -85,17 +85,18 @@ class ClippedReLU {
         else
         {
             constexpr IndexType NumChunks = InputDimensions / (SimdWidth / 2);
-            const auto          in        = reinterpret_cast<const __m128i*>(input);
+            const __m256i       Offsets   = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
+            const auto          in        = reinterpret_cast<const __m256i*>(input);
             const auto          out       = reinterpret_cast<__m128i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)
             {
-                const __m128i words0 = _mm_srli_epi16(
-                  _mm_packus_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1])),
-                  WeightScaleBits);
-                const __m128i words1 = _mm_srli_epi16(
-                  _mm_packus_epi32(_mm_load_si128(&in[i * 4 + 2]), _mm_load_si128(&in[i * 4 + 3])),
-                  WeightScaleBits);
-                _mm_store_si128(&out[i], _mm_packs_epi16(words0, words1));
+                const __m256i words0 =
+                  _mm256_srli_epi16(_mm256_packus_epi32(_mm256_load_si256(&in[i * 2 + 0]),
+                                                        _mm256_load_si256(&in[i * 2 + 1])),
+                                    WeightScaleBits);
+                
+                _mm_store_si128(&out[i], _mm256_castsi256_si128(_mm256_permutevar8x32_epi32(
+                                              _mm256_packs_epi16(words0, words0), Offsets)));
             }
         }
         constexpr IndexType Start = InputDimensions % SimdWidth == 0
