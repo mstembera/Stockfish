@@ -70,7 +70,7 @@ class SqrClippedReLU {
 
         static_assert(WeightScaleBits == 6);
         #if defined(USE_AVX2)
-        const __m256i Offsets = _mm256_set_epi32(7, 6, 3, 2, 5, 4, 1, 0);
+        const __m256i Offsets = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
         const auto in = reinterpret_cast<const __m256i*>(input);
         #else
         const auto in = reinterpret_cast<const __m128i*>(input);
@@ -86,9 +86,11 @@ class SqrClippedReLU {
             // which is an additional shift-right of 7, meaning 19 in total.
             // MulHi strips the lower 16 bits so we need to shift out 3 more to match.
             words0 = _mm256_srli_epi16(_mm256_mulhi_epi16(words0, words0), 3);
+
+            words0 = _mm256_packs_epi16(words0, words0);
             words0 = _mm256_permutevar8x32_epi32(words0, Offsets);
-            _mm_store_si128(&out[i], _mm_packs_epi16(_mm256_castsi256_si128(words0),
-                                                     _mm256_extracti128_si256(words0, 1)));
+            _mm_store_si128(&out[i], _mm256_castsi256_si128(words0));
+           
         #else
             __m128i words0 =
               _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1]));
