@@ -68,11 +68,11 @@ class ClippedReLU {
 #if defined(USE_AVX2)
         if constexpr (InputDimensions % SimdWidth == 0)
         {
-        #if defined(USE_AVX512)
             constexpr IndexType NumChunks = InputDimensions / SimdWidth;
-            static const __m512i       Offsets   = _mm512_set_epi32(13, 9, 5, 1, 12, 8, 4, 0, 13, 9, 5, 1, 12, 8, 4, 0);
-            const auto          in        = reinterpret_cast<const __m512i*>(input);
-            const auto          out       = reinterpret_cast<__m256i*>(output);
+        #if defined(USE_AVX512)
+            static const __m512i Offsets   = _mm512_set_epi32(13, 9, 5, 1, 12, 8, 4, 0, 13, 9, 5, 1, 12, 8, 4, 0);
+            const auto           in        = reinterpret_cast<const __m512i*>(input);
+            const auto           out       = reinterpret_cast<__m256i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)
             {
                 const __m512i words0 =
@@ -84,10 +84,9 @@ class ClippedReLU {
                                             Offsets, _mm512_packs_epi16(words0, words0))));
             }
         #else
-            constexpr IndexType NumChunks = InputDimensions / SimdWidth;
-            static const __m256i       Offsets   = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
-            const auto          in        = reinterpret_cast<const __m256i*>(input);
-            const auto          out       = reinterpret_cast<__m256i*>(output);
+            static const __m256i Offsets   = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
+            const auto           in        = reinterpret_cast<const __m256i*>(input);
+            const auto           out       = reinterpret_cast<__m256i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)
             {
                 const __m256i words0 =
@@ -106,9 +105,9 @@ class ClippedReLU {
         else
         {
             constexpr IndexType NumChunks = InputDimensions / (SimdWidth / 2);
-            static const __m256i       Offsets   = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
-            const auto          in        = reinterpret_cast<const __m256i*>(input);
-            const auto          out       = reinterpret_cast<__m128i*>(output);
+            static const __m256i Offsets   = _mm256_set_epi32(5, 1, 4, 0, 5, 1, 4, 0);
+            const auto           in        = reinterpret_cast<const __m256i*>(input);
+            const auto           out       = reinterpret_cast<__m128i*>(output);
             for (IndexType i = 0; i < NumChunks; ++i)
             {
                 const __m256i words0 =
