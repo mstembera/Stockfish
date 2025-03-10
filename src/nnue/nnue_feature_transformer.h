@@ -885,7 +885,7 @@ class FeatureTransformer {
             if (FeatureSet::requires_refresh(st, Perspective)
                 || !st->previous
                 || st->previous->next != st
-                || loopCnt++ > 8)
+                || loopCnt++ > 9)
             {
                 // compute accumulator from scratch for this position
                 update_accumulator_refresh_cache<Perspective>(pos, cache);
