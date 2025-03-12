@@ -37,6 +37,11 @@
 
 namespace Stockfish::Eval::NNUE::Layers {
 
+#if !defined(USE_SSSE3) && !defined(USE_NEON)
+"Intentionally break compilation for fistest testing."
+#endif
+
+
 #if (USE_SSSE3 | (USE_NEON >= 8))
 static constexpr int lsb_index64[64] = {
   0,  47, 1,  56, 48, 27, 2,  60, 57, 49, 41, 37, 28, 16, 3,  61, 54, 58, 35, 52, 50, 42,
@@ -258,8 +263,8 @@ class AffineTransformSparseInput {
 
         constexpr IndexType NumChunks = ceil_to_multiple<IndexType>(InputDimensions, 8) / ChunkSize;
         constexpr IndexType NumRegs   = OutputDimensions / OutputSimdWidth;
-        std::uint16_t       nnz[NumChunks];
-        IndexType           count;
+        alignas(16) std::uint16_t nnz[NumChunks];
+        IndexType                 count;
 
         const auto input32 = reinterpret_cast<const std::int32_t*>(input);
 
