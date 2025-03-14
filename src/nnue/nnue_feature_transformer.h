@@ -874,7 +874,8 @@ class FeatureTransformer {
         // Always try to do an incremental update as most accumulators will be reusable.
         do
         {
-            if (FeatureSet::requires_refresh(st, Perspective) || !st->previous
+            if (FeatureSet::requires_refresh(st, Perspective)
+                || !st->previous
                 || st->previous->next != st)
             {
                 // compute accumulator from scratch for this position
@@ -885,7 +886,7 @@ class FeatureTransformer {
                     // move. We expect that we will need these accumulators later anyway, so
                     // computing them now will save some work.
                     update_accumulator_incremental<Perspective, BACKWARDS>(
-                      pos.square<KING>(Perspective), st, pos.state());
+                      pos.square<KING>(Perspective), pos.state()->previous, pos.state());
                 return;
             }
             st = st->previous;
