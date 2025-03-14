@@ -881,13 +881,19 @@ class FeatureTransformer {
                 // compute accumulator from scratch for this position
                 update_accumulator_refresh_cache<Perspective>(pos, cache);
                 if (st != pos.state())
+                {
+                    StateInfo* previous = pos.state()->previous;
+                    for (int i = 0; i < 2 && previous != st && previous->previous; ++i)
+                        previous = previous->previous;
+
                     // when computing an accumulator from scratch we can use it to
                     // efficiently compute the accumulator backwards, until we get to a king
                     // move. We expect that we will need these accumulators later anyway, so
                     // computing them now will save some work.
                     update_accumulator_incremental<Perspective, BACKWARDS>(
-                      pos.square<KING>(Perspective), 
-                      st->next != pos.state() ? pos.state()->previous->previous : pos.state()->previous, pos.state());
+                      pos.square<KING>(Perspective), previous, pos.state());
+                }
+
                 return;
             }
             st = st->previous;
