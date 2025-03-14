@@ -886,7 +886,8 @@ class FeatureTransformer {
                     // move. We expect that we will need these accumulators later anyway, so
                     // computing them now will save some work.
                     update_accumulator_incremental<Perspective, BACKWARDS>(
-                      pos.square<KING>(Perspective), pos.state()->previous, pos.state());
+                      pos.square<KING>(Perspective), 
+                      st->next != pos.state() ? pos.state()->previous->previous : pos.state()->previous, pos.state());
                 return;
             }
             st = st->previous;
