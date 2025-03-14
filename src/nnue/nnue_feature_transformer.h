@@ -883,7 +883,7 @@ class FeatureTransformer {
                 if (st != pos.state())
                 {
                     StateInfo* previous = pos.state()->previous;
-                    for (int i = 0; i < 2 && previous != st && previous->previous; ++i)
+                    for (int i = 0; i < 3 && previous != st && previous->previous; ++i)
                         previous = previous->previous;
 
                     // when computing an accumulator from scratch we can use it to
