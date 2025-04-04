@@ -117,6 +117,26 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
+static void attacked_once_twice(const Position& pos, Color c, Bitboard& attackedOnce, Bitboard& attackedTwice)
+{
+    attackedOnce = c == WHITE ? pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                              : pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+
+    attackedTwice = c == WHITE ? double_pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                               : double_pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+
+    for (PieceType pt = KNIGHT; pt <= KING; ++pt)
+    {
+        Bitboard attackers = pos.pieces(c, pt);
+        while (attackers)
+        {
+            Bitboard attacks = attacks_bb(pt, pop_lsb(attackers), pos.pieces());
+            attackedTwice |= attacks & attackedOnce;
+            attackedOnce  |= attacks;
+        }
+    }
+}
+
 // Assigns a numerical value to each move in a list, used for sorting.
 // Captures are ordered by Most Valuable Victim (MVV), preferring captures
 // with a good history. Quiets moves are ordered using the history tables.
@@ -126,7 +146,7 @@ void MovePicker::score() {
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
-      threatenedPieces;
+      threatenedByAny, threatenedPieces, defendedOnce, defendedTwice;
     if constexpr (Type == QUIETS)
     {
         Color us = pos.side_to_move();
@@ -135,11 +155,15 @@ void MovePicker::score() {
         threatenedByMinor =
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
         threatenedByRook = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+        threatenedByAny =
+          pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us) | threatenedByRook;
 
         // Pieces threatened by pieces of lesser material value
         threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+        attacked_once_twice(pos, us, defendedOnce, defendedTwice);
     }
 
     for (auto& m : *this)
@@ -179,6 +203,11 @@ void MovePicker::score() {
             m.value -= (pt == QUEEN && bool(to & threatenedByRook)   ? 49000
                         : pt == ROOK && bool(to & threatenedByMinor) ? 24335
                                                                      : 0);
+
+            // malus for putting an undefended piece under attack
+            m.value -= pt == PAWN 
+                ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 16 * PawnValue      : 0)
+                : ((to & threatenedByAny) && !(to & defendedTwice) ? 16 * PieceValue[pt] : 0);
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);
