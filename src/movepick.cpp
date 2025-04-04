@@ -200,14 +200,10 @@ void MovePicker::score() {
                                                : 0;
 
             // malus for putting piece en prise
-            m.value -= (pt == QUEEN && bool(to & threatenedByRook)   ? 49000
-                        : pt == ROOK && bool(to & threatenedByMinor) ? 24335
-                                                                     : 0);
-
-            // malus for putting an undefended piece under attack
-            m.value -= pt == PAWN 
-                ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 32 * PawnValue      : 0)
-                : ((to & threatenedByAny) && !(to & defendedTwice) ? 32 * PieceValue[pt] : 0);
+            m.value -= (  pt == QUEEN && bool(to & threatenedByRook)  ? 49000
+                        : pt == ROOK  && bool(to & threatenedByMinor) ? 24335                              
+                        : (pt == PAWN ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 16 * PawnValue      : 0)
+                                      : ((to & threatenedByAny) && !(to & defendedTwice) ? 16 * PieceValue[pt] : 0)));
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);
