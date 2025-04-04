@@ -206,8 +206,8 @@ void MovePicker::score() {
 
             // malus for putting an undefended piece under attack
             m.value -= pt == PAWN 
-                ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 16 * PawnValue      : 0)
-                : ((to & threatenedByAny) && !(to & defendedTwice) ? 16 * PieceValue[pt] : 0);
+                ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 32 * PawnValue      : 0)
+                : ((to & threatenedByAny) && !(to & defendedTwice) ? 32 * PieceValue[pt] : 0);
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);
