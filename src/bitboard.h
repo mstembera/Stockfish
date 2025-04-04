@@ -61,7 +61,7 @@ extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
 
 extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
-extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
+extern Bitboard PseudoAttacks[SQUARE_NB][PIECE_TYPE_NB];
 
 
 // Magic holds all magic bitboards relevant data for a single square
@@ -213,7 +213,7 @@ template<PieceType Pt>
 inline Bitboard attacks_bb(Square s, Color c = COLOR_NB) {
 
     assert((Pt != PAWN || c < COLOR_NB) && (is_ok(s)));
-    return Pt == PAWN ? PseudoAttacks[c][s] : PseudoAttacks[Pt][s];
+    return Pt == PAWN ? PseudoAttacks[s][c] : PseudoAttacks[s][Pt];
 }
 
 
@@ -233,7 +233,7 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
     case QUEEN :
         return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
     default :
-        return PseudoAttacks[Pt][s];
+        return PseudoAttacks[s][Pt];
     }
 }
 
@@ -253,7 +253,7 @@ inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
     case QUEEN :
         return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
     default :
-        return PseudoAttacks[pt][s];
+        return PseudoAttacks[s][pt];
     }
 }
 

@@ -31,7 +31,7 @@ uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
 
 Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
-Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
+Bitboard PseudoAttacks[SQUARE_NB][PIECE_TYPE_NB];
 
 alignas(64) Magic Magics[SQUARE_NB][2];
 
@@ -85,22 +85,23 @@ void Bitboards::init() {
 
     for (Square s1 = SQ_A1; s1 <= SQ_H8; ++s1)
     {
-        PseudoAttacks[WHITE][s1] = pawn_attacks_bb<WHITE>(square_bb(s1));
-        PseudoAttacks[BLACK][s1] = pawn_attacks_bb<BLACK>(square_bb(s1));
+        PseudoAttacks[s1][WHITE] = pawn_attacks_bb<WHITE>(square_bb(s1));
+        PseudoAttacks[s1][BLACK] = pawn_attacks_bb<BLACK>(square_bb(s1));
 
         for (int step : {-9, -8, -7, -1, 1, 7, 8, 9})
-            PseudoAttacks[KING][s1] |= safe_destination(s1, step);
+            PseudoAttacks[s1][KING] |= safe_destination(s1, step);
 
         for (int step : {-17, -15, -10, -6, 6, 10, 15, 17})
-            PseudoAttacks[KNIGHT][s1] |= safe_destination(s1, step);
+            PseudoAttacks[s1][KNIGHT] |= safe_destination(s1, step);
 
-        PseudoAttacks[QUEEN][s1] = PseudoAttacks[BISHOP][s1] = attacks_bb<BISHOP>(s1, 0);
-        PseudoAttacks[QUEEN][s1] |= PseudoAttacks[ROOK][s1]  = attacks_bb<ROOK>(s1, 0);
+        PseudoAttacks[s1][QUEEN]  = PseudoAttacks[s1][BISHOP] = attacks_bb<BISHOP>(s1, 0);
+        PseudoAttacks[s1][QUEEN] |= PseudoAttacks[s1][ROOK]   = attacks_bb<ROOK>(s1, 0);
+        PseudoAttacks[s1][KING + 1] = PseudoAttacks[s1][KNIGHT] | PseudoAttacks[s1][QUEEN];
 
         for (PieceType pt : {BISHOP, ROOK})
             for (Square s2 = SQ_A1; s2 <= SQ_H8; ++s2)
             {
-                if (PseudoAttacks[pt][s1] & s2)
+                if (PseudoAttacks[s1][pt] & s2)
                 {
                     LineBB[s1][s2] = (attacks_bb(pt, s1, 0) & attacks_bb(pt, s2, 0)) | s1 | s2;
                     BetweenBB[s1][s2] =
