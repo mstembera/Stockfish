@@ -117,23 +117,16 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
-static void attacked_once_twice(const Position& pos, Color c, Bitboard& attackedOnce, Bitboard& attackedTwice)
+static void attacked_by_any(const Position& pos, Color c, Bitboard& attacked)
 {
-    attackedOnce = c == WHITE ? pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
-                              : pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
-
-    attackedTwice = c == WHITE ? double_pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
-                               : double_pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+    attacked = c == WHITE ? pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                          : pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
 
     for (PieceType pt = KNIGHT; pt <= KING; ++pt)
     {
         Bitboard attackers = pos.pieces(c, pt);
         while (attackers)
-        {
-            Bitboard attacks = attacks_bb(pt, pop_lsb(attackers), pos.pieces());
-            attackedTwice |= attacks & attackedOnce;
-            attackedOnce  |= attacks;
-        }
+            attacked |= attacks_bb(pt, pop_lsb(attackers), pos.pieces());
     }
 }
 
@@ -146,7 +139,7 @@ void MovePicker::score() {
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
-      threatenedByAny, threatenedPieces, defendedOnce, defendedTwice;
+      threatenedByAny, threatenedPieces, defended;
     if constexpr (Type == QUIETS)
     {
         Color us = pos.side_to_move();
@@ -163,7 +156,7 @@ void MovePicker::score() {
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
 
-        attacked_once_twice(pos, us, defendedOnce, defendedTwice);
+        attacked_by_any(pos, us, defended);
     }
 
     for (auto& m : *this)
@@ -192,14 +185,16 @@ void MovePicker::score() {
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
+            int tmpValue = m.value;
             // bonus for escaping from capture
-            m.value +=  threatenedPieces & from
-                      ? (  pt == QUEEN && !(to & threatenedByRook)  ? 51700
-                         : pt == ROOK  && !(to & threatenedByMinor) ? 25600
-                         : !(to & threatenedByPawn)                 ? 14450 : 0)
-                      : ( (from & threatenedByAny) && !(from & defendedOnce)
-                         ? 16 * PieceValue[pt]
-                         : 0);
+            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51700
+                                                  : pt == ROOK && !(to & threatenedByMinor) ? 25600
+                                                  : !(to & threatenedByPawn)                ? 14450
+                                                                                            : 0)
+                                               : 0;
+            if (   tmpValue == m.value
+                && (from & threatenedByAny) && !(from & defended))
+                m.value += 16 * PieceValue[pt];
 
             // malus for putting piece en prise
             m.value -= (pt == QUEEN && bool(to & threatenedByRook)   ? 49000
