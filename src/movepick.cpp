@@ -117,16 +117,27 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
-static void attacked_by_any(const Position& pos, Color c, Bitboard& attacked)
+static void attacked_once_twice(const Position& pos, Color c, Bitboard& attackedOnce, Bitboard& attackedTwice)
 {
-    attacked = c == WHITE ? pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
-                          : pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+    attackedOnce = c == WHITE ? pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                              : pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
+
+    attackedTwice = c == WHITE ? double_pawn_attacks_bb<WHITE>(pos.pieces(WHITE, PAWN))
+                               : double_pawn_attacks_bb<BLACK>(pos.pieces(BLACK, PAWN));
 
     for (PieceType pt = KNIGHT; pt <= KING; ++pt)
     {
+        const Bitboard occupied = pt == BISHOP ? (pos.pieces() ^ pos.pieces(c, BISHOP, QUEEN)) :
+                                  pt == ROOK   ? (pos.pieces() ^ pos.pieces(c, ROOK, QUEEN)) :
+                                  pt == QUEEN  ? (pos.pieces() ^ pos.pieces(c, BISHOP, ROOK, QUEEN)) : 0;
+
         Bitboard attackers = pos.pieces(c, pt);
         while (attackers)
-            attacked |= attacks_bb(pt, pop_lsb(attackers), pos.pieces());
+        {
+            Bitboard attacks = attacks_bb(pt, pop_lsb(attackers), occupied);
+            attackedTwice |= attacks & attackedOnce;
+            attackedOnce  |= attacks;
+        }
     }
 }
 
@@ -139,7 +150,7 @@ void MovePicker::score() {
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
-      threatenedByAny, threatenedPieces, defended;
+      threatenedByAny, threatenedPieces, defendedOnce, defendedTwice;
     if constexpr (Type == QUIETS)
     {
         Color us = pos.side_to_move();
@@ -156,7 +167,7 @@ void MovePicker::score() {
                          | (pos.pieces(us, ROOK) & threatenedByMinor)
                          | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
 
-        attacked_by_any(pos, us, defended);
+        attacked_once_twice(pos, us, defendedOnce, defendedTwice);
     }
 
     for (auto& m : *this)
@@ -185,21 +196,18 @@ void MovePicker::score() {
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
-            int tmpValue = m.value;
             // bonus for escaping from capture
             m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51700
                                                   : pt == ROOK && !(to & threatenedByMinor) ? 25600
                                                   : !(to & threatenedByPawn)                ? 14450
                                                                                             : 0)
                                                : 0;
-            if (   tmpValue == m.value
-                && (from & threatenedByAny) && !(from & defended))
-                m.value += 16 * PieceValue[pt];
 
             // malus for putting piece en prise
-            m.value -= (pt == QUEEN && bool(to & threatenedByRook)   ? 49000
+            m.value -= (  pt == QUEEN && bool(to & threatenedByRook)  ? 49000
                         : pt == ROOK && bool(to & threatenedByMinor) ? 24335
-                                                                     : 0);
+                        : (pt == PAWN ? ((to & threatenedByAny) && !(to & defendedOnce)  ? 16 * PawnValue      : 0)
+                                      : ((to & threatenedByAny) && !(to & defendedTwice) ? 16 * PieceValue[pt] : 0)));
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + 2 * ply);

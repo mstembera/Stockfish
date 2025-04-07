@@ -155,6 +155,12 @@ constexpr Bitboard pawn_attacks_bb(Bitboard b) {
 }
 
 
+template<Color C>
+constexpr Bitboard double_pawn_attacks_bb(Bitboard b) {
+    return C == WHITE ? shift<NORTH_WEST>(b) & shift<NORTH_EAST>(b)
+                      : shift<SOUTH_WEST>(b) & shift<SOUTH_EAST>(b);
+}
+
 // Returns a bitboard representing an entire line (from board edge
 // to board edge) that intersects the two given squares. If the given squares
 // are not on a same file/rank/diagonal, the function returns 0. For instance,
