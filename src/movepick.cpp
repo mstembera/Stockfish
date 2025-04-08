@@ -129,17 +129,22 @@ void MovePicker::score() {
       threatenedPieces;
     if constexpr (Type == QUIETS)
     {
-        Color us = pos.side_to_move();
+        if (end() - begin() > 2)
+        {
+            Color us = pos.side_to_move();
 
-        threatenedByPawn = pos.attacks_by<PAWN>(~us);
-        threatenedByMinor =
-          pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
-        threatenedByRook = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+            threatenedByPawn = pos.attacks_by<PAWN>(~us);
+            threatenedByMinor =
+              pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
+            threatenedByRook = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
 
-        // Pieces threatened by pieces of lesser material value
-        threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
-                         | (pos.pieces(us, ROOK) & threatenedByMinor)
-                         | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+            // Pieces threatened by pieces of lesser material value
+            threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
+                             | (pos.pieces(us, ROOK) & threatenedByMinor)
+                             | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+        }
+        else
+            threatenedByPawn = threatenedByMinor = threatenedByRook = threatenedPieces = 0;
     }
 
     for (auto& m : *this)
