@@ -129,7 +129,7 @@ void MovePicker::score() {
       threatenedPieces;
     if constexpr (Type == QUIETS)
     {
-        if (end() - begin() > 2)
+        if (end() - begin() > 4)
         {
             Color us = pos.side_to_move();
 
