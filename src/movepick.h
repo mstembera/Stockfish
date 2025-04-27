@@ -51,8 +51,9 @@ class MovePicker {
                const CapturePieceToHistory*,
                const PieceToHistory**,
                const PawnHistory*,
-               int);
-    MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
+               int,
+               Square);
+    MovePicker(const Position&, Move, int, const CapturePieceToHistory*, Square);
     Move next_move();
     void skip_quiet_moves();
     bool otherPieceTypesMobile(PieceType pt, ValueList<Move, 32>& capturesSearched);
@@ -77,6 +78,7 @@ class MovePicker {
     int                          threshold;
     Depth                        depth;
     int                          ply;
+    Square                       prevSq;
     bool                         skipQuiets = false;
     ExtMove                      moves[MAX_MOVES];
 };
