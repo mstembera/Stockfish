@@ -413,6 +413,7 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
     vec_t      acc[Tiling::NumRegs];
     psqt_vec_t psqt[Tiling::NumPsqtRegs];
 
+    const bool combine3 = removed.size() != added.size() && removed.size() && added.size();
     for (IndexType j = 0; j < Dimensions / Tiling::TileHeight; ++j)
     {
         auto* accTile =
@@ -422,31 +423,59 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
             acc[k] = entryTile[k];
 
-        IndexType i = 0;
-        for (; i < std::min(removed.size(), added.size()); ++i)
+        IndexType ir = 0, ia = 0;
+        for (; ir < removed.size() - combine3 && ia < added.size() - combine3; ++ir, ++ia)
         {
-            IndexType       indexR  = removed[i];
+            IndexType       indexR  = removed[ir];
             const IndexType offsetR = Dimensions * indexR + j * Tiling::TileHeight;
             auto* columnR = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetR]);
-            IndexType       indexA  = added[i];
+            IndexType       indexA  = added[ia];
             const IndexType offsetA = Dimensions * indexA + j * Tiling::TileHeight;
             auto* columnA = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetA]);
 
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = fused<Vec16Wrapper, Add, Sub>(acc[k], columnA[k], columnR[k]);
         }
-        for (; i < removed.size(); ++i)
+        if (combine3)
         {
-            IndexType       index  = removed[i];
+            IndexType       indexR  = removed[ir++];
+            const IndexType offsetR = Dimensions * indexR + j * Tiling::TileHeight;
+            auto*           columnR = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetR]);
+            IndexType       indexA  = added[ia++];
+            const IndexType offsetA = Dimensions * indexA + j * Tiling::TileHeight;
+            auto*           columnA = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetA]);
+
+            if (removed.size() > added.size())
+            {
+                IndexType       indexR2  = removed[ir++];
+                const IndexType offsetR2 = Dimensions * indexR2 + j * Tiling::TileHeight;
+                auto*           columnR2 = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetR2]);
+
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = fused<Vec16Wrapper, Sub, Sub, Add>(acc[k], columnR[k], columnR2[k], columnA[k]);
+            }
+            else
+            {
+                IndexType       indexA2  = added[ia++];
+                const IndexType offsetA2 = Dimensions * indexA2 + j * Tiling::TileHeight;
+                auto*           columnA2 = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offsetA2]);
+
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = fused<Vec16Wrapper, Sub, Add, Add>(acc[k], columnR[k], columnA[k], columnA2[k]);
+            }
+        }
+        for (; ir < removed.size(); ++ir)
+        {
+            IndexType       index  = removed[ir];
             const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
             auto* column = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offset]);
 
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = vec_sub_16(acc[k], column[k]);
         }
-        for (; i < added.size(); ++i)
+        for (; ia < added.size(); ++ia)
         {
-            IndexType       index  = added[i];
+            IndexType       index  = added[ia];
             const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
             auto* column = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offset]);
 
@@ -498,7 +527,7 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
     }
 
 #else
-
+"Intentionally break non vector compile just for fishtest testing."
     for (const auto index : removed)
     {
         const IndexType offset = Dimensions * index;
