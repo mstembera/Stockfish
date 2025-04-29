@@ -49,7 +49,7 @@ namespace {
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
-                       AccumulatorState&                                       middle_state,
+                       const AccumulatorState&                                 middle_state,
                        AccumulatorState&                                       target_state,
                        const AccumulatorState&                                 computed);
 
@@ -276,7 +276,7 @@ auto make_accumulator_update_context(const FeatureTransformer<Dimensions>& featu
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
-                       AccumulatorState&                                       middle_state,
+                       const AccumulatorState&                                 middle_state,
                        AccumulatorState&                                       target_state,
                        const AccumulatorState&                                 computed) {
 
@@ -297,7 +297,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     // Workaround compiler warning for uninitialized variables, replicated on
     // profile builds on windows with gcc 14.2.0.
     // TODO remove once unneeded
-    sf_assume(added.size() == 1);
+    sf_assume(added.size() == 1 || added.size() == 2);
     sf_assume(removed.size() == 2 || removed.size() == 3);
 
     auto updateContext =
