@@ -267,12 +267,14 @@ top:
                 if ((cur - 1)->value > -7998)
                     return *(cur - 1);
 
-                if ((cur - 1)->value <= quiet_threshold(depth))
+                if ((cur - 1)->value < quiet_threshold(depth))
                 {
+                    // This bad quiet wasn't sorted so more good quiets may remain
                     std::swap(*--cur, *--endMoves);
+                    beginBadQuiets = endMoves;
                     continue;
                 }
-    
+
                 // Remaining quiets are bad
                 beginBadQuiets = cur - 1;
                 break;
