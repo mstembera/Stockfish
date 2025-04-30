@@ -264,7 +264,7 @@ top:
         if (!skipQuiets)
             while (select([]() { return true; }))
             {
-                if ((cur - 1)->value > -7998)
+                if ((cur - 1)->value > -8500)
                     return *(cur - 1);
 
                 if ((cur - 1)->value < quiet_threshold(depth))
