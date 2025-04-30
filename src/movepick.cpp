@@ -261,14 +261,22 @@ top:
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select([]() { return true; }))
-        {
-            if ((cur - 1)->value > -7998 || (cur - 1)->value <= quiet_threshold(depth))
-                return *(cur - 1);
+        if (!skipQuiets)
+            while (select([]() { return true; }))
+            {
+                if ((cur - 1)->value > -7998)
+                    return *(cur - 1);
 
-            // Remaining quiets are bad
-            beginBadQuiets = cur - 1;
-        }
+                if ((cur - 1)->value <= quiet_threshold(depth))
+                {
+                    std::swap(*--cur, *--endMoves);
+                    continue;
+                }
+    
+                // Remaining quiets are bad
+                beginBadQuiets = cur - 1;
+                break;
+            }
 
         // Prepare the pointers to loop over the bad captures
         cur      = moves;
