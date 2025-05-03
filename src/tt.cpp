@@ -228,11 +228,11 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     for (int i = 0; i < ClusterSize; ++i)
         if (tte[i].key16 == key16)
         {
-            // Keep the generation no more than one out of date
-            if (tte[i].relative_age(generation8) > GENERATION_DELTA)
+            // Refresh generation
+            if (tte[i].relative_age(generation8))
             {
                 constexpr int LOWER_BITS = GENERATION_DELTA - 1;
-                tte[i].genBound8 = uint8_t((generation8 - GENERATION_DELTA) | (tte[i].genBound8 & LOWER_BITS));
+                tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & LOWER_BITS));
             }
 
             // This gap is the main place for read races.
