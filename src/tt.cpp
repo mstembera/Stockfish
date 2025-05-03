@@ -194,7 +194,7 @@ void TranspositionTable::clear(ThreadPool& threads) {
 // occupation during a search. The hash is x permill full, as per UCI protocol.
 // Only counts entries which match the current generation.
 int TranspositionTable::hashfull(int maxAge) const {
-    int maxAgeInternal = maxAge << GENERATION_BITS;
+    int maxAgeInternal = 2 * (maxAge << GENERATION_BITS);
     int cnt            = 0;
     for (int i = 0; i < 1000; ++i)
         for (int j = 0; j < ClusterSize; ++j)
@@ -207,7 +207,7 @@ int TranspositionTable::hashfull(int maxAge) const {
 
 void TranspositionTable::new_search() {
     // increment by delta to keep lower bits as is
-    generation8 += GENERATION_DELTA;
+    generation8 += 2 * GENERATION_DELTA;
 }
 
 
@@ -228,11 +228,11 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     for (int i = 0; i < ClusterSize; ++i)
         if (tte[i].key16 == key16)
         {
-            // Refresh generation
-            if (tte[i].relative_age(generation8))
+            // // Keep the generation no more than HALF a generation out of date
+            if (tte[i].relative_age(generation8) > GENERATION_DELTA)
             {
                 constexpr int LOWER_BITS = GENERATION_DELTA - 1;
-                tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & LOWER_BITS));
+                tte[i].genBound8 = uint8_t((generation8 - GENERATION_DELTA) | (tte[i].genBound8 & LOWER_BITS));
             }
 
             // This gap is the main place for read races.
@@ -243,8 +243,8 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     // Find an entry to be replaced according to the replacement strategy
     TTEntry* replace = tte;
     for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8) * 2
-            > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
+        if (replace->depth8 - replace->relative_age(generation8)
+            > tte[i].depth8 - tte[i].relative_age(generation8))
             replace = &tte[i];
 
     return {false,
