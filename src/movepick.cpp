@@ -275,7 +275,7 @@ top:
             endMoves = beginBadQuiets = endBadQuiets = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -3560 * depth, goodQuietLimit);
+            partial_insertion_sort(cur, endMoves, -3400 * depth, goodQuietLimit);
         }
 
         ++stage;
