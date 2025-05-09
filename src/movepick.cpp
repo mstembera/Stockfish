@@ -146,7 +146,7 @@ void MovePicker::score() {
         if constexpr (Type == CAPTURES)
             m.value =
                 7 * int(PieceValue[pos.piece_on(m.to_sq())])
-              + 1024 * pos.gives_check(m)
+              + 1024 * ((pos.check_squares(type_of(pos.moved_piece(m))) & m.to_sq()) && pos.see_ge(m, -75))
               + (*captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))];
 
         else if constexpr (Type == QUIETS)
@@ -166,7 +166,7 @@ void MovePicker::score() {
             m.value += (*continuationHistory[5])[pc][to];
 
             // bonus for checks
-            m.value += (pos.gives_check(m) && pos.see_ge(m, -75)) * 16384;
+            m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
 
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
