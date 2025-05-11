@@ -262,7 +262,7 @@ top:
         if (   !skipQuiets 
             && select([&]() {
                 // Move bad quiets to endBadQuiets to be tried later
-                return cur->value > -7998 ? true
+                return cur->value > -7000 ? true
                                           : (*endBadQuiets++ = *cur, false);
             }))
             return *(cur - 1);
