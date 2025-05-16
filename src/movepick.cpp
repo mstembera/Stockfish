@@ -260,8 +260,8 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                return cur->value > -7998 ? true
-                                          : (*endBadQuiets++ = *cur, false);
+                return cur->value > -14000 ? true
+                                           : (*endBadQuiets++ = *cur, false);
             }))
             return *(cur - 1);
 
