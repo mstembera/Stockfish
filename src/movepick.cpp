@@ -252,7 +252,7 @@ top:
             endMoves = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endMoves, -3300 * depth);
+            partial_insertion_sort(cur, endMoves, -3560 * depth);
         }
 
         ++stage;
@@ -260,8 +260,9 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                return cur->value > -14000 ? true
-                                           : (*endBadQuiets++ = *cur, false);
+                return cur->value > -11000 && pos.see_ge(*cur, -75)
+                    ? true
+                    : (*endBadQuiets++ = *cur, false);
             }))
             return *(cur - 1);
 
