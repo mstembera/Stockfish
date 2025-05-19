@@ -979,7 +979,7 @@ moves_loop:  // When in check, search starts here
             continue;
 
         // Check for legality
-        if (!pos.legal(move))
+        if (!pos.pseudo_legal(move) || !pos.legal(move))
         {
             mp.mark_current_illegal();
             continue;
@@ -1632,7 +1632,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     {
         assert(move.is_ok());
 
-        if (!pos.legal(move))
+        if (!pos.pseudo_legal(move) || !pos.legal(move))
             continue;
 
         givesCheck = pos.gives_check(move);
