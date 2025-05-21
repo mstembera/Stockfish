@@ -245,7 +245,7 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
       pos.checkers() ? generate<EVASIONS>(pos, moveList) : generate<NON_EVASIONS>(pos, moveList);
     while (cur != moveList)
         if (((pinned & cur->from_sq()) || cur->from_sq() == ksq || cur->type_of() == EN_PASSANT)
-            && !pos.legal(*cur))
+            && (!pos.pseudo_legal(*cur) || !pos.legal(*cur)))
             *cur = *(--moveList);
         else
             ++cur;
