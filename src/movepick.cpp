@@ -249,8 +249,9 @@ top:
     case QUIET_INIT :
         if (!skipQuiets)
         {
-            cur = endBadQuiets = endBadCaptures;
-            endMoves           = generate<QUIETS>(pos, cur);
+            assert(cur == endMoves);
+            beginBadQuiets = endBadQuiets = cur;
+            endMoves = endAllGenerated = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
             partial_insertion_sort(cur, endMoves, -3560 * depth);
@@ -261,7 +262,10 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                return cur->value > -14000 ? true : (*endBadQuiets++ = *cur, false);
+                if (cur->value > -1400)
+                    return true;
+                std::swap(*endBadQuiets++, *cur);
+                return false;
             }))
             return *(cur - 1);
 
@@ -277,7 +281,7 @@ top:
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
-        cur      = endBadCaptures;
+        cur      = beginBadQuiets;
         endMoves = endBadQuiets;
 
         ++stage;
@@ -291,7 +295,7 @@ top:
 
     case EVASION_INIT :
         cur      = moves;
-        endMoves = generate<EVASIONS>(pos, cur);
+        endMoves = endAllGenerated = generate<EVASIONS>(pos, cur);
 
         score<EVASIONS>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
@@ -313,10 +317,10 @@ top:
 void MovePicker::skip_quiet_moves() { skipQuiets = true; }
 
 // this function must be called after all quiet moves and captures have been generated
-bool MovePicker::can_move_king_or_pawn() {
+bool MovePicker::can_move_king_or_pawn() const {
     assert(stage == GOOD_QUIET || stage == BAD_QUIET || stage == EVASION);
 
-    for (ExtMove* m = moves; m < endMoves; ++m)
+    for (const ExtMove* m = moves; m < endAllGenerated; ++m)
     {
         PieceType movedPieceType = type_of(pos.moved_piece(*m));
         if ((movedPieceType == PAWN || movedPieceType == KING) && pos.legal(*m))
