@@ -236,10 +236,8 @@ top:
 
     case GOOD_CAPTURE :
         if (select([&]() {
-                if (pos.see_ge(*cur, -cur->value / 18))
-                    return true;
-                std::swap(*endBadCaptures++, *cur);
-                return false;
+                return pos.see_ge(*cur, -cur->value / 18)
+                    ? true : (std::swap(*endBadCaptures++, *cur), false);
             }))
             return *(cur - 1);
 
@@ -262,10 +260,8 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                if (cur->value > -1400)
-                    return true;
-                std::swap(*endBadQuiets++, *cur);
-                return false;
+                return cur->value > -1400
+                    ? true : (std::swap(*endBadQuiets++, *cur), false);
             }))
             return *(cur - 1);
 
