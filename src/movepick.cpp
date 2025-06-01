@@ -212,6 +212,7 @@ Move MovePicker::select(Pred filter) {
 // picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move() {
 
+    constexpr int goodQuietThreshold = -12000;
 top:
     switch (stage)
     {
@@ -252,7 +253,7 @@ top:
             endCur = endGenerated = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
-            partial_insertion_sort(cur, endCur, -3560 * depth);
+            partial_insertion_sort(cur, endCur, -3320 * depth);
         }
 
         ++stage;
@@ -260,7 +261,7 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                return cur->value > -14000;
+                return cur->value > goodQuietThreshold;
             }))
             return *(cur - 1);
 
@@ -284,7 +285,7 @@ top:
 
     case BAD_QUIET :
         if (!skipQuiets)
-            return select([&]() {  return cur->value <= -14000; });
+            return select([&]() { return cur->value <= goodQuietThreshold; });
 
         return Move::none();
 
