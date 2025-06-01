@@ -227,7 +227,7 @@ top:
     case PROBCUT_INIT :
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
-        endCur               = generate<CAPTURES>(pos, cur);
+        endCur = endCaptures  = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
         partial_insertion_sort(cur, endCur, std::numeric_limits<int>::min());
@@ -249,8 +249,7 @@ top:
     case QUIET_INIT :
         if (!skipQuiets)
         {
-            cur = endBadQuiets = endBadCaptures;
-            endCur             = generate<QUIETS>(pos, cur);
+            endCur = endGenerated = generate<QUIETS>(pos, cur);
 
             score<QUIETS>();
             partial_insertion_sort(cur, endCur, -3560 * depth);
@@ -261,10 +260,7 @@ top:
 
     case GOOD_QUIET :
         if (!skipQuiets && select([&]() {
-                if (cur->value > -14000)
-                    return true;
-                *endBadQuiets++ = *cur;
-                return false;
+                return cur->value > -14000;
             }))
             return *(cur - 1);
 
@@ -279,22 +275,22 @@ top:
         if (select([]() { return true; }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over the bad quiets
-        cur    = endBadCaptures;
-        endCur = endBadQuiets;
+        // Prepare the pointers to loop over quiets again
+        cur    = endCaptures;
+        endCur = endGenerated;
 
         ++stage;
         [[fallthrough]];
 
     case BAD_QUIET :
         if (!skipQuiets)
-            return select([]() { return true; });
+            return select([&]() {  return cur->value <= -14000; });
 
         return Move::none();
 
     case EVASION_INIT :
         cur    = moves;
-        endCur = generate<EVASIONS>(pos, cur);
+        endCur = endGenerated = generate<EVASIONS>(pos, cur);
 
         score<EVASIONS>();
         partial_insertion_sort(cur, endCur, std::numeric_limits<int>::min());
@@ -320,7 +316,7 @@ bool MovePicker::can_move_king_or_pawn() {
     // SEE negative captures shouldn't be returned in GOOD_CAPTURE stage
     assert(stage > GOOD_CAPTURE && stage != EVASION_INIT);
 
-    for (ExtMove* m = moves; m < endCur; ++m)
+    for (ExtMove* m = moves; m < endGenerated; ++m)
     {
         PieceType movedPieceType = type_of(pos.moved_piece(*m));
         if ((movedPieceType == PAWN || movedPieceType == KING) && pos.legal(*m))
