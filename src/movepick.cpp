@@ -226,7 +226,7 @@ top:
     case CAPTURE_INIT :
     case PROBCUT_INIT :
     case QCAPTURE_INIT :
-        cur = endBadCaptures = moves;
+        cur = moves;
         endCur = endCaptures  = generate<CAPTURES>(pos, cur);
 
         score<CAPTURES>();
@@ -238,7 +238,7 @@ top:
         if (select([&]() {
                 if (pos.see_ge(*cur, -cur->value / 18))
                     return true;
-                std::swap(*endBadCaptures++, *cur);
+                cur->value = std::numeric_limits<int>::min();
                 return false;
             }))
             return *(cur - 1);
@@ -264,18 +264,18 @@ top:
             }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over the bad captures
+        // Prepare the pointers to loop over the captures again
         cur    = moves;
-        endCur = endBadCaptures;
+        endCur = endCaptures;
 
         ++stage;
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select([]() { return true; }))
+        if (select([&]() { return cur->value == std::numeric_limits<int>::min(); }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over quiets again
+        // Prepare the pointers to loop over the quiets again
         cur    = endCaptures;
         endCur = endGenerated;
 
