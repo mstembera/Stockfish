@@ -128,14 +128,9 @@ void MovePicker::score() {
 
     Color us = pos.side_to_move();
 
-    [[maybe_unused]] Bitboard threatByLesser[QUEEN + 1], attackedByThem;
-    if constexpr (Type == CAPTURES)
-    {
-        attackedByThem = pos.attacks_by<PAWN>(~us)   | pos.attacks_by<KNIGHT>(~us)
-                       | pos.attacks_by<BISHOP>(~us) | pos.attacks_by<ROOK>(~us)
-                       | pos.attacks_by<QUEEN>(~us)  | pos.attacks_by<KING>(~us);
-    }
-    else if constexpr (Type == QUIETS)
+    [[maybe_unused]] Bitboard threatByLesser[QUEEN + 1];
+
+    if constexpr (Type == CAPTURES || Type == QUIETS)
     {
         threatByLesser[KNIGHT] = threatByLesser[BISHOP] = pos.attacks_by<PAWN>(~us);
         threatByLesser[ROOK] =
@@ -154,10 +149,17 @@ void MovePicker::score() {
         if constexpr (Type == CAPTURES)
         {
             m.value = (*captureHistory)[pc][to][type_of(capturedPiece)]
-                    + 7 * int(PieceValue[capturedPiece]) + 1024 * bool(pos.check_squares(pt) & to);
+                    + 7 * int(PieceValue[capturedPiece])
+                    + 1024 * bool(pos.check_squares(pt) & to);
 
-            if (attackedByThem & to)
-                m.value -= PieceValue[std::min(pt, QUEEN)] / 4;
+            if (KNIGHT <= pt && pt <= QUEEN)
+            {
+                if (threatByLesser[pt] & to)
+                    m.value -= PieceValue[pt];
+
+                if (threatByLesser[pt] & from)
+                    m.value += PieceValue[pt];
+            }
         }
         else if constexpr (Type == QUIETS)
         {
