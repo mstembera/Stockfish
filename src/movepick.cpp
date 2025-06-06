@@ -157,7 +157,9 @@ void MovePicker::score() {
                     + 7 * int(PieceValue[capturedPiece]) + 1024 * bool(pos.check_squares(pt) & to);
 
             if (attackedByThem & to)
-                m.value -= PieceValue[pc] - 3 * PawnValue;
+                m.value -= PieceValue[pc] - PawnValue;
+            else
+                m.value += PawnValue;
         }
         else if constexpr (Type == QUIETS)
         {
