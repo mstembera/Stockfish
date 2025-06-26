@@ -112,9 +112,6 @@ void TTEntry::save(
     }
     else 
     {
-        if (depth8 + DEPTH_ENTRY_OFFSET >= 5 && Bound(genBound8 & 0x3) != BOUND_EXACT)
-            depth8--;
-
         constexpr int LOWER_BITS = GENERATION_DELTA - 1;
         genBound8 = uint8_t((generation8 - GENERATION_DELTA) | (genBound8 & LOWER_BITS));
     }
