@@ -197,17 +197,25 @@ template void AccumulatorStack::evaluate<TransformedFeatureDimensionsSmall>(
 
 namespace {
 
+#if defined(__GNUC__) || defined(__clang__)
+    #define RESTRICT __restrict__
+#elif defined(_MSC_VER)
+    #define RESTRICT __restrict
+#else
+    #define RESTRICT
+#endif
+
 template<typename VectorWrapper,
          IndexType Width,
          UpdateOperation... ops,
          typename ElementType,
          typename... Ts,
          std::enable_if_t<is_all_same_v<ElementType, Ts...>, bool> = true>
-void fused_row_reduce(const ElementType* in, ElementType* out, const Ts* const... rows) {
+void fused_row_reduce(const ElementType* RESTRICT in, ElementType* RESTRICT out, const Ts* RESTRICT const... rows) {
     constexpr IndexType size = Width * sizeof(ElementType) / sizeof(typename VectorWrapper::type);
 
-    auto* vecIn  = reinterpret_cast<const typename VectorWrapper::type*>(in);
-    auto* vecOut = reinterpret_cast<typename VectorWrapper::type*>(out);
+    auto* RESTRICT vecIn = reinterpret_cast<const typename VectorWrapper::type*>(in);
+    auto* RESTRICT vecOut = reinterpret_cast<typename VectorWrapper::type*>(out);
 
     for (IndexType i = 0; i < size; ++i)
         vecOut[i] = fused<VectorWrapper, ops...>(
