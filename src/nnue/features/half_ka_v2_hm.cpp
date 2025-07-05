@@ -58,15 +58,20 @@ void HalfKAv2_hm::append_changed_indices(Square            ksq,
                                          const DirtyPiece& dp,
                                          IndexList&        removed,
                                          IndexList&        added) {
+
     removed.push_back(make_index<Perspective>(dp.from, dp.pc, ksq));
+
+    IndexType i1 = make_index<Perspective>(dp.to, dp.pc, ksq);
     if (dp.to != SQ_NONE)
-        added.push_back(make_index<Perspective>(dp.to, dp.pc, ksq));
+        added.push_back(i1);
 
+    IndexType i2 = make_index<Perspective>(dp.remove_sq, dp.remove_pc, ksq);
     if (dp.remove_sq != SQ_NONE)
-        removed.push_back(make_index<Perspective>(dp.remove_sq, dp.remove_pc, ksq));
+        removed.push_back(i2);
 
+    IndexType i3 = make_index<Perspective>(dp.add_sq, dp.add_pc, ksq);
     if (dp.add_sq != SQ_NONE)
-        added.push_back(make_index<Perspective>(dp.add_sq, dp.add_pc, ksq));
+        added.push_back(i3);
 }
 
 // Explicit template instantiations
