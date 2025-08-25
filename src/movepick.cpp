@@ -128,7 +128,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
-    [[maybe_unused]] Bitboard threatByLesser[KING + 1];
+    [[maybe_unused]] Bitboard threatByLesser[KING + 1], blockers;
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
@@ -137,6 +137,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = pos.attacks_by<QUEEN>(~us) | threatByLesser[QUEEN];
+        blockers              = pos.blockers_for_king(~us);
     }
 
     ExtMove* it = cur;
@@ -175,9 +176,22 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             int v = threatByLesser[pt] & to ? -95 : 100 * bool(threatByLesser[pt] & from);
             m.value += bonus[pt] * v;
 
-
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + ply);
+
+            if (blockers)
+            {
+                if (pt == PAWN)
+                {
+                    if (attacks_bb<PAWN>(to, us) & blockers)
+                        m.value += 15000;
+                }
+                else
+                {
+                    if (attacks_bb(pt, to, pos.pieces() ^ from) & blockers)
+                        m.value += 15000;
+                }
+            }
         }
 
         else  // Type == EVASIONS
