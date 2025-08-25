@@ -173,8 +173,8 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
             static constexpr int bonus[KING + 1] = {0, 0, 144, 144, 256, 517, 10000};
-            m.value += (  100 * bool(threatByLesser[pt] & from)
-                        -  95 * bool(threatByLesser[pt] & to  )) * bonus[pt];
+            m.value += (  150 * bool(threatByLesser[pt] & from)
+                        - 150 * bool(threatByLesser[pt] & to  )) * bonus[pt];
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.from_to()] / (1 + ply);
@@ -229,7 +229,7 @@ top:
     case QCAPTURE_INIT : {
         MoveList<CAPTURES> ml(pos);
 
-        cur = endBadCaptures = moves;
+        cur = moves;
         endCur = endCaptures = score<CAPTURES>(ml);
 
         partial_insertion_sort(cur, endCur, std::numeric_limits<int>::min());
@@ -241,7 +241,7 @@ top:
         if (select([&]() {
                 if (pos.see_ge(*cur, -cur->value / 18))
                     return true;
-                std::swap(*endBadCaptures++, *cur);
+                cur->value = std::numeric_limits<int>::min();
                 return false;
             }))
             return *(cur - 1);
@@ -266,18 +266,18 @@ top:
         if (!skipQuiets && select([&]() { return cur->value > goodQuietThreshold; }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over the bad captures
+        // Prepare the pointers to loop over the bad captures again
         cur    = moves;
-        endCur = endBadCaptures;
+        endCur = endCaptures;
 
         ++stage;
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select([]() { return true; }))
+        if (select([&]() { return cur->value == std::numeric_limits<int>::min(); }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over quiets again
+        // Prepare the pointers to loop over the quiets again
         cur    = endCaptures;
         endCur = endGenerated;
 
