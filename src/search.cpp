@@ -1329,7 +1329,13 @@ moves_loop:  // When in check, search starts here
                 // This information is used for time management. In MultiPV mode,
                 // we must take care to only do this for the first PV line.
                 if (moveCount > 1 && !pvIdx)
-                    ++bestMoveChanges;
+                {
+                    if (rm.pv.size() < 3 || rootMoves[0].pv.size() < 3
+                        || rm.pv[0] != rootMoves[0].pv[2]
+                        || rm.pv[1] != rootMoves[0].pv[1]
+                        || rm.pv[2] != rootMoves[0].pv[0])
+                        ++bestMoveChanges;
+                }
             }
             else
                 // All other moves but the PV, are set to the lowest value: this
