@@ -1289,7 +1289,8 @@ moves_loop:  // When in check, search starts here
 
         if (rootNode)
         {
-            RootMove& rm = *std::find(rootMoves.begin(), rootMoves.end(), move);
+            auto      rmIt = std::find(rootMoves.begin(), rootMoves.end(), move);
+            RootMove& rm   = *rmIt;
 
             rm.effort += nodes - nodeCount;
 
@@ -1330,11 +1331,22 @@ moves_loop:  // When in check, search starts here
                 // we must take care to only do this for the first PV line.
                 if (moveCount > 1 && !pvIdx)
                 {
-                    if (rm.pv.size() < 3 || rootMoves[0].pv.size() < 3
-                        || rm.pv[0] != rootMoves[0].pv[2]
-                        || rm.pv[1] != rootMoves[0].pv[1]
-                        || rm.pv[2] != rootMoves[0].pv[0])
-                        ++bestMoveChanges;
+                    bool transpose = false;
+                    if (rm.pv.size() > 2)
+                    {
+                        for (auto it = rootMoves.begin(); it != rmIt; ++it)
+                        {
+                            if (   it->pv.size() > 2
+                                && it->pv[0] == rm.pv[2]
+                                && it->pv[2] == rm.pv[0])
+                            {
+                                transpose = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    bestMoveChanges += !transpose;
                 }
             }
             else
