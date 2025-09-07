@@ -59,14 +59,14 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     assert(!pos.checkers());
 
     int  simpleEval         = simple_eval(pos);
-    bool smallNet           = std::abs(simpleEval) > 962;
+    bool smallNet           = std::abs(simpleEval) > 900;
     auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, accumulators, &caches.small)
                                        : networks.big.evaluate(pos, accumulators, &caches.big);
 
     Value nnue = (125 * psqt + 131 * positional) / 128;
 
     // Re-evaluate the position when higher eval accuracy is worth the time spent
-    if (smallNet && 6 * std::abs(nnue) < std::abs(simpleEval))
+    if (smallNet && (4 * std::abs(nnue) < std::abs(simpleEval)))
     {
         std::tie(psqt, positional) = networks.big.evaluate(pos, accumulators, &caches.big);
         nnue                       = (125 * psqt + 131 * positional) / 128;
