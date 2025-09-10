@@ -1339,7 +1339,7 @@ moves_loop:  // When in check, search starts here
                         {
                             if (   it->pv.size() > 2
                                 && it->pv[0] == rm.pv[2]
-                                // && it->pv[1] == rm.pv[1]
+                                && it->pv[1] == rm.pv[1]
                                 && it->pv[2] == rm.pv[0])
                             {
                                 transpose = true;
