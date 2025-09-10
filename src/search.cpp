@@ -483,7 +483,7 @@ void Search::Worker::iterative_deepening() {
             timeReduction = 0.723 + 0.79 / (1.104 + std::exp(-k * (completedDepth - center)));
             double reduction =
               (1.455 + mainThread->previousTimeReduction) / (2.2375 * timeReduction);
-            double bestMoveInstability = 1.0 + 1.8956 * totBestMoveChanges / threads.size();
+            double bestMoveInstability = 1.04 + 1.7 * totBestMoveChanges / threads.size();
 
             double totalTime =
               mainThread->tm.optimum() * fallingEval * reduction * bestMoveInstability;
