@@ -132,6 +132,7 @@ void TimeManagement::init(Search::LimitsType& limits,
     optimumTime = TimePoint(optScale * timeLeft);
     maximumTime =
       TimePoint(std::min(0.825179 * limits.time[us] - moveOverhead, maxScale * optimumTime)) - 10;
+    maximumTime = std::min(maximumTime, 4 * optimumTime);
 
     if (options["Ponder"])
         optimumTime += optimumTime / 4;
