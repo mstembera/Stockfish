@@ -288,20 +288,33 @@ class AffineTransformSparseInput {
         for (IndexType k = 0; k < NumRegs; ++k)
             acc[k] = biasvec[k];
 
-        auto* start = nnz;
-        auto* end   = nnz + count;
+        const auto* start = nnz;
+        const auto* end   = nnz + count;
 
         // convince GCC to not do weird pointer arithmetic in the following loop
         const std::int8_t* weights_cp = weights;
 
-        while (start < end)
+        while (start < end - 1)
         {
-            const std::ptrdiff_t i = *start;
-            start++;
-            const invec_t in  = vec_set_32(input32[i]);
-            const auto    col = (const invec_t*) (&weights_cp[i * OutputDimensions * ChunkSize]);
+            const std::ptrdiff_t i0 = *start++;
+            const invec_t in0  = vec_set_32(input32[i0]);
+            const auto    col0 = (const invec_t*) (&weights_cp[i0 * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
-                vec_add_dpbusd_32(acc[k], in, col[k]);
+                vec_add_dpbusd_32(acc[k], in0, col0[k]);
+
+            const std::ptrdiff_t i1 = *start++;
+            const invec_t in1  = vec_set_32(input32[i1]);
+            const auto    col1 = (const invec_t*) (&weights_cp[i1 * OutputDimensions * ChunkSize]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in1, col1[k]);
+        }
+        if (start < end)
+        {
+            const std::ptrdiff_t i0 = *start++;
+            const invec_t in0  = vec_set_32(input32[i0]);
+            const auto    col0 = (const invec_t*) (&weights_cp[i0 * OutputDimensions * ChunkSize]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in0, col0[k]);
         }
 
         outvec_t* outptr = reinterpret_cast<outvec_t*>(output);
