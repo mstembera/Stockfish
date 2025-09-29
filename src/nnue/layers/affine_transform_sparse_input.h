@@ -294,7 +294,7 @@ class AffineTransformSparseInput {
         // convince GCC to not do weird pointer arithmetic in the following loop
         const std::int8_t* weights_cp = weights;
 
-        while (start < end - 1)
+        while (start < end - 2)
         {
             const std::ptrdiff_t i0 = *start++;
             const invec_t in0  = vec_set_32(input32[i0]);
@@ -307,8 +307,14 @@ class AffineTransformSparseInput {
             const auto    col1 = (const invec_t*) (&weights_cp[i1 * OutputDimensions * ChunkSize]);
             for (IndexType k = 0; k < NumRegs; ++k)
                 vec_add_dpbusd_32(acc[k], in1, col1[k]);
+
+            const std::ptrdiff_t i2  = *start++;
+            const invec_t        in2 = vec_set_32(input32[i2]);
+            const auto col2 = (const invec_t*) (&weights_cp[i2 * OutputDimensions * ChunkSize]);
+            for (IndexType k = 0; k < NumRegs; ++k)
+                vec_add_dpbusd_32(acc[k], in2, col2[k]);
         }
-        if (start < end)
+        while (start < end)
         {
             const std::ptrdiff_t i0 = *start++;
             const invec_t in0  = vec_set_32(input32[i0]);
