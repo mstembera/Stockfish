@@ -284,7 +284,8 @@ class AffineTransformSparseInput {
     #else
           false;
     #endif
-        constexpr IndexType NumRegs = SplitAccums ? 2 * NumAccums : NumAccums;
+        static_assert(SplitAccums && "Test not intended to run on this arch");
+        constexpr IndexType NumRegs = SplitAccums ? 3 * NumAccums : NumAccums;
         std::uint16_t       nnz[NumChunks];
         IndexType           count;
 
@@ -298,35 +299,39 @@ class AffineTransformSparseInput {
         for (IndexType k = 0; k < NumAccums; ++k)
             acc[k] = biasvec[k];
 
-        auto* start = nnz;
-        auto* end   = nnz + count;
+        const auto* start = nnz;
+        const auto* end   = nnz + count;
 
         // convince GCC to not do weird pointer arithmetic in the following loop
         const std::int8_t* weights_cp = weights;
 
         if constexpr (SplitAccums)
         {
-            acc[1] = vec_set_32(0);
-            while (start + 1 < end)
+            acc[1] = acc[2] = vec_set_32(0);
+            while (start < end - 2)
             {
-                std::ptrdiff_t i1  = *start++;
-                std::ptrdiff_t i2  = *start++;
+                const std::ptrdiff_t i0  = *start++;
+                const std::ptrdiff_t i1  = *start++;
+                const std::ptrdiff_t i2  = *start++;
+                const invec_t  in0 = vec_set_32(input32[i0]);
                 const invec_t  in1 = vec_set_32(input32[i1]);
                 const invec_t  in2 = vec_set_32(input32[i2]);
-                const auto     col1 =
+                const auto col0 =
+                  reinterpret_cast<const invec_t*>(&weights_cp[i0 * OutputDimensions * ChunkSize]);
+                const auto col1 =
                   reinterpret_cast<const invec_t*>(&weights_cp[i1 * OutputDimensions * ChunkSize]);
                 const auto col2 =
                   reinterpret_cast<const invec_t*>(&weights_cp[i2 * OutputDimensions * ChunkSize]);
-                vec_add_dpbusd_32(acc[0], in1, *col1);
-                vec_add_dpbusd_32(acc[1], in2, *col2);
+                vec_add_dpbusd_32(acc[0], in0, *col0);
+                vec_add_dpbusd_32(acc[1], in1, *col1);
+                vec_add_dpbusd_32(acc[2], in2, *col2);
             }
-            acc[0] = vec_add_32(acc[0], acc[1]);
+            acc[0] = vec_add_32(vec_add_32(acc[0], acc[1]), acc[2]);
         }
 
         while (start < end)
         {
-            const std::ptrdiff_t i = *start;
-            start++;
+            const std::ptrdiff_t i = *start++;
             const invec_t in = vec_set_32(input32[i]);
             const auto    col =
               reinterpret_cast<const invec_t*>(&weights_cp[i * OutputDimensions * ChunkSize]);
