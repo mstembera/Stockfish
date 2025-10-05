@@ -38,7 +38,7 @@ namespace Stockfish::Eval::NNUE {
 using FeatureSet = Features::HalfKAv2_hm;
 
 // Number of input feature dimensions after conversion
-constexpr IndexType TransformedFeatureDimensionsBig = 3072;
+constexpr IndexType TransformedFeatureDimensionsBig = 4096;
 constexpr int       L2Big                           = 15;
 constexpr int       L3Big                           = 32;
 
@@ -54,6 +54,10 @@ constexpr IndexType LayerStacks = 8;
 // vector registers.
 static_assert(PSQTBuckets % 8 == 0,
               "Per feature PSQT values cannot be processed at granularity lower than 8 at a time.");
+
+#if !defined(USE_VNNI)
+static_assert(false, "This test is only intended to run w/ VNNI512.");
+#endif
 
 template<IndexType L1, int L2, int L3>
 struct NetworkArchitecture {
