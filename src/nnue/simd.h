@@ -262,7 +262,7 @@ fused(const typename VecWrapper::type& in, const T& operand, const Ts&... operan
 
 [[maybe_unused]] static void m512_add_dpbusd_epi32(__m512i& acc, __m512i a, __m512i b) {
 
-    #if defined(USE_VNNI)
+    #if 0//defined(USE_VNNI)
     acc = _mm512_dpbusd_epi32(acc, a, b);
     #else
     __m512i product0 = _mm512_maddubs_epi16(a, b);
@@ -284,7 +284,7 @@ fused(const typename VecWrapper::type& in, const T& operand, const Ts&... operan
 
 [[maybe_unused]] static void m256_add_dpbusd_epi32(__m256i& acc, __m256i a, __m256i b) {
 
-    #if defined(USE_VNNI)
+    #if 0//defined(USE_VNNI)
     acc = _mm256_dpbusd_epi32(acc, a, b);
     #else
     __m256i product0 = _mm256_maddubs_epi16(a, b);
