@@ -228,7 +228,7 @@ inline Bitboard Position::pieces(Color c, PieceTypes... pts) const {
 
 template<PieceType Pt>
 inline int Position::count(Color c) const {
-    return pieceCount[make_piece(c, Pt)];
+    return popcount(pieces(c, Pt));
 }
 
 template<PieceType Pt>
