@@ -860,6 +860,7 @@ DirtyPiece Position::do_move(Move                      m,
 
     // Set capture piece
     st->capturedPiece = captured;
+    st->captureSquare = captured == NO_PIECE ? SQ_NONE : to;
 
     // Calculate checkers bitboard (if move gives check)
     st->checkersBB = givesCheck ? attackers_to(square<KING>(them)) & pieces(us) : 0;

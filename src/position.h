@@ -57,6 +57,7 @@ struct StateInfo {
     Bitboard   pinners[COLOR_NB];
     Bitboard   checkSquares[PIECE_TYPE_NB];
     Piece      capturedPiece;
+    Square     captureSquare;
     int        repetition;
 };
 
@@ -129,6 +130,7 @@ class Position {
     bool  gives_check(Move m) const;
     Piece moved_piece(Move m) const;
     Piece captured_piece() const;
+    Square capture_square() const;
 
     // Doing and undoing moves
     void       do_move(Move m, StateInfo& newSt, const TranspositionTable* tt);
@@ -322,6 +324,8 @@ inline bool Position::capture_stage(Move m) const {
 }
 
 inline Piece Position::captured_piece() const { return st->capturedPiece; }
+
+inline Square Position::capture_square() const { return st->captureSquare; }
 
 inline void Position::put_piece(Piece pc, Square s) {
 
