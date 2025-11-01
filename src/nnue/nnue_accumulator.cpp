@@ -362,8 +362,18 @@ void update_accumulator_incremental(
     (target_state.acc<TransformedFeatureDimensions>()).computed[Perspective] = true;
 }
 
+#if !defined(USE_AVX512)
+static_assert(false, "This test is only intended to run w/ USE_AVX512.");
+#endif
+
 Bitboard get_changed_pieces(const Piece old[SQUARE_NB], const Piece new_[SQUARE_NB]) {
-#if defined(USE_AVX512) || defined(USE_AVX2)
+#if defined(USE_AVX512)
+    static_assert(sizeof(Piece) == 1);
+    const __m512i   old_v       = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(old));
+    const __m512i   new_v       = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(new_));
+    const __mmask64 nequal_mask = _mm512_cmpneq_epi8_mask(old_v, new_v);
+    return static_cast<Bitboard>(nequal_mask);
+#elif defined(USE_AVX2)
     static_assert(sizeof(Piece) == 1);
     Bitboard same_bb = 0;
     for (int i = 0; i < 64; i += 32)
