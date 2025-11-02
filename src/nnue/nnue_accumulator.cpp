@@ -400,7 +400,7 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
     const Bitboard changed_bb = get_changed_pieces(entry.pieces, pos.piece_array());   
     Bitboard removed_bb, added_bb;
 
-    if (popcount(changed_bb) > pos.count<ALL_PIECES>())
+    if (popcount(changed_bb) > pos.count<ALL_PIECES>() + 2)
     {
         entry.clear(featureTransformer.biases);
         removed_bb = 0;
