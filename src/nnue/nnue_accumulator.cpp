@@ -397,9 +397,20 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
     auto&                 entry = cache[ksq][Perspective];
     FeatureSet::IndexList removed, added;
 
-    const Bitboard changed_bb = get_changed_pieces(entry.pieces, pos.piece_array());
-    Bitboard       removed_bb = changed_bb & entry.pieceBB;
-    Bitboard       added_bb   = changed_bb & pos.pieces();
+    const Bitboard changed_bb = get_changed_pieces(entry.pieces, pos.piece_array());   
+    Bitboard removed_bb, added_bb;
+
+    if (popcount(changed_bb) > pos.count<ALL_PIECES>() + 1)
+    {
+        entry.clear(featureTransformer.biases);
+        removed_bb = 0;
+        added_bb = pos.pieces();
+    }
+    else
+    {
+        removed_bb = changed_bb & entry.pieceBB;
+        added_bb   = changed_bb & pos.pieces();
+    }
 
     while (removed_bb)
     {
