@@ -400,7 +400,7 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
     const Bitboard changed_bb = get_changed_pieces(entry.pieces, pos.piece_array());   
     Bitboard removed_bb, added_bb;
 
-    if (popcount(changed_bb) > pos.count<ALL_PIECES>() + 2)
+    if (popcount(changed_bb) > pos.count<ALL_PIECES>() + 1)
     {
         entry.clear(featureTransformer.biases);
         removed_bb = 0;
@@ -442,8 +442,8 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
             acc[k] = entryTile[k];
 
-        IndexType i = 0;
-        for (; i < std::min(removed.size(), added.size()); ++i)
+        int i = 0;
+        for (; i < (int)std::min(removed.size(), added.size()); ++i)
         {
             IndexType       indexR  = removed[i];
             const IndexType offsetR = Dimensions * indexR + j * Tiling::TileHeight;
@@ -455,7 +455,7 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = fused<Vec16Wrapper, Add, Sub>(acc[k], columnA[k], columnR[k]);
         }
-        for (; i < removed.size(); ++i)
+        for (; i < (int)removed.size(); ++i)
         {
             IndexType       index  = removed[i];
             const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
@@ -464,7 +464,19 @@ void update_accumulator_refresh_cache(const FeatureTransformer<Dimensions>& feat
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = vec_sub_16(acc[k], column[k]);
         }
-        for (; i < added.size(); ++i)
+        for (; i < (int)added.size() - 1; i+=2)
+        {
+            IndexType       index0  = added[i];
+            const IndexType offset0 = Dimensions * index0 + j * Tiling::TileHeight;
+            auto* column0 = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offset0]);
+            IndexType       index1  = added[i + 1];
+            const IndexType offset1 = Dimensions * index1 + j * Tiling::TileHeight;
+            auto* column1 = reinterpret_cast<const vec_t*>(&featureTransformer.weights[offset1]);
+
+            for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                acc[k] = fused<Vec16Wrapper, Add, Add>(acc[k], column0[k], column1[k]);
+        }
+        for (; i < (int)added.size(); ++i)
         {
             IndexType       index  = added[i];
             const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
