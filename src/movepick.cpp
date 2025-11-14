@@ -122,7 +122,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
 // Captures are ordered by Most Valuable Victim (MVV), preferring captures
 // with a good history. Quiets moves are ordered using the history tables.
 template<GenType Type>
-ExtMove* MovePicker::score(MoveList<Type>& ml) {
+ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -136,7 +136,8 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         threatByLesser[ROOK] =
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
-        threatByLesser[KING]  = pos.attacks_by<QUEEN>(~us) | threatByLesser[QUEEN];
+        threatByLesser[KING] =
+          pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us) | threatByLesser[QUEEN];
     }
 
     ExtMove* it = cur;
@@ -171,9 +172,10 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
-            int v = threatByLesser[pt] & to ? -19 : 20 * bool(threatByLesser[pt] & from);
-            m.value += PieceValue[pt] * v;
-
+            constexpr Value PcValue[KING + 1] = {VALUE_ZERO, PawnValue,  KnightValue, BishopValue,
+                                                 RookValue,  QueenValue, 10000};
+            int v = threatByLesser[pt] & to ? -38 : 40 * bool(threatByLesser[pt] & from);
+            m.value += PcValue[pt] * v;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
