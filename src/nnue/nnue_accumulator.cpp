@@ -34,6 +34,10 @@
 #include "nnue_feature_transformer.h"  // IWYU pragma: keep
 #include "simd.h"
 
+#if !defined(VECTOR) || defined(USE_NEON)
+static_assert(false, "This test is not intended to run on this architecture.");
+#endif
+
 namespace Stockfish::Eval::NNUE {
 
 using namespace SIMD;
@@ -360,7 +364,26 @@ struct AccumulatorUpdateContext {
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = fromTile[k];
 
-            for (IndexType i = 0; i < removed.size(); ++i)
+            IndexType i = 0;
+    #ifndef USE_NEON
+            for (; i < std::min(removed.size(), added.size()); ++i)
+            {
+                IndexType       indexR  = removed[i];
+                IndexType       indexA  = added[i];
+                const IndexType offsetR = Dimensions * indexR + j * Tiling::TileHeight;
+                const IndexType offsetA = Dimensions * indexA + j * Tiling::TileHeight;
+                auto*           columnR =
+                  reinterpret_cast<const vec_i8_t*>(&featureTransformer.threatWeights[offsetR]);
+                auto*           columnA =
+                  reinterpret_cast<const vec_i8_t*>(&featureTransformer.threatWeights[offsetA]);
+
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = vec_add_16(vec_sub_16(acc[k], vec_convert_8_16(columnR[k])),
+                                                           vec_convert_8_16(columnA[k]));
+            }
+    #endif
+
+            for (; i < removed.size(); ++i)
             {
                 IndexType       index  = removed[i];
                 const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
@@ -379,7 +402,7 @@ struct AccumulatorUpdateContext {
     #endif
             }
 
-            for (IndexType i = 0; i < added.size(); ++i)
+            for (; i < added.size(); ++i)
             {
                 IndexType       index  = added[i];
                 const IndexType offset = Dimensions * index + j * Tiling::TileHeight;
