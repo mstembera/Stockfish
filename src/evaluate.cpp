@@ -62,7 +62,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, accumulators, caches.small)
                                        : networks.big.evaluate(pos, accumulators, caches.big);
 
-    Value nnue = ((250 - 13 * smallNet) * psqt + (262 - 27 * smallNet) * positional) / 256;
+    Value nnue = (250 * psqt + (262 - 13 * smallNet) * positional) / 256;
 
     // Re-evaluate the position when higher eval accuracy is worth the time spent
     if (smallNet && (std::abs(nnue) < 236))
