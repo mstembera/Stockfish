@@ -253,6 +253,10 @@ class AffineTransformSparseInput {
     // Forward propagation
     void propagate(const InputType* input, OutputType* output) const {
 
+#if !defined(USE_NEON_DOTPROD)
+    static_assert(false, "This test is only intended to run w/ USE_NEON_DOTPROD.");
+#endif
+
 #if (USE_SSSE3 | (USE_NEON >= 8))
     #if defined(USE_AVX512)
         using invec_t  = __m512i;
@@ -274,6 +278,7 @@ class AffineTransformSparseInput {
     #elif defined(USE_NEON_DOTPROD)
         using invec_t  = int8x16_t;
         using outvec_t = int32x4_t;
+        #define vec_add_32 vaddq_s32
         #define vec_set_32(a) vreinterpretq_s8_u32(vdupq_n_u32(a))
         #define vec_add_dpbusd_32 SIMD::dotprod_m128_add_dpbusd_epi32
     #elif defined(USE_NEON)
@@ -288,7 +293,7 @@ class AffineTransformSparseInput {
         // If we're using high-latency dot product instructions, split the accumulators
         // to create 3 separate dependency chains and merge at the end
         constexpr IndexType NumRegs =
-    #if defined(USE_VNNI)
+    #if defined(USE_VNNI) || defined(USE_NEON_DOTPROD)
           3 * NumAccums;
     #else
           NumAccums;
@@ -311,9 +316,14 @@ class AffineTransformSparseInput {
 
         // convince GCC to not do weird pointer arithmetic in the following loop
         const std::int8_t* weights_cp = weights;
-    #if defined(USE_VNNI)
+    #if defined(USE_VNNI) || defined(USE_NEON_DOTPROD)
         for (IndexType k = NumAccums; k < NumRegs; ++k)
-            acc[k] = vec_zero();
+            acc[k] =
+            #if defined(USE_VNNI)
+                vec_zero();
+            #else
+                vreinterpretq_s32_s16(vec_zero());
+            #endif
 
         while (start < end - 2)
         {

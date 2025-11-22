@@ -191,7 +191,7 @@ using vec_uint_t = uint32x4_t;
     #define vec_add_16(a, b) vaddq_s16(a, b)
     #define vec_sub_16(a, b) vsubq_s16(a, b)
     #define vec_mulhi_16(a, b) vqdmulhq_s16(a, b)
-    #define vec_zero() vec_t{0}
+    #define vec_zero() vdupq_n_s16(0)
     #define vec_set_16(a) vdupq_n_s16(a)
     #define vec_max_16(a, b) vmaxq_s16(a, b)
     #define vec_min_16(a, b) vminq_s16(a, b)
