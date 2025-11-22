@@ -33,6 +33,10 @@
 #include "layers/sqr_clipped_relu.h"
 #include "nnue_common.h"
 
+#if !defined(USE_VNNI) || !defined(USE_AVX512)
+    static_assert(false, "This test is only intended to run w/ VNNI 512.");
+#endif
+
 namespace Stockfish::Eval::NNUE {
 
 // Input features used in evaluation function
@@ -41,7 +45,7 @@ using PSQFeatureSet    = Features::HalfKAv2_hm;
 
 // Number of input feature dimensions after conversion
 constexpr IndexType TransformedFeatureDimensionsBig = 1024;
-constexpr int       L2Big                           = 15;
+constexpr int       L2Big                           = 31;
 constexpr int       L3Big                           = 32;
 
 constexpr IndexType TransformedFeatureDimensionsSmall = 128;
