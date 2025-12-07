@@ -33,6 +33,10 @@
 #include "nnue_feature_transformer.h"  // IWYU pragma: keep
 #include "simd.h"
 
+#if !defined(USE_AVX2)
+static_assert(false, "This test is only intended to run w/ AVX2 or newer.");
+#endif
+
 namespace Stockfish::Eval::NNUE {
 
 using namespace SIMD;
@@ -370,7 +374,30 @@ struct AccumulatorUpdateContext {
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = fromTile[k];
 
-            for (int i = 0; i < removed.ssize(); ++i)
+            int i;
+            for (i = 0; i < removed.ssize() - 1; i += 2)
+            {
+                size_t       index0   = removed[i];
+                size_t       index1   = removed[i + 1];
+                const size_t offset0  = Dimensions * index0;
+                const size_t offset1  = Dimensions * index1;
+                auto*        column0  = reinterpret_cast<const vec_i8_t*>(&threatWeights[offset0]);
+                auto*        column1  = reinterpret_cast<const vec_i8_t*>(&threatWeights[offset1]);
+
+    #ifdef USE_NEON
+                for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+                {
+                    acc[k] = vec_sub_16(vec_sub_16(acc[k], vmovl_s8(vget_low_s8(column0[k / 2]))),
+                                        vmovl_s8(vget_low_s8(column1[k / 2])));
+                    acc[k + 1] = vec_sub_16(vec_sub_16(acc[k + 1], vmovl_high_s8(column0[k / 2])),
+                                            vmovl_high_s8(column1[k / 2]));
+                }
+    #else
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = vec_sub_16(vec_sub_16(acc[k], vec_convert_8_16(column0[k])), vec_convert_8_16(column1[k]));
+    #endif
+            }
+            for (; i < removed.ssize(); ++i)
             {
                 size_t       index  = removed[i];
                 const size_t offset = Dimensions * index;
@@ -388,7 +415,29 @@ struct AccumulatorUpdateContext {
     #endif
             }
 
-            for (int i = 0; i < added.ssize(); ++i)
+            for (i = 0; i < added.ssize() - 1; i += 2)
+            {
+                size_t       index0   = added[i];
+                size_t       index1   = added[i + 1];
+                const size_t offset0  = Dimensions * index0;
+                const size_t offset1  = Dimensions * index1;
+                auto*        column0  = reinterpret_cast<const vec_i8_t*>(&threatWeights[offset0]);
+                auto*        column1  = reinterpret_cast<const vec_i8_t*>(&threatWeights[offset1]);
+
+    #ifdef USE_NEON
+                for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+                {
+                    acc[k] = vec_add_16(vec_add_16(acc[k], vmovl_s8(vget_low_s8(column0[k / 2]))),
+                                        vmovl_s8(vget_low_s8(column1[k / 2])));
+                    acc[k + 1] = vec_add_16(vec_add_16(acc[k + 1], vmovl_high_s8(column0[k / 2])),
+                                            vmovl_high_s8(column1[k / 2]));
+                }
+    #else
+                for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                    acc[k] = vec_add_16(vec_add_16(acc[k], vec_convert_8_16(column0[k])), vec_convert_8_16(column1[k]));
+    #endif
+            }
+            for (; i < added.ssize(); ++i)
             {
                 size_t       index  = added[i];
                 const size_t offset = Dimensions * index;
