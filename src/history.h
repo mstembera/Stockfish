@@ -68,10 +68,7 @@ struct StatsEntry {
     }
 
     operator T() const {
-        if constexpr (Atomic)
-            return entry.load(std::memory_order_relaxed);
-        else
-            return entry;
+        return entry;
     }
 
     void operator<<(int bonus) {
