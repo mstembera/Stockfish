@@ -183,6 +183,7 @@ std::string compiler_info() {
     compiler += "ICX ";
     compiler += stringify(__INTEL_LLVM_COMPILER);
 #elif defined(__clang__)
+    #error "GCC only"
     compiler += "clang++ ";
     compiler += make_version_string(__clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif _MSC_VER
