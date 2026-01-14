@@ -76,9 +76,22 @@ struct StatsEntry {
 
     void operator<<(int bonus) {
         // Make sure that bonus is in range [-D, D]
-        int clampedBonus = std::clamp(bonus, -D, D);
-        T   val          = *this;
-        *this            = val + clampedBonus - val * std::abs(clampedBonus) / D;
+        const T val          = *this;
+
+        if (bonus >= 0)
+        {
+            const int clampedBonus = std::min(bonus, D);
+            const int vcb          = val * clampedBonus;
+            *this = val + clampedBonus - (val >= 0 ?  (unsigned( vcb) / unsigned(D))
+                                                   : -(unsigned(-vcb) / unsigned(D)));
+        }
+        else
+        {
+            const int clampedBonus = std::max(bonus, -D);
+            const int vcb          = val * clampedBonus;
+            *this = val + clampedBonus - (val >= 0 ?  (unsigned(-vcb) / unsigned(D))
+                                                   : -(unsigned( vcb) / unsigned(D)));
+        }
 
         assert(std::abs(T(*this)) <= D);
     }
