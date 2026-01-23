@@ -1131,7 +1131,7 @@ clang-profile-use:
 gcc-profile-make:
 	@mkdir -p profdir
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-generate=profdir -fno-peel-loops -fno-tracer' \
+	EXTRACXXFLAGS='-fprofile-generate=profdir -fprofile-values -fno-peel-loops -fno-tracer' \
 	EXTRACXXFLAGS+=$(EXTRAPROFILEFLAGS) \
 	EXTRALDFLAGS='-lgcov' \
 	all
@@ -1139,7 +1139,7 @@ gcc-profile-make:
 gcc-profile-use:
 	$(eval gccmajor := $(shell $(CXX) -dumpversion 2>/dev/null | cut -f1 -d.))
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-use=profdir -fno-peel-loops -fno-tracer' \
+	EXTRACXXFLAGS='-fprofile-use=profdir -fprofile-values -fno-peel-loops -fno-tracer -fprofile-reorder-functions' \
 	EXTRACXXFLAGS+='$(if $(shell expr $(gccmajor) \>= 11),-fprofile-partial-training)' \
 	EXTRACXXFLAGS+=$(EXTRAPROFILEFLAGS) \
 	EXTRALDFLAGS='-lgcov' \
