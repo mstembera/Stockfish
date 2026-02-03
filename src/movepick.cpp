@@ -178,7 +178,7 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
 
-            m.value += pt * 8;
+            m.value += 8 * (relative_rank(us, to) > relative_rank(us, from)) - 4;
         }
 
         else  // Type == EVASIONS
