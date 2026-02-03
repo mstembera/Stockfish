@@ -140,6 +140,10 @@ class ValueList {
         assert(size_ < MaxSize);
         values_[size_++] = value;
     }
+    void erase(int index) {
+        assert(index >= 0 && index < size_);
+        values_[index] = values_[--size_];
+    }
     const T* begin() const { return values_; }
     const T* end() const { return values_ + size_; }
     const T& operator[](int index) const { return values_[index]; }

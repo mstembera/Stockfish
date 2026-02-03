@@ -347,8 +347,8 @@ struct AccumulatorUpdateContext {
           to_psqt_weight_vector(indices)...);
     }
 
-    void apply(const typename FeatureSet::IndexList& added,
-               const typename FeatureSet::IndexList& removed) {
+    void apply(typename FeatureSet::IndexList& added,
+               typename FeatureSet::IndexList& removed) {
         const auto& fromAcc = from.template acc<Dimensions>().accumulation[perspective];
         auto&       toAcc   = to.template acc<Dimensions>().accumulation[perspective];
 
@@ -361,6 +361,20 @@ struct AccumulatorUpdateContext {
         psqt_vec_t psqt[Tiling::NumPsqtRegs];
 
         const auto* threatWeights = &featureTransformer.threatWeights[0];
+
+        for (int ia = added.ssize() - 1; ia >= 0; --ia)
+        {
+            const auto val = added[ia];
+            for (int ir = 0; ir < removed.ssize(); ++ir)
+            {
+                if (val == removed[ir])
+                {
+                    removed.erase(ir);
+                    added.erase(ia);
+                    break;
+                }
+            }
+        }
 
         for (IndexType j = 0; j < Dimensions / Tiling::TileHeight; ++j)
         {
