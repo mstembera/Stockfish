@@ -64,11 +64,28 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; ++p)
         if (p->value >= limit)
         {
-            ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
-                *q = *(q - 1);
-            *q = tmp;
+            // Insert two at a time
+            if (p < end - 1 && p->value == (p + 1)->value)
+            {
+                ExtMove tmp0 = *p, tmp1 = *(p + 1), *q;
+                *p =       *++sortedEnd;
+                *(p + 1) = *++sortedEnd;
+
+                for (q = sortedEnd; q != begin + 1 && *(q - 2) < tmp0; --q)
+                    *q = *(q - 2);
+
+                *(q - 1) = tmp0;
+                *q       = tmp1;
+                ++p;
+            }
+            else
+            {
+                ExtMove tmp = *p, *q;
+                *p          = *++sortedEnd;
+                for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+                    *q = *(q - 1);
+                *q = tmp;
+            }
         }
 }
 
