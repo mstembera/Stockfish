@@ -212,6 +212,24 @@ Move* generate_moves(const Position& pos, Move* moveList, Bitboard target) {
     static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in generate_moves()");
 
     Bitboard bb = pos.pieces(Us, Pt);
+    
+    if constexpr (Pt == KNIGHT)
+        bb &= ~pos.blockers_for_king(Us);
+
+    else if constexpr (Pt == BISHOP || Pt == ROOK || Pt == QUEEN)
+    {
+        Bitboard pinned = bb & pos.blockers_for_king(Us);
+        bb ^= pinned;
+
+        while (pinned)
+        {
+            Square   from = pop_lsb(pinned);
+            Bitboard b    = attacks_bb<Pt>(from, pos.pieces()) & target
+                          & line_bb(pos.square<KING>(Us), from);
+
+            moveList = splat_moves(moveList, from, b);
+        }
+    }
 
     while (bb)
     {
@@ -249,6 +267,21 @@ Move* generate_all(const Position& pos, Move* moveList) {
     }
 
     Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS ? ~pos.pieces(Us) : target);
+        
+    if (b)
+    {
+        b &= ~(pos.attacks_by<PAWN>(~Us) | pos.attacks_by<KNIGHT>(~Us) | pos.attacks_by<KING>(~Us));
+
+        const Bitboard occupied  = pos.pieces() ^ square_bb(ksq);
+
+        Bitboard attackers = pos.pieces(~Us, ROOK, QUEEN);
+        while (attackers && b)
+            b &= ~attacks_bb<ROOK>(pop_lsb(attackers), occupied);
+
+        attackers = pos.pieces(~Us, BISHOP, QUEEN);
+        while (attackers && b)
+            b &= ~attacks_bb<BISHOP>(pop_lsb(attackers), occupied);
+    }
 
     moveList = splat_moves(moveList, ksq, b);
 
