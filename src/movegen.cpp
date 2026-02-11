@@ -55,15 +55,14 @@ inline Move* splat_pawn_moves(Move* moveList, Bitboard to_bb) {
         return table;
     }();
 
-    if (to_bb)
-    {
-        auto table = reinterpret_cast<const __m512i*>(SPLAT_TABLE.data());
+    auto table = reinterpret_cast<const __m512i*>(SPLAT_TABLE.data());
 
+    if (static_cast<uint32_t>(to_bb >> 0))
         moveList =
           write_moves(moveList, static_cast<uint32_t>(to_bb >> 0), _mm512_load_si512(table + 0));
+    if (static_cast<uint32_t>(to_bb >> 32))
         moveList =
           write_moves(moveList, static_cast<uint32_t>(to_bb >> 32), _mm512_load_si512(table + 1));
-    }
 
     return moveList;
 }
@@ -76,17 +75,16 @@ inline Move* splat_moves(Move* moveList, Square from, Bitboard to_bb) {
         return table;
     }();
 
-    if (to_bb)
-    {
-        __m512i fromVec = _mm512_set1_epi16(Move(from, SQUARE_ZERO).raw());
+    __m512i fromVec = _mm512_set1_epi16(Move(from, SQUARE_ZERO).raw());
 
-        auto table = reinterpret_cast<const __m512i*>(SPLAT_TABLE.data());
+    auto table = reinterpret_cast<const __m512i*>(SPLAT_TABLE.data());
 
+    if (static_cast<uint32_t>(to_bb >> 0))
         moveList = write_moves(moveList, static_cast<uint32_t>(to_bb >> 0),
-                               _mm512_or_si512(_mm512_load_si512(table + 0), fromVec));
+                            _mm512_or_si512(_mm512_load_si512(table + 0), fromVec));
+    if (static_cast<uint32_t>(to_bb >> 32))
         moveList = write_moves(moveList, static_cast<uint32_t>(to_bb >> 32),
-                               _mm512_or_si512(_mm512_load_si512(table + 1), fromVec));
-    }
+                            _mm512_or_si512(_mm512_load_si512(table + 1), fromVec));
 
     return moveList;
 }
