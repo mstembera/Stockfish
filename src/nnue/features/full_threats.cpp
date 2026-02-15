@@ -154,7 +154,8 @@ constexpr auto helper_offsets = init_threat_offsets().first;
 constexpr auto offsets = init_threat_offsets().second;
 
 constexpr auto init_index_luts() {
-    std::array<std::array<std::array<uint32_t, 2>, PIECE_NB>, PIECE_NB> indices{};
+    std::array<std::array<std::array<uint16_t, 2>, PIECE_NB>, PIECE_NB> indices{};
+    static_assert(FullThreats::Dimensions < 65536, "Too many dimensions to fit into 16 bits.");
 
     for (Piece attacker : AllPieces)
     {
@@ -212,7 +213,7 @@ void FullThreats::append_active_indices(Color perspective, const Position& pos, 
 
     for (Color color : {WHITE, BLACK})
     {
-        for (PieceType pt = PAWN; pt <= KING; ++pt)
+        for (PieceType pt = PAWN; pt < KING; ++pt)
         {
             Color    c        = Color(perspective ^ color);
             Piece    attacker = make_piece(c, pt);
@@ -233,9 +234,7 @@ void FullThreats::append_active_indices(Color perspective, const Position& pos, 
                     Square    from     = to - right;
                     Piece     attacked = pos.piece_on(to);
                     IndexType index    = make_index(perspective, attacker, from, to, attacked, ksq);
-
-                    if (index < Dimensions)
-                        active.push_back(index);
+                    active.push_back_if(index, index < Dimensions);
                 }
 
                 while (attacks_right)
@@ -244,9 +243,7 @@ void FullThreats::append_active_indices(Color perspective, const Position& pos, 
                     Square    from     = to - left;
                     Piece     attacked = pos.piece_on(to);
                     IndexType index    = make_index(perspective, attacker, from, to, attacked, ksq);
-
-                    if (index < Dimensions)
-                        active.push_back(index);
+                    active.push_back_if(index, index < Dimensions);
                 }
             }
             else
@@ -262,9 +259,7 @@ void FullThreats::append_active_indices(Color perspective, const Position& pos, 
                         Piece     attacked = pos.piece_on(to);
                         IndexType index =
                           make_index(perspective, attacker, from, to, attacked, ksq);
-
-                        if (index < Dimensions)
-                            active.push_back(index);
+                        active.push_back_if(index, index < Dimensions);
                     }
                 }
             }
