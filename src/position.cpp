@@ -508,7 +508,8 @@ Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
          | (attacks_bb<BISHOP>(s, occupied) & pieces(BISHOP, QUEEN))
          | (attacks_bb<PAWN>(s, BLACK) & pieces(WHITE, PAWN))
          | (attacks_bb<PAWN>(s, WHITE) & pieces(BLACK, PAWN))
-         | (attacks_bb<KNIGHT>(s) & pieces(KNIGHT)) | (attacks_bb<KING>(s) & pieces(KING));
+         | (attacks_bb<KNIGHT>(s) & pieces(KNIGHT))
+         | (attacks_bb<KING>(s) & pieces(KING));
 }
 
 bool Position::attackers_to_exist(Square s, Bitboard occupied, Color c) const {
