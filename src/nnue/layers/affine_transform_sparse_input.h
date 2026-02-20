@@ -119,20 +119,32 @@ void find_nnz(const std::uint8_t* RESTRICT input,
 
     constexpr IndexType SimdWidth = 16;  // 512 bits / 32 bits
     constexpr IndexType NumChunks = InputDimensions / SimdWidth;
-    const __m512i       increment = _mm512_set1_epi32(SimdWidth);
-    __m512i base = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    const __m512i       increment = _mm512_set1_epi32(SimdWidth * 2);
+    __m512i base0 = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    __m512i base1 = _mm512_set_epi32(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16);
 
     IndexType count = 0;
-    for (IndexType i = 0; i < NumChunks; ++i)
+    for (IndexType i = 0; i < NumChunks / 2; ++i)
     {
-        const __m512i inputV = _mm512_load_si512(input + i * SimdWidth * sizeof(std::uint32_t));
+        const __m512i v0 = _mm512_load_si512(input + (i * 2 + 0) * SimdWidth * sizeof(std::uint32_t));
+        const __m512i v1 = _mm512_load_si512(input + (i * 2 + 1) * SimdWidth * sizeof(std::uint32_t));
 
-        // Get a bitmask and gather non zero indices
-        const __mmask16 nnzMask = _mm512_test_epi32_mask(inputV, inputV);
-        const __m512i   nnzV    = _mm512_maskz_compress_epi32(nnzMask, base);
-        _mm512_mask_cvtepi32_storeu_epi16(out + count, 0xFFFF, nnzV);
-        count += popcount(nnzMask);
-        base = _mm512_add_epi32(base, increment);
+        const __mmask16 mask0 = _mm512_test_epi32_mask(v0, v0);
+        const __mmask16 mask1 = _mm512_test_epi32_mask(v1, v1);
+
+        const IndexType count0 = popcount(mask0);
+        const IndexType count1 = popcount(mask1);
+
+        const __m512i nnz0 = _mm512_maskz_compress_epi32(mask0, base0);
+        const __m512i nnz1 = _mm512_maskz_compress_epi32(mask1, base1);
+
+        _mm512_mask_cvtepi32_storeu_epi16(out + count, 0xFFFF, nnz0);
+        count += count0;
+        _mm512_mask_cvtepi32_storeu_epi16(out + count, 0xFFFF, nnz1);
+        count += count1;
+
+        base0 = _mm512_add_epi32(base0, increment);
+        base1 = _mm512_add_epi32(base1, increment);
     }
     count_out = count;
 
