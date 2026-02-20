@@ -86,7 +86,7 @@ void find_nnz(const std::uint8_t* RESTRICT input,
               std::uint16_t* RESTRICT      out,
               IndexType&                   count_out) {
 
-    #if defined(USE_AVX512ICL)
+    #if 0 //defined(USE_AVX512ICL)
 
     constexpr IndexType SimdWidthIn  = 64;  // 512 bits
     constexpr IndexType SimdWidthOut = 32;  // 512 bits / 16 bits
