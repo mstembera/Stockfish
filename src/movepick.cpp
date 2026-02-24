@@ -139,11 +139,11 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = pos.attacks_by<QUEEN>(~us) | threatByLesser[QUEEN];
 
-        themHigherValue[PAWN]   = pos.pieces(~us, KNIGHT, BISHOP, ROOK, QUEEN, KING);
+        themHigherValue[PAWN]   = pos.pieces(~us, KNIGHT, BISHOP, ROOK, QUEEN); 
         themHigherValue[KNIGHT] =
-        themHigherValue[BISHOP] = pos.pieces(~us, ROOK, QUEEN, KING);                                                     
-        themHigherValue[ROOK]   = pos.pieces(~us, QUEEN, KING);
-        themHigherValue[QUEEN]  = pos.pieces(~us, KING);
+        themHigherValue[BISHOP] = pos.pieces(~us, ROOK, QUEEN);                                                     
+        themHigherValue[ROOK]   = pos.pieces(~us, QUEEN);
+        themHigherValue[QUEEN]  =
         themHigherValue[KING]   = 0;
     }
 
@@ -183,8 +183,8 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             m.value += PieceValue[pt] * v;
 
             // bonus for attacking a higher-value enemy piece with a lower-value piece
-            if (attacks_bb(pc, to, pos.pieces() ^ from) & themHigherValue[pt])
-                m.value += 800;
+            if (themHigherValue[pt] & attacks_bb(pc, to, pos.pieces() ^ from))
+                m.value += 500;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
