@@ -28,6 +28,15 @@
 
 namespace Stockfish {
 
+int Cf = 20;
+int Ct = 19;
+
+auto rC = [](int v) { return std::pair<int, int>(2, 70); };
+TUNE(SetRange(rC), Cf);
+TUNE(SetRange(rC), Ct);
+
+UPDATE_ON_LAST();
+
 namespace {
 
 enum Stages {
@@ -171,7 +180,9 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
-            int v = threatByLesser[pt] & to ? -19 : 20 * bool(threatByLesser[pt] & from);
+            //int v = threatByLesser[pt] & to ? -19 : 20 * bool(threatByLesser[pt] & from);
+            int v = Cf * bool(threatByLesser[pt] & from) - Ct * bool(threatByLesser[pt] & to);
+
             m.value += PieceValue[pt] * v;
 
 
