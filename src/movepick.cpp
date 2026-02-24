@@ -129,7 +129,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
     Color us = pos.side_to_move();
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
-    [[maybe_unused]] Bitboard themNonPawn;
+    [[maybe_unused]] Bitboard themHigherValue[KING + 1];
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
@@ -139,7 +139,12 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = pos.attacks_by<QUEEN>(~us) | threatByLesser[QUEEN];
 
-        themNonPawn = (pos.pieces() ^ pos.pieces(PAWN)) & pos.pieces(~us);
+        themHigherValue[PAWN]   = pos.pieces(~us, KNIGHT, BISHOP, ROOK, QUEEN); 
+        themHigherValue[KNIGHT] =
+        themHigherValue[BISHOP] = pos.pieces(~us, ROOK, QUEEN);
+        themHigherValue[ROOK]   = pos.pieces(~us, QUEEN);
+        themHigherValue[QUEEN]  =
+        themHigherValue[KING]   = 0;
     }
 
     ExtMove* it = cur;
@@ -177,9 +182,8 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             int v = threatByLesser[pt] & to ? -19 : 20 * bool(threatByLesser[pt] & from);
             m.value += PieceValue[pt] * v;
 
-            // bonus for attacking multiple enemy pieces
-            if (more_than_one(themNonPawn & attacks_bb(pc, to, pos.pieces() ^ from)))
-                m.value += 8 * (QueenValue - PieceValue[pt]);
+            if (themHigherValue[pt] & attacks_bb(pc, to, pos.pieces() ^ from))
+                m.value += 2 * (QueenValue - PieceValue[pt]);
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
