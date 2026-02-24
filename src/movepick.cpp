@@ -184,7 +184,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
             // bonus for attacking a higher-value enemy piece with a lower-value piece
             if (attacks_bb(pc, to, pos.pieces() ^ from) & themHigherValue[pt])
-                m.value += 3000;
+                m.value += 800;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
