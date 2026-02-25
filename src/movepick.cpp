@@ -128,15 +128,23 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
+    [[maybe_unused]] Bitboard threatBy[KING + 1];
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     if constexpr (Type == QUIETS)
     {
+        threatBy[PAWN]   = pos.attacks_by<PAWN>(~us);
+        threatBy[KNIGHT] = pos.attacks_by<KNIGHT>(~us);
+        threatBy[BISHOP] = pos.attacks_by<BISHOP>(~us);
+        threatBy[ROOK]   = pos.attacks_by<ROOK>(~us);
+        threatBy[QUEEN]  = pos.attacks_by<QUEEN>(~us);
+        threatBy[KING]   = pos.attacks_by<KING>(~us);
+
         threatByLesser[PAWN]   = 0;
-        threatByLesser[KNIGHT] = threatByLesser[BISHOP] = pos.attacks_by<PAWN>(~us);
-        threatByLesser[ROOK] =
-          pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
-        threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
-        threatByLesser[KING]  = pos.attacks_by<QUEEN>(~us) | threatByLesser[QUEEN];
+        threatByLesser[KNIGHT] = threatBy[PAWN];
+        threatByLesser[BISHOP] = threatBy[PAWN];
+        threatByLesser[ROOK]   = threatBy[PAWN]  | threatBy[KNIGHT] | threatBy[BISHOP];
+        threatByLesser[QUEEN]  = threatBy[ROOK]  | threatByLesser[ROOK];
+        threatByLesser[KING]   = threatBy[QUEEN] | threatByLesser[QUEEN];
     }
 
     ExtMove* it = cur;
@@ -171,9 +179,28 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
-            int v = 19 * bool(threatByLesser[pt] & from) - 29 * bool(threatByLesser[pt] & to);
-            m.value += PieceValue[pt] * v;
-
+            if (threatByLesser[pt] & from)
+            {
+                for (PieceType ptt = PAWN; ptt < pt; ++ptt)
+                {
+                    if (threatBy[ptt] & from)
+                    {
+                        m.value += 32 * PieceValue[pt] - 8 * PieceValue[ptt];
+                        break;
+                    }
+                }
+            }
+            if (threatByLesser[pt] & to)
+            {
+                for (PieceType ptt = PAWN; ptt < pt; ++ptt)
+                {
+                    if (threatBy[ptt] & to)
+                    {
+                        m.value -= 32 * PieceValue[pt] - 8 * PieceValue[ptt];
+                        break;
+                    }
+                }
+            }
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
