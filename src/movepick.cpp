@@ -180,27 +180,20 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
             if (threatByLesser[pt] & from)
-            {
                 for (PieceType ptt = PAWN; ptt < pt; ++ptt)
-                {
                     if (threatBy[ptt] & from)
                     {
-                        m.value += 32 * PieceValue[pt] - 8 * PieceValue[ptt];
+                        m.value += 22 * PieceValue[pt] - 2 * PieceValue[ptt];
                         break;
                     }
-                }
-            }
+            
             if (threatByLesser[pt] & to)
-            {
                 for (PieceType ptt = PAWN; ptt < pt; ++ptt)
-                {
                     if (threatBy[ptt] & to)
                     {
-                        m.value -= 32 * PieceValue[pt] - 8 * PieceValue[ptt];
+                        m.value -= 22 * PieceValue[pt] - 2 * PieceValue[ptt];
                         break;
                     }
-                }
-            }
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
