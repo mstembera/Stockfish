@@ -129,6 +129,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
     Color us = pos.side_to_move();
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
+    [[maybe_unused]] Bitboard threatened, defendedOnce, defendedTwice;
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
@@ -137,6 +138,40 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
+        
+        threatened = threatByLesser[QUEEN] | pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us);
+
+        {
+            Bitboard pawns = pos.pieces(us, PAWN);
+            Bitboard west  = us == WHITE ? shift<NORTH_WEST>(pawns) : shift<SOUTH_WEST>(pawns);
+            Bitboard east  = us == WHITE ? shift<NORTH_EAST>(pawns) : shift<SOUTH_EAST>(pawns);
+
+            defendedOnce  = west | east;
+            defendedTwice = west & east;
+        }
+
+        auto accumulate_attacks = [&](Bitboard bb) {
+            defendedTwice |= defendedOnce & bb;
+            defendedOnce  |= bb;
+        };
+
+        auto accumulate_non_pawn_attacks = [&](PieceType pt) {
+            Bitboard attackers = pos.pieces(us, pt);
+            Bitboard occupied  = pos.pieces();
+
+            while (attackers)
+            {
+                Square   s = pop_lsb(attackers);
+                Bitboard b = attacks_bb(pt, s, occupied);
+                accumulate_attacks(b);
+            }
+        };
+
+        accumulate_non_pawn_attacks(KNIGHT);
+        accumulate_non_pawn_attacks(BISHOP);
+        accumulate_non_pawn_attacks(ROOK);
+        accumulate_non_pawn_attacks(QUEEN);
+        accumulate_non_pawn_attacks(KING);
     }
 
     ExtMove* it = cur;
@@ -174,6 +209,14 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             int v = 20 * (bool(threatByLesser[pt] & from) - bool(threatByLesser[pt] & to));
             m.value += PieceValue[pt] * v;
 
+            // penalty for moving to a threatened but undefended square
+            // (except for quiet pawn pushes the piece was one of the defenders of 'to')
+            if ((threatened & to) && !(threatByLesser[pt] & to))
+            {
+                const Bitboard defended = pt == PAWN ? defendedOnce & to : defendedTwice & to;
+                if (!defended)
+                    m.value -= 8 * PieceValue[pt];
+            }
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
