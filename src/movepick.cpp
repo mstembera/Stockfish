@@ -215,7 +215,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             {
                 const Bitboard defended = pt == PAWN ? defendedOnce & to : defendedTwice & to;
                 if (!defended)
-                    m.value -= 8 * PieceValue[pt];
+                    m.value -= 20 * PieceValue[pt];
             }
 
             if (ply < LOW_PLY_HISTORY_SIZE)
