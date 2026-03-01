@@ -122,7 +122,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
 // Captures are ordered by Most Valuable Victim (MVV), preferring captures
 // with a good history. Quiets moves are ordered using the history tables.
 template<GenType Type>
-ExtMove* MovePicker::score(MoveList<Type>& ml) {
+ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
@@ -204,17 +204,18 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
 
-            // penalty for moving to a square threatened by a lesser piece
-            // or bonus for escaping an attack by a lesser piece.
-            int v = 20 * (bool(threatByLesser[pt] & from) - bool(threatByLesser[pt] & to));
-            m.value += PieceValue[pt] * v;
+            // bonus for escaping an attack by a lesser piece.
+            m.value += 20 * bool(threatByLesser[pt] & from) * PieceValue[pt];
 
             // penalty for moving to a threatened but undefended square
-            // (except for quiet pawn pushes the piece was one of the defenders of 'to')
-            if ((threatened & to) && !(threatByLesser[pt] & to))
+            // or a square threatened by a lesser piece
+            if (threatened & to)
             {
+                //except for quiet pawn pushes the piece was one of the defenders of 'to'
                 const Bitboard defended = pt == PAWN ? defendedOnce & to : defendedTwice & to;
                 if (!defended)
+                    m.value -= 30 * PieceValue[pt];
+                else if (threatByLesser[pt] & to)
                     m.value -= 20 * PieceValue[pt];
             }
 
