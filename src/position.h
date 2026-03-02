@@ -288,7 +288,17 @@ inline Bitboard Position::attacks_by(Color c) const {
         return c == WHITE ? pawn_attacks_bb<WHITE>(pieces(WHITE, PAWN))
                           : pawn_attacks_bb<BLACK>(pieces(BLACK, PAWN));
     else if constexpr (Pt == KING)
+    {
         return attacks_bb<KING>(square<KING>(c));
+    }
+    else if constexpr (Pt == KNIGHT)
+    {
+        Bitboard threats   = 0;
+        Bitboard attackers = pieces(c, KNIGHT);
+        while (attackers)
+            threats |= attacks_bb<KNIGHT>(pop_lsb(attackers));
+        return threats;
+    }
     else
     {
         Bitboard threats   = 0;
