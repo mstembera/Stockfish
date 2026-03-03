@@ -1078,13 +1078,19 @@ void Position::update_piece_threats(Piece                     pc,
                                     Square                    s,
                                     DirtyThreats* const       dts,
                                     [[maybe_unused]] Bitboard noRaysContaining) const {
+
+    if constexpr (!ComputeRay)
+        if (type_of(pc) == KING)
+            return;
+
     const Bitboard occupied     = pieces();
     const Bitboard rookQueens   = pieces(ROOK, QUEEN);
     const Bitboard bishopQueens = pieces(BISHOP, QUEEN);
     const Bitboard rAttacks     = attacks_bb<ROOK>(s, occupied);
     const Bitboard bAttacks     = attacks_bb<BISHOP>(s, occupied);
+    const Bitboard qAttacks     = rAttacks | bAttacks;
     const Bitboard kings        = pieces(KING);
-    Bitboard       occupiedNoK  = occupied ^ kings;
+    const Bitboard occupiedNoK  = occupied ^ kings;
 
     Bitboard sliders         = (rookQueens & rAttacks) | (bishopQueens & bAttacks);
     auto     process_sliders = [&](bool addDirectAttacks) {
@@ -1093,11 +1099,11 @@ void Position::update_piece_threats(Piece                     pc,
             Square sliderSq = pop_lsb(sliders);
             Piece  slider   = piece_on(sliderSq);
 
-            const Bitboard ray        = RayPassBB[sliderSq][s];
-            const Bitboard discovered = ray & (rAttacks | bAttacks) & occupiedNoK;
+            const Bitboard ray        = RayPassBB[s][sliderSq];
+            const Bitboard discovered = ray & (qAttacks & occupiedNoK);
 
             assert(!more_than_one(discovered));
-            if (discovered && (RayPassBB[sliderSq][s] & noRaysContaining) != noRaysContaining)
+            if (discovered && (RayPassBB[s][sliderSq] & noRaysContaining) != noRaysContaining)
             {
                 const Square threatenedSq = lsb(discovered);
                 const Piece  threatenedPc = piece_on(threatenedSq);
@@ -1111,16 +1117,13 @@ void Position::update_piece_threats(Piece                     pc,
 
     if (type_of(pc) == KING)
     {
-        if constexpr (ComputeRay)
-            process_sliders(false);
+        process_sliders(false);
         return;
     }
-
 
     const Bitboard knights    = pieces(KNIGHT);
     const Bitboard whitePawns = pieces(WHITE, PAWN);
     const Bitboard blackPawns = pieces(BLACK, PAWN);
-
 
     Bitboard threatened = attacks_bb(pc, s, occupied) & occupiedNoK;
     Bitboard incoming_threats =
@@ -1128,23 +1131,17 @@ void Position::update_piece_threats(Piece                     pc,
       | (attacks_bb<PAWN>(s, BLACK) & whitePawns) | (PseudoAttacks[KING][s] & kings);
 
 #ifdef USE_AVX512ICL
+    const Bitboard all_attackers = sliders | incoming_threats;
+
     if constexpr (PutPiece)
     {
-        dts->threatenedSqs |= threatened;
-        dts->threateningSqs |= s;
+        dts->threatenedSqs  |= threatened | s;
+        dts->threateningSqs |= s | all_attackers;
     }
 
     DirtyThreat dt_template{pc, NO_PIECE, s, Square(0), PutPiece};
     write_multiple_dirties<DirtyThreat::ThreatenedSqOffset, DirtyThreat::ThreatenedPcOffset>(
       *this, threatened, dt_template, dts);
-
-    Bitboard all_attackers = sliders | incoming_threats;
-
-    if constexpr (PutPiece)
-    {
-        dts->threatenedSqs |= s;
-        dts->threateningSqs |= all_attackers;
-    }
 
     dt_template = {NO_PIECE, pc, Square(0), s, PutPiece};
     write_multiple_dirties<DirtyThreat::PcSqOffset, DirtyThreat::PcOffset>(*this, all_attackers,
@@ -1171,9 +1168,7 @@ void Position::update_piece_threats(Piece                     pc,
 #endif
     }
     else
-    {
         incoming_threats |= sliders;
-    }
 
 #ifndef USE_AVX512ICL
     while (incoming_threats)
