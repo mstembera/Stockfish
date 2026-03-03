@@ -227,13 +227,6 @@ constexpr auto index_lut2 = index_lut2_array();
 inline sf_always_inline IndexType FullThreatsv2::make_index(
   Color perspective, Piece attacker, Square from, Square to, Piece attacked, Square ksq) {
     const std::int8_t orientation   = OrientTBL[ksq] ^ (56 * perspective);
-    unsigned          from_oriented = uint8_t(from) ^ orientation;
-    unsigned          to_oriented   = uint8_t(to) ^ orientation;
-    bool              from_to_direc = from_oriented < to_oriented;
-
-    std::int8_t swap              = 8 * perspective;
-    unsigned    attacker_oriented = attacker ^ swap;
-    unsigned    attacked_oriented = attacked ^ swap;
 
     // In the case when two pieces of the same type are attacking, one half of
     // the indices (in this case, the ones corresponding to from < to) are unused.
@@ -244,15 +237,18 @@ inline sf_always_inline IndexType FullThreatsv2::make_index(
     // type X -> X use the usual from > to indices, and attacks of the type
     // X -> ~X now use the from < to indices. This cannot be applied to pawns,
     // since their attacks are not fully symmetrical.
-    IndexType il1 = index_lut1[attacker_oriented][attacked_oriented][from_to_direc];
-    if (attacker == ~attacked && type_of(attacker) != PAWN)
-        return il1
-             + offsets[attacker_oriented][to_oriented]
-             + index_lut2[attacker_oriented][to_oriented][from_oriented];
-    else
-        return il1
-             + offsets[attacker_oriented][from_oriented]
-             + index_lut2[attacker_oriented][from_oriented][to_oriented];
+    const bool swapFromTo    = attacker == ~attacked && type_of(attacker) != PAWN;
+    unsigned   from_oriented = (swapFromTo ? uint8_t(to)   : uint8_t(from)) ^ orientation;
+    unsigned   to_oriented   = (swapFromTo ? uint8_t(from) : uint8_t(to))   ^ orientation;
+    bool       from_to_direc = swapFromTo ^ (from_oriented < to_oriented);
+
+    std::int8_t swap              = 8 * perspective;
+    unsigned    attacker_oriented = attacker ^ swap;
+    unsigned    attacked_oriented = attacked ^ swap;
+
+    return index_lut1[attacker_oriented][attacked_oriented][from_to_direc]
+            + offsets[attacker_oriented][from_oriented]
+            + index_lut2[attacker_oriented][from_oriented][to_oriented];
 }
 
 // Get a list of indices for active features in ascending order
