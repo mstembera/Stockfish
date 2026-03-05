@@ -203,9 +203,8 @@ class Position {
     Key  adjust_key50(Key k) const;
 
     // Data members
-    std::array<Piece, SQUARE_NB>        board;
-    std::array<Bitboard, PIECE_TYPE_NB> byTypeBB;
-    std::array<Bitboard, COLOR_NB>      byColorBB;
+    std::array<Piece, SQUARE_NB> board;
+    std::array<std::array<Bitboard, PIECE_TYPE_NB>, COLOR_NB> byTypeBB;
 
     int          castlingRightsMask[SQUARE_NB];
     Square       castlingRookSquare[CASTLING_RIGHT_NB];
@@ -233,18 +232,23 @@ inline bool Position::empty(Square s) const { return piece_on(s) == NO_PIECE; }
 
 inline Piece Position::moved_piece(Move m) const { return piece_on(m.from_sq()); }
 
-inline Bitboard Position::pieces() const { return byTypeBB[ALL_PIECES]; }
+inline Bitboard Position::pieces() const {
+    return byTypeBB[WHITE][ALL_PIECES] | byTypeBB[BLACK][ALL_PIECES];
+}
 
 template<typename... PieceTypes>
 inline Bitboard Position::pieces(PieceTypes... pts) const {
-    return (byTypeBB[pts] | ...);
+    return ((byTypeBB[WHITE][pts] | byTypeBB[BLACK][pts]) | ...);
 }
 
-inline Bitboard Position::pieces(Color c) const { return byColorBB[c]; }
+inline Bitboard Position::pieces(Color c) const {
+    return byTypeBB[c][ALL_PIECES];
+}
 
 template<typename... PieceTypes>
 inline Bitboard Position::pieces(Color c, PieceTypes... pts) const {
-    return pieces(c) & pieces(pts...);
+    const auto& byType = byTypeBB[c];
+    return (byType[pts] | ...);
 }
 
 inline int Position::count(Piece pc) const {
@@ -344,8 +348,10 @@ inline Piece Position::captured_piece() const { return st->capturedPiece; }
 
 inline void Position::put_piece(Piece pc, Square s, DirtyThreats* const dts) {
     board[s] = pc;
-    byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= s;
-    byColorBB[color_of(pc)] |= s;
+
+    auto& byType = byTypeBB[color_of(pc)];
+    byType[ALL_PIECES] |= s;
+    byType[type_of(pc)] |= s;
 
     if (dts)
         update_piece_threats<true>(pc, s, dts);
@@ -357,9 +363,10 @@ inline void Position::remove_piece(Square s, DirtyThreats* const dts) {
     if (dts)
         update_piece_threats<false>(pc, s, dts);
 
-    byTypeBB[ALL_PIECES] ^= s;
-    byTypeBB[type_of(pc)] ^= s;
-    byColorBB[color_of(pc)] ^= s;
+    auto& byType = byTypeBB[color_of(pc)];
+    byType[ALL_PIECES] ^= s;
+    byType[type_of(pc)] ^= s;
+
     board[s] = NO_PIECE;
 }
 
@@ -370,9 +377,10 @@ inline void Position::move_piece(Square from, Square to, DirtyThreats* const dts
     if (dts)
         update_piece_threats<false>(pc, from, dts, fromTo);
 
-    byTypeBB[ALL_PIECES] ^= fromTo;
-    byTypeBB[type_of(pc)] ^= fromTo;
-    byColorBB[color_of(pc)] ^= fromTo;
+    auto& byType = byTypeBB[color_of(pc)];
+    byType[ALL_PIECES] ^= fromTo;
+    byType[type_of(pc)] ^= fromTo;
+
     board[from] = NO_PIECE;
     board[to]   = pc;
 
