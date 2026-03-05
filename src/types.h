@@ -391,9 +391,9 @@ constexpr File file_of(Square s) { return File(s & 7); }
 
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
 
-constexpr Square relative_square(Color c, Square s) { return Square(s ^ (c * 56)); }
+constexpr Square relative_square(Color c, Square s) { return Square(s ^ (-c & 56)); }
 
-constexpr Rank relative_rank(Color c, Rank r) { return Rank(r ^ (c * 7)); }
+constexpr Rank relative_rank(Color c, Rank r) { return Rank(r ^ (-c & 7)); }
 
 constexpr Rank relative_rank(Color c, Square s) { return relative_rank(c, rank_of(s)); }
 
