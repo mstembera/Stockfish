@@ -128,27 +128,24 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
-    [[maybe_unused]] Bitboard threatByLesser[KING + 1];
-    [[maybe_unused]] Bitboard threatened, defendedOnce, defendedTwice;
+    [[maybe_unused]] Bitboard threatByLesser[KING + 1], unsafe[2];
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
         threatByLesser[KNIGHT] = threatByLesser[BISHOP] = pos.attacks_by<PAWN>(~us);
-        threatByLesser[ROOK] =
+        threatByLesser[ROOK]   =
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
         
-        threatened = threatByLesser[QUEEN] | pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us);
+        Bitboard threatened =
+          threatByLesser[QUEEN] | pos.attacks_by<QUEEN>(~us) | pos.attacks_by<KING>(~us);
 
-        {
-            Bitboard pawns = pos.pieces(us, PAWN);
-            Bitboard west  = us == WHITE ? shift<NORTH_WEST>(pawns) : shift<SOUTH_WEST>(pawns);
-            Bitboard east  = us == WHITE ? shift<NORTH_EAST>(pawns) : shift<SOUTH_EAST>(pawns);
-
-            defendedOnce  = west | east;
-            defendedTwice = west & east;
-        }
+        Bitboard pawns = pos.pieces(us, PAWN);
+        Bitboard west  = us == WHITE ? shift<NORTH_WEST>(pawns) : shift<SOUTH_WEST>(pawns);
+        Bitboard east  = us == WHITE ? shift<NORTH_EAST>(pawns) : shift<SOUTH_EAST>(pawns);
+        Bitboard defendedOnce  = west | east;
+        Bitboard defendedTwice = west & east;
 
         auto accumulate_attacks = [&](Bitboard bb) {
             defendedTwice |= defendedOnce & bb;
@@ -172,6 +169,9 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         accumulate_non_pawn_attacks(ROOK);
         accumulate_non_pawn_attacks(QUEEN);
         accumulate_non_pawn_attacks(KING);
+
+        unsafe[0] = threatened & ~defendedTwice;
+        unsafe[1] = threatened & ~defendedOnce;
     }
 
     ExtMove* it = cur;
@@ -204,20 +204,14 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
 
-            // bonus for escaping an attack by a lesser piece.
-            m.value += 20 * bool(threatByLesser[pt] & from) * PieceValue[pt];
+            // Bonus for escaping an attack by a lesser piece.
+            int v = 20 * bool(threatByLesser[pt] & from);
 
-            // penalty for moving to a threatened but undefended square
-            // or a square threatened by a lesser piece
-            if (threatened & to)
-            {
-                //except for quiet pawn pushes the piece was one of the defenders of 'to'
-                const Bitboard defended = pt == PAWN ? defendedOnce & to : defendedTwice & to;
-                if (!defended)
-                    m.value -= 30 * PieceValue[pt];
-                else if (threatByLesser[pt] & to)
-                    m.value -= 20 * PieceValue[pt];
-            }
+            // Penalty for moving to a threatened but undefended square
+            // or a square threatened by a lesser piece.
+            // Note that except for quiet pawn pushes the piece was one of the defenders of 'to'.
+            v -= 25 * bool((threatByLesser[pt] & to) | (unsafe[pt == PAWN] & to));
+            m.value += PieceValue[pt] * v;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
