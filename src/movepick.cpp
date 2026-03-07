@@ -170,8 +170,8 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         accumulate_non_pawn_attacks(QUEEN);
         accumulate_non_pawn_attacks(KING);
 
-        unsafe[0] = threatened & ~defendedTwice;
-        unsafe[1] = threatened & ~defendedOnce;
+        unsafe[0] = threatened & ~defendedOnce;
+        unsafe[1] = threatened & ~defendedTwice;
     }
 
     ExtMove* it = cur;
@@ -205,12 +205,12 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
 
             // Bonus for escaping an attack by a lesser piece.
-            int v = 20 * bool(threatByLesser[pt] & from);
+            int v = 20 * bool((threatByLesser[pt] & from) | (unsafe[0] & from));
 
             // Penalty for moving to a threatened but undefended square
             // or a square threatened by a lesser piece.
             // Note that except for quiet pawn pushes the piece was one of the defenders of 'to'.
-            v -= 25 * bool((threatByLesser[pt] & to) | (unsafe[pt == PAWN] & to));
+            v -= 25 * bool((threatByLesser[pt] & to) | (unsafe[pt != PAWN] & to));
             m.value += PieceValue[pt] * v;
 
             if (ply < LOW_PLY_HISTORY_SIZE)
@@ -289,7 +289,7 @@ top:
 
             endCur = endGenerated = score<QUIETS>(ml);
 
-            partial_insertion_sort(cur, endCur, -3800 * depth);
+            partial_insertion_sort(cur, endCur, -3560 * depth);
         }
 
         ++stage;
