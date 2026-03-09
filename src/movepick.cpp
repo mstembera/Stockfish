@@ -128,18 +128,8 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
-    [[maybe_unused]] Bitboard threatByLesser[KING + 1], unsafe;
-    if constexpr (Type == CAPTURES)
-    {
-        Bitboard threatened = pos.attacks_by<PAWN>(~us) | pos.attacks_by<KNIGHT>(~us)
-                          | pos.attacks_by<BISHOP>(~us) | pos.attacks_by<ROOK>(~us)
-                          | pos.attacks_by<QUEEN>(~us)  | pos.attacks_by<KING>(~us);
-        Bitboard defended = pos.attacks_by<PAWN>(us)   | pos.attacks_by<KNIGHT>(us)
-                          | pos.attacks_by<BISHOP>(us) | pos.attacks_by<ROOK>(us)
-                          | pos.attacks_by<QUEEN>(us)  | pos.attacks_by<KING>(us);
-        unsafe = threatened & ~defended;
-    }
-    else if constexpr (Type == QUIETS)
+    [[maybe_unused]] Bitboard threatByLesser[KING + 1];
+    if constexpr (Type == CAPTURES || Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
         threatByLesser[KNIGHT] = threatByLesser[BISHOP] = pos.attacks_by<PAWN>(~us);
@@ -164,7 +154,7 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         if constexpr (Type == CAPTURES)
             m.value = (*captureHistory)[pc][to][type_of(capturedPiece)]
                     + 7 * int(PieceValue[capturedPiece])
-                    + 2 * bool(unsafe & from) * int(PieceValue[pt]);
+                    + 6 * bool(threatByLesser[pt] & from) * PieceValue[pt];
 
         else if constexpr (Type == QUIETS)
         {
