@@ -507,6 +507,10 @@ void Search::Worker::iterative_deepening() {
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
                              * bestMoveInstability * highBestMoveEffort;
 
+            // +10% time boost peaking at abs(bestValue) == 382, fading to 0% at ±191 (50% of 382)
+            const int dist = std::abs(std::abs(bestValue) - 382);
+            totalTime *= 1.0 + 0.10 * std::max(0, 191 - dist) / 191.0;
+
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
                 totalTime = std::min(502.0, totalTime);
