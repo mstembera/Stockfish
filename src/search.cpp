@@ -504,20 +504,8 @@ void Search::Worker::iterative_deepening() {
 
             double highBestMoveEffort = nodesEffort >= 93340 ? 0.76 : 1.0;
 
-            // Scale up time for positions with high score variance across iterations
-            double scoreInstability = 1.0;
-            if (rootMoves[0].meanSquaredScore != -VALUE_INFINITE * VALUE_INFINITE
-                && rootMoves[0].averageScore != -VALUE_INFINITE)
-            {
-                double avg     = double(rootMoves[0].averageScore);
-                double msq     = double(rootMoves[0].meanSquaredScore);
-                double sqMean  = avg * std::abs(avg);
-                double variance = std::max(0.0, msq - sqMean);
-                scoreInstability = std::clamp(1.0 + variance * (1.0 / 30000), 1.0, 1.25);
-            }
-
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
-                             * bestMoveInstability * highBestMoveEffort * scoreInstability;
+                             * bestMoveInstability * highBestMoveEffort;
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
@@ -1862,6 +1850,14 @@ void update_all_stats(const Position& pos,
         // Increase stats for the best move in case it was a capture move
         capturedPiece = type_of(pos.piece_on(bestMove.to_sq()));
         captureHistory[movedPiece][bestMove.to_sq()][capturedPiece] << bonus * 1290 / 1024;
+
+        // Penalize quiet moves that failed when the best move was a capture
+        int quietMalus = malus * 820 / 1024;
+        for (Move move : quietsSearched)
+        {
+            quietMalus = quietMalus * 963 / 1024;
+            update_quiet_histories(pos, ss, workerThread, move, -quietMalus);
+        }
     }
 
     // Extra penalty for a quiet early move that was not a TT move in
