@@ -1217,6 +1217,7 @@ moves_loop:  // When in check, search starts here
                           + captureHistory[movedPiece][move.to_sq()][type_of(pos.captured_piece())];
         else
             ss->statScore = 2 * mainHistory[us][move.raw()]
+                          + sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()]
                           + (*contHist[0])[movedPiece][move.to_sq()]
                           + (*contHist[1])[movedPiece][move.to_sq()];
 
