@@ -74,7 +74,7 @@ using StateListPtr = std::unique_ptr<std::deque<StateInfo>>;
 // pieces, side to move, hash keys, castling info, etc. Important methods are
 // do_move() and undo_move(), used by the search to update node info when
 // traversing the search tree.
-class Position {
+class alignas(64) Position {
    public:
     static void init();
 
