@@ -157,7 +157,7 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     [[maybe_unused]] int histBuffer[KING + 1][SQUARE_NB];
-    [[maybe_unused]] const bool precomputeHistBuffer = ml.size() > 25;
+    [[maybe_unused]] const bool precomputeHistBuffer = ml.size() > 30;
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
