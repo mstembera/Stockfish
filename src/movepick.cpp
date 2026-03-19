@@ -118,6 +118,33 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
     stage = PROBCUT_TT + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm));
 }
 
+static void init_quiet_hist_buffer(int                    buf[][SQUARE_NB],
+                                   const Position&        pos,
+                                   const PieceToHistory** continuationHistory,
+                                   const SharedHistories* sharedHistory) {
+
+    for (PieceType pt = PAWN; pt <= KING; ++pt)
+    {
+        const Piece pc = make_piece(pos.side_to_move(), pt);
+        auto&       sh = sharedHistory->pawn_entry(pos)[pc];
+
+        for (Square s = SQ_A1; s <= SQ_H8; ++s)
+            buf[pt][s] = 2 * sh[s];
+    }
+
+    for (int i : {0, 1, 2, 3, 5})
+    {
+        for (PieceType pt = PAWN; pt <= KING; ++pt)
+        {
+            const Piece pc = make_piece(pos.side_to_move(), pt);
+            auto&       ch = (*continuationHistory[i])[pc];
+
+            for (Square s = SQ_A1; s <= SQ_H8; ++s)
+                buf[pt][s] += ch[s];
+        }
+    }
+}
+
 // Assigns a numerical value to each move in a list, used for sorting.
 // Captures are ordered by Most Valuable Victim (MVV), preferring captures
 // with a good history. Quiets moves are ordered using the history tables.
@@ -129,6 +156,8 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
     Color us = pos.side_to_move();
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
+    [[maybe_unused]] int histBuffer[KING + 1][SQUARE_NB];
+    [[maybe_unused]] const bool precomputeHistBuffer = ml.size() > 25;
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
@@ -137,6 +166,9 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
+
+        if (precomputeHistBuffer)
+            init_quiet_hist_buffer(histBuffer, pos, continuationHistory, sharedHistory);
     }
 
     ExtMove* it = cur;
@@ -159,12 +191,18 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         {
             // histories
             m.value = 2 * (*mainHistory)[us][m.raw()];
-            m.value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
-            m.value += (*continuationHistory[0])[pc][to];
-            m.value += (*continuationHistory[1])[pc][to];
-            m.value += (*continuationHistory[2])[pc][to];
-            m.value += (*continuationHistory[3])[pc][to];
-            m.value += (*continuationHistory[5])[pc][to];
+
+            if (precomputeHistBuffer)
+                m.value += histBuffer[pt][to];
+            else
+            {
+                m.value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
+                m.value += (*continuationHistory[0])[pc][to];
+                m.value += (*continuationHistory[1])[pc][to];
+                m.value += (*continuationHistory[2])[pc][to];
+                m.value += (*continuationHistory[3])[pc][to];
+                m.value += (*continuationHistory[5])[pc][to];
+            }
 
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
