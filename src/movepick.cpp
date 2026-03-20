@@ -137,16 +137,17 @@ static void init_quiet_hist_buffer(int                    buf[][SQUARE_NB],
         const Piece pc = make_piece(pos.side_to_move(), pt);
         auto&       ph = sharedHistory->pawn_entry(pos)[pc];
 
+        __m512i tmp[SQUARE_NB / 16];
         for (int sq = 0; sq < SQUARE_NB; sq += 16)
-        {
-            // Pawn history is weighted by 2 so shift left by 1
-            __m512i sum = _mm512_slli_epi32(load_i16_as_i32(&ph[sq]), 1);
+            tmp[sq / 16] = _mm512_slli_epi32(load_i16_as_i32(&ph[sq]), 1);
 
-            for (int j : {0, 1, 2, 3, 5})
-                sum = _mm512_add_epi32(sum, load_i16_as_i32(&(*continuationHistory[j])[pc][sq]));
+        for (int j : {0, 1, 2, 3, 5})
+            for (int sq = 0; sq < SQUARE_NB; sq += 16)
+                tmp[sq / 16] = _mm512_add_epi32(
+                  tmp[sq / 16], load_i16_as_i32(&(*continuationHistory[j])[pc][sq]));
 
-            _mm512_store_epi32(&buf[pt][sq], sum);
-        }
+        for (int sq = 0; sq < SQUARE_NB; sq += 16)
+            _mm512_store_epi32(&buf[pt][sq], tmp[sq / 16]);
     }
 }
 #endif
@@ -163,8 +164,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     #if defined(USE_AVX512)
-    [[maybe_unused]] alignas(64) int histBuffer[KING + 1][SQUARE_NB];
-    const bool precomputeHistBuffer = ml.size() > 12;
+    alignas(64) int histBuffer[KING + 1][SQUARE_NB];
     #endif
     if constexpr (Type == QUIETS)
     {
@@ -176,8 +176,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         threatByLesser[KING]  = 0;
 
         #if defined(USE_AVX512)
-        if (precomputeHistBuffer)
-            init_quiet_hist_buffer(histBuffer, pos, continuationHistory, sharedHistory);
+        init_quiet_hist_buffer(histBuffer, pos, continuationHistory, sharedHistory);
         #endif
     }
 
@@ -203,18 +202,15 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             m.value = 2 * (*mainHistory)[us][m.raw()];
 
             #if defined(USE_AVX512)
-            if (precomputeHistBuffer)
                 m.value += histBuffer[pt][to];
-            else
-            #endif
-            {
+            #else
                 m.value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
                 m.value += (*continuationHistory[0])[pc][to];
                 m.value += (*continuationHistory[1])[pc][to];
                 m.value += (*continuationHistory[2])[pc][to];
                 m.value += (*continuationHistory[3])[pc][to];
                 m.value += (*continuationHistory[5])[pc][to];
-            }
+            #endif
 
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
