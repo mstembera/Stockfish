@@ -164,6 +164,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     #if defined(USE_AVX512)
     [[maybe_unused]] alignas(64) int histBuffer[KING + 1][SQUARE_NB];
+    const bool precomputeHistBuffer = ml.size() > 12;
     #endif
     if constexpr (Type == QUIETS)
     {
@@ -175,6 +176,7 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
         threatByLesser[KING]  = 0;
 
         #if defined(USE_AVX512)
+        if (precomputeHistBuffer)
             init_quiet_hist_buffer(histBuffer, pos, continuationHistory, sharedHistory);
         #endif
     }
@@ -201,15 +203,18 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
             m.value = 2 * (*mainHistory)[us][m.raw()];
 
             #if defined(USE_AVX512)
+            if (precomputeHistBuffer)
                 m.value += histBuffer[pt][to];
-            #else
+            else
+            #endif
+            {
                 m.value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
                 m.value += (*continuationHistory[0])[pc][to];
                 m.value += (*continuationHistory[1])[pc][to];
                 m.value += (*continuationHistory[2])[pc][to];
                 m.value += (*continuationHistory[3])[pc][to];
                 m.value += (*continuationHistory[5])[pc][to];
-            #endif
+            }
 
             // bonus for checks
             m.value += (bool(pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
