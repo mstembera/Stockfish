@@ -1360,7 +1360,10 @@ moves_loop:  // When in check, search starts here
                 if (moveCount > 1 && !pvIdx)
                 {
                     bool transpose = false;
-                    if (rm.pv.size() > 2)
+                    if (   rm.pv.size() > 2
+                        && (   rm.pv[0].to_sq() != rm.pv[2].to_sq()
+                            || pos.piece_on(rm.pv[0].from_sq()) == pos.piece_on(rm.pv[2].from_sq())))
+                    {
                         for (auto it = rootMoves.begin(); it != rootMoves.end(); ++it)
                         {
                             if (   it->pv.size() > 2
@@ -1372,6 +1375,7 @@ moves_loop:  // When in check, search starts here
                                 break;
                             }
                         }
+                    }
                     
                     bestMoveChanges += !transpose;
                 }
