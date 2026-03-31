@@ -1358,7 +1358,26 @@ moves_loop:  // When in check, search starts here
                 // This information is used for time management. In MultiPV mode,
                 // we must take care to only do this for the first PV line.
                 if (moveCount > 1 && !pvIdx)
-                    ++bestMoveChanges;
+                {
+                    bool transpose = false;
+                    if (   rm.pv.size() > 2
+                        && rm.pv[0].to_sq() != rm.pv[2].to_sq())
+                    {
+                        for (auto it = rootMoves.begin(); it != rootMoves.end(); ++it)
+                        {
+                            if (   it->pv.size() > 2
+                                && it->pv[0] == rm.pv[2]
+                                && it->pv[1] == rm.pv[1]
+                                && it->pv[2] == rm.pv[0])
+                            {
+                                transpose = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    bestMoveChanges += !transpose;
+                }
             }
             else
                 // All other moves but the PV, are set to the lowest value: this
