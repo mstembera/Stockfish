@@ -30,7 +30,6 @@
 #include "layers/affine_transform.h"
 #include "layers/affine_transform_sparse_input.h"
 #include "layers/clipped_relu.h"
-#include "layers/sqr_clipped_relu.h"
 #include "nnue_common.h"
 
 namespace Stockfish::Eval::NNUE {
@@ -64,7 +63,6 @@ struct NetworkArchitecture {
     static constexpr int       FC_1_OUTPUTS                 = L3;
 
     Layers::AffineTransformSparseInput<TransformedFeatureDimensions, FC_0_OUTPUTS + 1> fc_0;
-    Layers::SqrClippedReLU<FC_0_OUTPUTS + 1>                                           ac_sqr_0;
     Layers::ClippedReLU<FC_0_OUTPUTS + 1>                                              ac_0;
     Layers::AffineTransform<FC_0_OUTPUTS * 2, FC_1_OUTPUTS>                            fc_1;
     Layers::ClippedReLU<FC_1_OUTPUTS>                                                  ac_1;
@@ -102,9 +100,8 @@ struct NetworkArchitecture {
     std::int32_t propagate(const TransformedFeatureType* transformedFeatures) const {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
-            alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType
+            alignas(CacheLineSize) typename decltype(ac_0)::OutputType
               ac_sqr_0_out[ceil_to_multiple<IndexType>(FC_0_OUTPUTS * 2, 32)];
-            alignas(CacheLineSize) typename decltype(ac_0)::OutputBuffer ac_0_out;
             alignas(CacheLineSize) typename decltype(fc_1)::OutputBuffer fc_1_out;
             alignas(CacheLineSize) typename decltype(ac_1)::OutputBuffer ac_1_out;
             alignas(CacheLineSize) typename decltype(fc_2)::OutputBuffer fc_2_out;
@@ -122,10 +119,7 @@ struct NetworkArchitecture {
 #endif
 
         fc_0.propagate(transformedFeatures, buffer.fc_0_out);
-        ac_sqr_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out);
-        ac_0.propagate(buffer.fc_0_out, buffer.ac_0_out);
-        std::memcpy(buffer.ac_sqr_0_out + FC_0_OUTPUTS, buffer.ac_0_out,
-                    FC_0_OUTPUTS * sizeof(typename decltype(ac_0)::OutputType));
+        ac_0.propagate_pair(buffer.fc_0_out, buffer.ac_sqr_0_out);
         fc_1.propagate(buffer.ac_sqr_0_out, buffer.fc_1_out);
         ac_1.propagate(buffer.fc_1_out, buffer.ac_1_out);
         fc_2.propagate(buffer.ac_1_out, buffer.fc_2_out);
@@ -142,7 +136,6 @@ struct NetworkArchitecture {
     std::size_t get_content_hash() const {
         std::size_t h = 0;
         hash_combine(h, fc_0.get_content_hash());
-        hash_combine(h, ac_sqr_0.get_content_hash());
         hash_combine(h, ac_0.get_content_hash());
         hash_combine(h, fc_1.get_content_hash());
         hash_combine(h, ac_1.get_content_hash());
