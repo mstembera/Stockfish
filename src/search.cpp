@@ -1318,7 +1318,8 @@ moves_loop:  // When in check, search starts here
 
         if (rootNode)
         {
-            RootMove& rm = *std::find(rootMoves.begin(), rootMoves.end(), move);
+            const auto rmIt = std::find(rootMoves.begin(), rootMoves.end(), move);
+            RootMove&  rm   = *rmIt;
 
             rm.effort += nodes - nodeCount;
 
@@ -1364,7 +1365,7 @@ moves_loop:  // When in check, search starts here
                         && (   rm.pv[0].to_sq() != rm.pv[2].to_sq()
                             || pos.piece_on(rm.pv[0].from_sq()) == pos.piece_on(rm.pv[2].from_sq())))
                     {
-                        for (auto it = rootMoves.begin(); it != rootMoves.end(); ++it)
+                        for (auto it = rootMoves.begin(); it != rmIt; ++it)
                         {
                             if (   it->pv.size() > 2
                                 && it->pv[0] == rm.pv[2]
