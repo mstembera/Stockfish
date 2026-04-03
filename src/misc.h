@@ -201,11 +201,15 @@ class ValueList {
         assert(size_ < MaxSize);
         values_[size_++] = value;
     }
+    void remove(std::size_t i) {
+        assert(size_);
+        values_[i] = values_[--size_];
+    }
     const T* begin() const { return values_; }
     const T* end() const { return values_ + size_; }
     const T& operator[](int index) const { return values_[index]; }
 
-    T* make_space(size_t count) {
+    T* make_space(std::size_t count) {
         T* result = &values_[size_];
         size_ += count;
         assert(size_ <= MaxSize);

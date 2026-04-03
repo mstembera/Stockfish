@@ -339,15 +339,42 @@ void FullThreats::append_changed_indices(Color                   perspective,
             }
         }
 
-        auto&           insert = add ? added : removed;
-        const IndexType index  = make_index(perspective, attacker, from, to, attacked, ksq);
+        auto remove_first = [](IndexList& list, IndexType x) {
+            for (int i = 0; i < list.ssize(); ++i)
+            {
+                if (list[i] == x)
+                {
+                    list.remove(i);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        const IndexType index = make_index(perspective, attacker, from, to, attacked, ksq);
 
         if (index < Dimensions)
         {
-            if (prefetchBase)
-                prefetch<PrefetchRw::READ, PrefetchLoc::LOW>(
-                  prefetchBase + static_cast<std::ptrdiff_t>(index) * prefetchStride);
-            insert.push_back(index);
+            if (add)
+            {
+                if (!remove_first(removed, index))
+                {
+                    if (prefetchBase)
+                        prefetch<PrefetchRw::READ, PrefetchLoc::LOW>(
+                          prefetchBase + static_cast<std::ptrdiff_t>(index) * prefetchStride);
+                    added.push_back(index);
+                }
+            }
+            else
+            {
+                if (!remove_first(added, index))
+                {
+                    if (prefetchBase)
+                        prefetch<PrefetchRw::READ, PrefetchLoc::LOW>(
+                          prefetchBase + static_cast<std::ptrdiff_t>(index) * prefetchStride);
+                    removed.push_back(index);
+                }
+            }
         }
     }
 }
