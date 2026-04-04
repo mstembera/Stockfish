@@ -509,7 +509,7 @@ bool Search::Worker::iterative_deepening() {
 
             double reduction = (1.5 + mainThread->previousTimeReduction) / (2.255 * timeReduction);
 
-            double bestMoveInstability = 1.088 + 2.315 * totBestMoveChanges / threads.size();
+            double bestMoveInstability = 1.088 + 2.6 * totBestMoveChanges / threads.size();
 
             double highBestMoveEffort = nodesEffort > 86000 ? 0.74 : 0.96;
 
@@ -1318,8 +1318,7 @@ moves_loop:  // When in check, search starts here
 
         if (rootNode)
         {
-            const auto rmIt = std::find(rootMoves.begin(), rootMoves.end(), move);
-            RootMove&  rm   = *rmIt;
+            RootMove& rm = *std::find(rootMoves.begin(), rootMoves.end(), move);
 
             rm.effort += nodes - nodeCount;
 
@@ -1365,7 +1364,7 @@ moves_loop:  // When in check, search starts here
                         && (   rm.pv[0].to_sq() != rm.pv[2].to_sq()
                             || pos.piece_on(rm.pv[0].from_sq()) == pos.piece_on(rm.pv[2].from_sq())))
                     {
-                        for (auto it = rootMoves.begin(); it != rmIt; ++it)
+                        for (auto it = rootMoves.begin(); it != rootMoves.end(); ++it)
                         {
                             if (   it->pv.size() > 2
                                 && it->pv[0] == rm.pv[2]
