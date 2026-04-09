@@ -509,7 +509,7 @@ bool Search::Worker::iterative_deepening() {
 
             double reduction = (1.5 + mainThread->previousTimeReduction) / (2.255 * timeReduction);
 
-            double bestMoveInstability = 1.088 + 2.6 * totBestMoveChanges / threads.size();
+            double bestMoveInstability = 1.088 + 2.315 * totBestMoveChanges / threads.size();
 
             double highBestMoveEffort = nodesEffort > 86000 ? 0.74 : 0.96;
 
@@ -1368,7 +1368,6 @@ moves_loop:  // When in check, search starts here
                         {
                             if (   it->pv.size() > 2
                                 && it->pv[0] == rm.pv[2]
-                                && it->pv[1] == rm.pv[1]
                                 && it->pv[2] == rm.pv[0])
                             {
                                 transpose = true;
