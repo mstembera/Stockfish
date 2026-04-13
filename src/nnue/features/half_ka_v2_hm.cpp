@@ -96,11 +96,47 @@ IndexType HalfKAv2_hm::make_index(Color perspective, Square s, Piece pc, Square 
 void HalfKAv2_hm::append_active_indices(Color perspective, const Position& pos, IndexList& active) {
     Square   ksq = pos.square<KING>(perspective);
     Bitboard bb  = pos.pieces();
+
+#if defined(USE_AVX512ICL)
+    auto* write_active = active.make_space(popcount(bb));
+    const __m512i vecPieces = _mm512_loadu_si512(pos.piece_array().data());
+
+    alignas(64) static constexpr uint16_t psiTable[COLOR_NB][16] = {
+      {PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE,
+       PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE},
+      {PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE,
+       PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE}};
+
+    const uint16_t flip   = 56 * perspective;
+    const __m512i  orient = _mm512_set1_epi16((uint16_t) OrientTBL[ksq] ^ flip);
+    const __m512i  psi =
+      _mm512_zextsi256_si512(_mm256_loadu_si256((const __m256i*) psiTable[perspective]));
+    const __m512i psi_plus_bucket =
+      _mm512_add_epi16(psi, _mm512_set1_epi16((uint16_t) KingBuckets[int(ksq) ^ flip]));
+
+    __m512i squares = _mm512_maskz_compress_epi8(bb, AllSquares);
+    __m512i pieces  = _mm512_maskz_compress_epi8(bb, vecPieces);
+
+    squares = _mm512_cvtepi8_epi16(_mm512_castsi512_si256(squares));
+    pieces  = _mm512_cvtepi8_epi16(_mm512_castsi512_si256(pieces));
+
+    const __m512i indices =
+      _mm512_or_si512(_mm512_xor_si512(squares, orient),
+                      _mm512_permutexvar_epi16(pieces, psi_plus_bucket));
+
+    _mm512_storeu_si512(write_active,
+                        _mm512_cvtepu16_epi32(_mm512_castsi512_si256(indices)));
+    _mm512_storeu_si512(write_active + 16,
+                        _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64(indices, 1)));
+
+#else
+
     while (bb)
     {
         Square s = pop_lsb(bb);
         active.push_back(make_index(perspective, s, pos.piece_on(s), ksq));
     }
+#endif
 }
 
 // Get a list of indices for recently changed features
