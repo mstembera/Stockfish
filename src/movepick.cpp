@@ -118,35 +118,39 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
     stage = PROBCUT_TT + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm));
 }
 
-static void init_quiet_hist_buffer(int                    buf[][SQUARE_NB],
-                                   const Position&        pos,
-                                   const PieceToHistory** continuationHistory,
-                                   const SharedHistories* sharedHistory) {
+static void init_quiet_hist_buffer(int                     buf[][SQUARE_NB],
+                                   const MoveList<QUIETS>& ml,
+                                   const Position&         pos,
+                                   const PieceToHistory**  continuationHistory,
+                                   const SharedHistories*  sharedHistory) {
+
+    // Collect unique destination squares
+    Bitboard toSquares = 0;
+    for (const auto& m : ml)
+        toSquares |= m.to_sq();
+
+    int    sqCnt = 0;
+    Square squares[SQUARE_NB];
+    while(toSquares)
+        squares[sqCnt++] = pop_lsb(toSquares);
 
     for (PieceType pt = PAWN; pt <= KING; ++pt)
     {
-        if (pos.pieces(pos.side_to_move(), pt))
+        if (!pos.pieces(pos.side_to_move(), pt))
+            continue;
+
+        const Piece pc  = make_piece(pos.side_to_move(), pt);
+        const auto& sh  = sharedHistory->pawn_entry(pos)[pc];
+        const auto& ch0 = (*continuationHistory[0])[pc];
+        const auto& ch1 = (*continuationHistory[1])[pc];
+        const auto& ch2 = (*continuationHistory[2])[pc];
+        const auto& ch3 = (*continuationHistory[3])[pc];
+        const auto& ch5 = (*continuationHistory[5])[pc];
+
+        for (int si = 0; si < sqCnt; ++si)
         {
-            const Piece pc = make_piece(pos.side_to_move(), pt);
-            auto&       sh = sharedHistory->pawn_entry(pos)[pc];
-
-            for (Square s = SQ_A1; s <= SQ_H8; ++s)
-                buf[pt][s] = 2 * sh[s];
-        }
-    }
-
-    for (int i : {0, 1, 2, 3, 5})
-    {
-        for (PieceType pt = PAWN; pt <= KING; ++pt)
-        {
-            if (pos.pieces(pos.side_to_move(), pt))
-            {
-                const Piece pc = make_piece(pos.side_to_move(), pt);
-                auto&       ch = (*continuationHistory[i])[pc];
-
-                for (Square s = SQ_A1; s <= SQ_H8; ++s)
-                    buf[pt][s] += ch[s];
-            }
+            const Square s = squares[si];
+            buf[pt][s]     = 2 * sh[s] + ch0[s] + ch1[s] + ch2[s] + ch3[s] + ch5[s];
         }
     }
 }
@@ -174,7 +178,7 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         threatByLesser[KING]  = 0;
 
         if (precomputeHistBuffer)
-            init_quiet_hist_buffer(histBuffer, pos, continuationHistory, sharedHistory);
+            init_quiet_hist_buffer(histBuffer, ml, pos, continuationHistory, sharedHistory);
     }
 
     ExtMove* it = cur;
