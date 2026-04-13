@@ -125,22 +125,28 @@ static void init_quiet_hist_buffer(int                    buf[][SQUARE_NB],
 
     for (PieceType pt = PAWN; pt <= KING; ++pt)
     {
-        const Piece pc = make_piece(pos.side_to_move(), pt);
-        auto&       sh = sharedHistory->pawn_entry(pos)[pc];
+        if (pos.pieces(pos.side_to_move(), pt))
+        {
+            const Piece pc = make_piece(pos.side_to_move(), pt);
+            auto&       sh = sharedHistory->pawn_entry(pos)[pc];
 
-        for (Square s = SQ_A1; s <= SQ_H8; ++s)
-            buf[pt][s] = 2 * sh[s];
+            for (Square s = SQ_A1; s <= SQ_H8; ++s)
+                buf[pt][s] = 2 * sh[s];
+        }
     }
 
     for (int i : {0, 1, 2, 3, 5})
     {
         for (PieceType pt = PAWN; pt <= KING; ++pt)
         {
-            const Piece pc = make_piece(pos.side_to_move(), pt);
-            auto&       ch = (*continuationHistory[i])[pc];
+            if (pos.pieces(pos.side_to_move(), pt))
+            {
+                const Piece pc = make_piece(pos.side_to_move(), pt);
+                auto&       ch = (*continuationHistory[i])[pc];
 
-            for (Square s = SQ_A1; s <= SQ_H8; ++s)
-                buf[pt][s] += ch[s];
+                for (Square s = SQ_A1; s <= SQ_H8; ++s)
+                    buf[pt][s] += ch[s];
+            }
         }
     }
 }
