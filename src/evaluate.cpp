@@ -57,7 +57,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     assert(!pos.checkers());
 
     Value simpleEval        = simple_eval(pos);
-    bool  smallNet          = std::abs(simpleEval) > 1050;
+    bool  smallNet          = std::abs(simpleEval) > 1010;
     auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, accumulators, caches.small)
                                        : networks.big.evaluate(pos, accumulators, caches.big);
 
