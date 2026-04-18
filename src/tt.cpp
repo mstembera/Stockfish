@@ -132,14 +132,14 @@ void TTWriter::write(
 // of TTEntry. Each non-empty TTEntry contains information on exactly one position. The size of a Cluster should
 // divide the size of a cache line for best performance, as the cacheline is prefetched when possible.
 
-static constexpr int ClusterSize = 3;
+static constexpr int ClusterSize = 6;
 
 struct Cluster {
     TTEntry entry[ClusterSize];
-    char    padding[2];  // Pad to 32 bytes
+    char    padding[4];  // Pad to 64 bytes
 };
 
-static_assert(sizeof(Cluster) == 32, "Suboptimal Cluster size");
+static_assert(sizeof(Cluster) == 64, "Suboptimal Cluster size");
 
 
 // Sets the size of the transposition table,
@@ -190,12 +190,12 @@ void TranspositionTable::clear(ThreadPool& threads) {
 // Only counts entries which are younger than maxAge.
 int TranspositionTable::hashfull(int maxAge) const {
     int cnt = 0;
-    for (int i = 0; i < 1000; ++i)
-        for (int j = 0; j < ClusterSize; ++j)
+    for (int i = 0, n = 0; n < 1000; ++i)
+        for (int j = 0; j < ClusterSize && n < 1000; ++j, ++n)
             cnt += table[i].entry[j].is_occupied()
                 && table[i].entry[j].relative_age(generation8) <= maxAge;
 
-    return cnt / ClusterSize;
+    return cnt;
 }
 
 
@@ -218,18 +218,31 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     TTEntry* const tte   = first_entry(key);
     const uint16_t key16 = uint16_t(key);  // Use the low 16 bits as key inside the cluster
 
-    for (int i = 0; i < ClusterSize; ++i)
-        if (tte[i].key16 == key16)
+    constexpr unsigned SampleCnt = 4;
+    const unsigned startID = (key >> 16) % ClusterSize;
+
+    for (unsigned i = 0; i < SampleCnt; ++i)
+    {
+        unsigned id = (startID + i) % ClusterSize;
+        if (tte[id].key16 == key16)
             // This gap is the main place for read races.
             // After `read()` completes that copy is final, but may be self-inconsistent.
-            return {tte[i].is_occupied(), tte[i].read(), TTWriter(&tte[i])};
+            return {tte[id].is_occupied(), tte[id].read(), TTWriter(&tte[id])};
+    }
 
     // Find an entry to be replaced according to the replacement strategy
-    TTEntry* replace = tte;
-    for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - 6 * replace->relative_age(generation8)
-            > tte[i].depth8 - 6 * tte[i].relative_age(generation8))
-            replace = &tte[i];
+    TTEntry* replace = &tte[startID];
+    int    bestValue = replace->depth8 - 8 * replace->relative_age(generation8);
+    for (unsigned i = 1; i < SampleCnt; ++i)
+    {
+        unsigned id    = (startID + i) % ClusterSize;
+        int      value = tte[id].depth8 - 8 * tte[id].relative_age(generation8);
+        if (bestValue > value)    
+        {
+            replace = &tte[id];
+            bestValue = value;
+        }
+    }
 
     return {false, TTData{Move::none(), VALUE_NONE, VALUE_NONE, DEPTH_NONE, BOUND_NONE, false},
             TTWriter(replace)};
