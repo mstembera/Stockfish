@@ -218,7 +218,7 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
     TTEntry* const tte   = first_entry(key);
     const uint16_t key16 = uint16_t(key);  // Use the low 16 bits as key inside the cluster
 
-    constexpr unsigned SampleCnt = 4;
+    constexpr unsigned SampleCnt = 3;
     const unsigned startID = (key >> 16) % ClusterSize;
 
     for (unsigned i = 0; i < SampleCnt; ++i)
@@ -232,15 +232,15 @@ std::tuple<bool, TTData, TTWriter> TranspositionTable::probe(const Key key) cons
 
     // Find an entry to be replaced according to the replacement strategy
     TTEntry* replace = &tte[startID];
-    int    bestValue = replace->depth8 - 8 * replace->relative_age(generation8);
+    int replaceValue = replace->depth8 - 8 * replace->relative_age(generation8);
     for (unsigned i = 1; i < SampleCnt; ++i)
     {
         unsigned id    = (startID + i) % ClusterSize;
         int      value = tte[id].depth8 - 8 * tte[id].relative_age(generation8);
-        if (bestValue > value)    
+        if (replaceValue > value)    
         {
             replace = &tte[id];
-            bestValue = value;
+            replaceValue = value;
         }
     }
 
