@@ -46,6 +46,10 @@ int Eval::simple_eval(const Position& pos) {
          - pos.non_pawn_material(~c);
 }
 
+bool Eval::use_smallnet(const Position& pos, Value simpleEval) {
+    return std::abs(simpleEval) > 1030 - 2 * pos.count<ALL_PIECES>();
+}
+
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
 Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
@@ -57,7 +61,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     assert(!pos.checkers());
 
     Value simpleEval        = simple_eval(pos);
-    bool  smallNet          = std::abs(simpleEval) > 1010;
+    bool  smallNet          = use_smallnet(pos, simpleEval);
     auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, accumulators, caches.small)
                                        : networks.big.evaluate(pos, accumulators, caches.big);
 
@@ -128,7 +132,7 @@ std::string Eval::trace(Position& pos, const Eval::NNUE::Networks& networks) {
     v       = pos.side_to_move() == WHITE ? v : -v;
 
     ss << "Final evaluation " << "(using "
-       << (use_smallnet(pos) && !useBig ? "small net) " : "big net)   ");
+       << (use_smallnet(pos, simple_eval(pos)) && !useBig ? "small net) " : "big net)   ");
     ss << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)";
     ss << " [with scaled NNUE, ...]\n";
 
