@@ -77,7 +77,9 @@ class AffineTransformSparseInput {
     static constexpr IndexType ChunkSize = 1;
 #endif
 
-#if defined(USE_NEON)
+#if defined(USE_AVX512ICL)
+    using NNZOutputType = std::conditional_t<(InDims <= 1024 && InDims >= 256), std::uint8_t, std::uint16_t>;
+#elif defined(USE_NEON)
     using NNZOutputType = std::conditional_t<(InDims <= 1024), std::uint8_t, std::uint16_t>;
 #else
     using NNZOutputType = std::uint16_t;
@@ -304,32 +306,76 @@ static void find_nnz(const std::uint8_t* RESTRICT input,
 
 #if defined(USE_AVX512ICL)
 
-    constexpr IndexType SimdWidthIn  = 64;  // 512 bits
-    constexpr IndexType SimdWidthOut = 32;  // 512 bits / 16 bits
-    constexpr IndexType SimdChunks   = NumChunks / SimdWidthOut;
-    const __m512i       increment    = _mm512_set1_epi16(SimdWidthOut);
-    __m512i             base = _mm512_set_epi16(  // Same permute order as _mm512_packus_epi32()
-        31, 30, 29, 28, 15, 14, 13, 12, 27, 26, 25, 24, 11, 10, 9, 8, 23, 22, 21, 20, 7, 6, 5, 4,
-        19, 18, 17, 16, 3, 2, 1, 0);
-
-    IndexType count = 0;
-    for (IndexType i = 0; i < SimdChunks; ++i)
+    if constexpr (std::is_same_v<NNZOutputType, std::uint8_t>)
     {
-        const __m512i inputV0 = _mm512_load_si512(input + i * 2 * SimdWidthIn);
-        const __m512i inputV1 = _mm512_load_si512(input + i * 2 * SimdWidthIn + SimdWidthIn);
+        static_assert(NumChunks <= 256 && NumChunks >= 64, "NumChunks must be <= 256 and >= 64");
 
-        // Get a bitmask and gather non zero indices
-        const __m512i   inputV01 = _mm512_packus_epi32(inputV0, inputV1);
-        const __mmask32 nnzMask  = _mm512_test_epi16_mask(inputV01, inputV01);
+        constexpr IndexType SimdWidthIn  = 64;  // 512 bits
+        constexpr IndexType SimdWidthOut = 64;  // 512 bits / 8 bits
+        constexpr IndexType SimdChunks   = NumChunks / SimdWidthOut;
+        const __m512i       increment    = _mm512_set1_epi8(static_cast<char>(SimdWidthOut));
 
-        // Avoid _mm512_mask_compressstoreu_epi16() as it's 256 uOps on Zen4
-        __m512i nnz = _mm512_maskz_compress_epi16(nnzMask, base);
-        _mm512_storeu_si512(out + count, nnz);
+        __m512i base = _mm512_set_epi8(
+          63, 62, 61, 60, 47, 46, 45, 44, 31, 30, 29, 28, 15, 14, 13, 12, 59, 58, 57, 56, 43, 42,
+          41, 40, 27, 26, 25, 24, 11, 10, 9, 8, 55, 54, 53, 52, 39, 38, 37, 36, 23, 22, 21, 20, 7,
+          6, 5, 4, 51, 50, 49, 48, 35, 34, 33, 32, 19, 18, 17, 16, 3, 2, 1, 0);
 
-        count += popcount(nnzMask);
-        base = _mm512_add_epi16(base, increment);
+        IndexType count = 0;
+        for (IndexType i = 0; i < SimdChunks; ++i)
+        {
+            const __m512i inputV0 =
+              _mm512_load_si512(input + i * 4 * SimdWidthIn + 0 * SimdWidthIn);
+            const __m512i inputV1 =
+              _mm512_load_si512(input + i * 4 * SimdWidthIn + 1 * SimdWidthIn);
+            const __m512i inputV2 =
+              _mm512_load_si512(input + i * 4 * SimdWidthIn + 2 * SimdWidthIn);
+            const __m512i inputV3 =
+              _mm512_load_si512(input + i * 4 * SimdWidthIn + 3 * SimdWidthIn);
+
+            // Get a bitmask and gather non zero indices
+            const __m512i inputV01    = _mm512_packs_epi32(inputV0,  inputV1);
+            const __m512i inputV23    = _mm512_packs_epi32(inputV2,  inputV3);
+            const __m512i inputV0123  = _mm512_packs_epi16(inputV01, inputV23);
+            const __mmask64 nnzMask   = _mm512_test_epi8_mask(inputV0123, inputV0123);
+
+            // Avoid _mm512_mask_compressstoreu_epi8() as it's 256 uOps on Zen4
+            __m512i nnz = _mm512_maskz_compress_epi8(nnzMask, base);
+            _mm512_storeu_si512(out + count, nnz);
+
+            count += popcount(nnzMask);
+            base = _mm512_add_epi8(base, increment);
+        }
+        count_out = count;
     }
-    count_out = count;
+    else
+    {
+        constexpr IndexType SimdWidthIn  = 64;  // 512 bits
+        constexpr IndexType SimdWidthOut = 32;  // 512 bits / 16 bits
+        constexpr IndexType SimdChunks   = NumChunks / SimdWidthOut;
+        const __m512i       increment    = _mm512_set1_epi16(SimdWidthOut);
+        __m512i             base = _mm512_set_epi16(  // Same permute order as _mm512_packus_epi32()
+            31, 30, 29, 28, 15, 14, 13, 12, 27, 26, 25, 24, 11, 10, 9, 8, 23, 22, 21, 20, 7, 6, 5, 4,
+            19, 18, 17, 16, 3, 2, 1, 0);
+
+        IndexType count = 0;
+        for (IndexType i = 0; i < SimdChunks; ++i)
+        {
+            const __m512i inputV0 = _mm512_load_si512(input + i * 2 * SimdWidthIn);
+            const __m512i inputV1 = _mm512_load_si512(input + i * 2 * SimdWidthIn + SimdWidthIn);
+
+            // Get a bitmask and gather non zero indices
+            const __m512i   inputV01 = _mm512_packs_epi32(inputV0, inputV1);
+            const __mmask32 nnzMask  = _mm512_test_epi16_mask(inputV01, inputV01);
+
+            // Avoid _mm512_mask_compressstoreu_epi16() as it's 256 uOps on Zen4
+            __m512i nnz = _mm512_maskz_compress_epi16(nnzMask, base);
+            _mm512_storeu_si512(out + count, nnz);
+
+            count += popcount(nnzMask);
+            base = _mm512_add_epi16(base, increment);
+        }
+        count_out = count;
+    }
 
 #elif defined(USE_AVX512)
 
