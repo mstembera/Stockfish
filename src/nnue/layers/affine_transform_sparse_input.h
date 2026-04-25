@@ -316,9 +316,9 @@ static void find_nnz(const std::uint8_t* RESTRICT input,
         const __m512i       increment    = _mm512_set1_epi8(static_cast<char>(SimdWidthOut));
 
         __m512i base = _mm512_set_epi8(
-          63, 62, 61, 60, 47, 46, 45, 44, 31, 30, 29, 28, 15, 14, 13, 12, 59, 58, 57, 56, 43, 42,
-          41, 40, 27, 26, 25, 24, 11, 10, 9, 8, 55, 54, 53, 52, 39, 38, 37, 36, 23, 22, 21, 20, 7,
-          6, 5, 4, 51, 50, 49, 48, 35, 34, 33, 32, 19, 18, 17, 16, 3, 2, 1, 0);
+          63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42,
+          41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19,
+          18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 
         IndexType count = 0;
         for (IndexType i = 0; i < SimdChunks; ++i)
@@ -333,10 +333,14 @@ static void find_nnz(const std::uint8_t* RESTRICT input,
               _mm512_load_si512(input + i * 4 * SimdWidthIn + 3 * SimdWidthIn);
 
             // Get a bitmask and gather non zero indices
-            const __m512i inputV01    = _mm512_packs_epi32(inputV0,  inputV1);
-            const __m512i inputV23    = _mm512_packs_epi32(inputV2,  inputV3);
-            const __m512i inputV0123  = _mm512_packs_epi16(inputV01, inputV23);
-            const __mmask64 nnzMask   = _mm512_test_epi8_mask(inputV0123, inputV0123);
+            const __mmask16 nnzMask0 = _mm512_test_epi32_mask(inputV0, inputV0);
+            const __mmask16 nnzMask1 = _mm512_test_epi32_mask(inputV1, inputV1);
+            const __mmask16 nnzMask2 = _mm512_test_epi32_mask(inputV2, inputV2);
+            const __mmask16 nnzMask3 = _mm512_test_epi32_mask(inputV3, inputV3);
+
+            const __mmask32 nnzMask01 = _mm512_kunpackw((__mmask32)nnzMask1,  (__mmask32) nnzMask0);
+            const __mmask32 nnzMask23 = _mm512_kunpackw((__mmask32)nnzMask3,  (__mmask32) nnzMask2);
+            const __mmask64 nnzMask   = _mm512_kunpackd((__mmask64)nnzMask23, (__mmask64) nnzMask01);
 
             // Avoid _mm512_mask_compressstoreu_epi8() as it's 256 uOps on Zen4
             __m512i nnz = _mm512_maskz_compress_epi8(nnzMask, base);
