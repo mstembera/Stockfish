@@ -77,11 +77,8 @@ extern Bitboard RayPassBB[SQUARE_NB][SQUARE_NB];
 // Magic holds all magic bitboards relevant data for a single square
 struct Magic {
     Bitboard mask;
-#ifdef USE_PEXT
-    uint16_t* attacks;
-    Bitboard  pseudoAttacks;
-#else
     Bitboard* attacks;
+#ifndef USE_PEXT
     Bitboard  magic;
     unsigned  shift;
 #endif
@@ -101,13 +98,7 @@ struct Magic {
 #endif
     }
 
-    Bitboard attacks_bb(Bitboard occupied) const {
-#ifdef USE_PEXT
-        return pdep(attacks[index(occupied)], pseudoAttacks);
-#else
-        return attacks[index(occupied)];
-#endif
-    }
+    Bitboard attacks_bb(Bitboard occupied) const { return attacks[index(occupied)]; }
 };
 
 extern Magic Magics[SQUARE_NB][2];
