@@ -1401,7 +1401,8 @@ bool Position::see_ge(Move m, int threshold) const {
 
     // Only deal with normal moves, assume others pass a simple SEE
     if (m.type_of() != NORMAL)
-        return PawnValue >= threshold;
+        return VALUE_ZERO >= threshold
+              || m.promotion_type() == QUEEN;
 
     Square from = m.from_sq(), to = m.to_sq();
 
