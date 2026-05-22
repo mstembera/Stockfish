@@ -53,8 +53,8 @@ Value Eval::evaluate(const Eval::NNUE::Network&     network,
     assert(!pos.checkers());
 
     int sEv = simple_eval(pos);
-    if (std::abs(sEv) >= RookValue + KnightValue + PawnValue)
-        return sEv;
+    if (std::abs(sEv) >= RookValue + BishopValue + PawnValue)
+        return sEv * 7 / 8;
 
     auto [psqt, positional] = network.evaluate(pos, accumulators, caches);
 
