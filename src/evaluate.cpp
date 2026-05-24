@@ -54,7 +54,7 @@ Value Eval::evaluate(const Eval::NNUE::Network&     network,
 
     int sEv = simple_eval(pos);
     if (std::abs(sEv) >= RookValue + BishopValue + PawnValue)
-        return sEv;
+        return sEv + 15 - (pos.key() & 0x1F);
 
     auto [psqt, positional] = network.evaluate(pos, accumulators, caches);
 
