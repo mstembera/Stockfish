@@ -205,38 +205,66 @@ void apply_combined(Color                              perspective,
                 acc[k] = vec_add_16(acc[k], row[k]);
         }
 
-        for (int i = 0; i < thrRemoved.ssize(); ++i)
+        int i = 0;
+    #ifndef USE_NEON
+        for (; i < thrRemoved.ssize() - 1; i+=2)
+        {
+            auto* column0 = reinterpret_cast<const vec_i8_t*>(
+              &threatWeights[thrRemoved[i] * Dimensions + tileOff]);
+            auto* column1 = reinterpret_cast<const vec_i8_t*>(
+              &threatWeights[thrRemoved[i + 1] * Dimensions + tileOff]);
+
+            for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                acc[k] = vec_sub_16(vec_sub_16(acc[k], vec_convert_8_16(column0[k])),
+                                    vec_convert_8_16(column1[k]));
+        }
+    #endif
+        for (; i < thrRemoved.ssize(); ++i)
         {
             auto* column = reinterpret_cast<const vec_i8_t*>(
               &threatWeights[thrRemoved[i] * Dimensions + tileOff]);
 
-    #ifdef USE_NEON
+        #ifdef USE_NEON
             for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
             {
                 acc[k]     = vsubw_s8(acc[k], vget_low_s8(column[k / 2]));
                 acc[k + 1] = vsubw_high_s8(acc[k + 1], column[k / 2]);
             }
-    #else
+        #else
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = vec_sub_16(acc[k], vec_convert_8_16(column[k]));
-    #endif
+        #endif
         }
 
-        for (int i = 0; i < thrAdded.ssize(); ++i)
+        i = 0;
+    #ifndef USE_NEON
+        for (; i < thrAdded.ssize() - 1; i+=2)
+        {
+            auto* column0 =
+              reinterpret_cast<const vec_i8_t*>(&threatWeights[thrAdded[i] * Dimensions + tileOff]);
+            auto* column1 =
+              reinterpret_cast<const vec_i8_t*>(&threatWeights[thrAdded[i + 1] * Dimensions + tileOff]);
+
+            for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+                acc[k] = vec_add_16(vec_add_16(acc[k], vec_convert_8_16(column0[k])),
+                                    vec_convert_8_16(column1[k]));
+        }
+    #endif
+        for (; i < thrAdded.ssize(); ++i)
         {
             auto* column =
               reinterpret_cast<const vec_i8_t*>(&threatWeights[thrAdded[i] * Dimensions + tileOff]);
 
-    #ifdef USE_NEON
+        #ifdef USE_NEON
             for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
             {
                 acc[k]     = vaddw_s8(acc[k], vget_low_s8(column[k / 2]));
                 acc[k + 1] = vaddw_high_s8(acc[k + 1], column[k / 2]);
             }
-    #else
+        #else
             for (IndexType k = 0; k < Tiling::NumRegs; ++k)
                 acc[k] = vec_add_16(acc[k], vec_convert_8_16(column[k]));
-    #endif
+        #endif
         }
 
         for (IndexType k = 0; k < Tiling::NumRegs; k++)
