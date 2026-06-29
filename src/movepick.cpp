@@ -56,6 +56,7 @@ enum Stages {
     QCAPTURE
 };
 
+static constexpr int MAX_SORTER_ELEMENTS = 16;
 #ifdef USE_AVX512ICL
 // Load the Move, and the ExtMove value, into all lanes of 512-bit registers
 static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
@@ -63,43 +64,11 @@ static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
     value = _mm512_set1_epi32(m.value);
 }
 
-// Sorts up to 8 moves.
-struct MoveSorter8 {
-    static constexpr int MAX_ELEMENTS = 8;
-    __m512i              sorted;
-
-    explicit MoveSorter8(const ExtMove& first) {
-        sorted = _mm512_set1_epi64(i64(u64(u32(first.value)) << 32 | first.raw()));
-
-        // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
-        sorted = _mm512_mask_set1_epi64(sorted, ~1, i64(u64(u32(std::numeric_limits<int>::min())) << 32));
-    }
-
-    void insert(const ExtMove& m) {
-        const __m512i v = _mm512_set1_epi64(i64(u64(u32(m.value)) << 32 | m.raw()));
-
-        // Mask of all elements except the insertion point
-        assert(m.value != std::numeric_limits<int>::min());
-        const __m512i mask   = _mm512_set1_epi64(0xFFFFFFFF00000000LL);
-        const u8      expand = _kadd_mask8(
-          _mm512_cmplt_epi64_mask(_mm512_and_epi64(sorted, mask), _mm512_and_epi64(v, mask)), -1);
-        sorted = _mm512_mask_expand_epi64(v, expand, sorted);
-    }
-
-    void write_sorted(ExtMove* moves, isize count) const {
-        static_assert(sizeof(ExtMove) == 8);
-        assert(count <= MAX_ELEMENTS);
-
-        _mm512_mask_storeu_epi64(moves, (1 << count) - 1, sorted);
-    }
-};
-
 // Sorts up to 16 moves.
-struct MoveSorter16 {
-    static constexpr int MAX_ELEMENTS = 16;
+struct MoveSorter {
     __m512i              sortedValues, sortedMoves;
 
-    explicit MoveSorter16(const ExtMove& first) {
+    explicit MoveSorter(const ExtMove& first) {
         splat_extmove(first, sortedMoves, sortedValues);
 
         // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
@@ -120,7 +89,7 @@ struct MoveSorter16 {
 
     void write_sorted(ExtMove* moves, isize count) const {
         static_assert(sizeof(ExtMove) == 8);
-        assert(count <= MAX_ELEMENTS);
+        assert(count <= MAX_SORTER_ELEMENTS);
 
         // Because values and moves are stored separately, we need to reassemble the ExtMoves
         auto write = [&](int offset, const __m512i indices) {
@@ -140,47 +109,40 @@ struct MoveSorter16 {
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
-    ExtMove *sortedEnd = begin, *p = begin + 1;
-
-#ifdef USE_AVX512ICL
+    
     if (end - begin < 2)
         return;
 
-    if (end - begin <= MoveSorter8::MAX_ELEMENTS)
+    int sortedCnt = 0; // sortedEnd - begin
+    ExtMove *sortedEnd = begin, *p = begin + 1;
+
+#ifdef USE_AVX512ICL
+    MoveSorter sorter(*begin);
+    for (; p < end; ++p)
     {
-        MoveSorter8 sorter(*begin);
-        for (; p < end; ++p)
-            if (p->value >= limit)
-            {
-                sorter.insert(*p);
-                *p = *++sortedEnd;
-            }
-        sorter.write_sorted(begin, sortedEnd - begin + 1);
+        if (p->value >= limit || end - p + sortedCnt < MAX_SORTER_ELEMENTS)
+        {
+            if (sortedCnt + 1 >= MAX_SORTER_ELEMENTS)  // sorter full
+                break;
+
+            sorter.insert(*p);
+            *p = *++sortedEnd;
+            ++sortedCnt;
+        }
     }
-    else
-    {
-        MoveSorter16 sorter(*begin);
-        for (; p < end; ++p)
-            if (p->value >= limit)
-            {
-                if (sortedEnd - begin + 1 >= MoveSorter16::MAX_ELEMENTS)  // sorter full
-                    break;
-                sorter.insert(*p);
-                *p = *++sortedEnd;
-            }
-        sorter.write_sorted(begin, sortedEnd - begin + 1);
-    }
+    sorter.write_sorted(begin, sortedEnd - begin + 1);
     // Use scalar implementation for any remaining elements
 #endif
 
     for (; p < end; ++p)
-        if (p->value >= limit)
+        if (p->value >= limit || end - p + sortedCnt < MAX_SORTER_ELEMENTS)
         {
             ExtMove tmp = *p, *q;
             *p          = *++sortedEnd;
             for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
+            ++sortedCnt;
         }
 }
 
