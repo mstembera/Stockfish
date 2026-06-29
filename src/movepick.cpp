@@ -56,8 +56,7 @@ enum Stages {
     QCAPTURE
 };
 
-static constexpr int MAX_SORTER_ELEMENTS = 16;
-#ifdef USE_AVX512ICL
+#ifdef USE_AVX512
 // Load the Move, and the ExtMove value, into all lanes of 512-bit registers
 static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
     move  = _mm512_set1_epi32(m.raw());
@@ -66,6 +65,7 @@ static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
 
 // Sorts up to 16 moves.
 struct MoveSorter {
+    static constexpr int MAX_ELEMENTS = 16;
     __m512i              sortedValues, sortedMoves;
 
     explicit MoveSorter(const ExtMove& first) {
@@ -89,7 +89,7 @@ struct MoveSorter {
 
     void write_sorted(ExtMove* moves, isize count) const {
         static_assert(sizeof(ExtMove) == 8);
-        assert(count <= MAX_SORTER_ELEMENTS);
+        assert(count <= MAX_ELEMENTS);
 
         // Because values and moves are stored separately, we need to reassemble the ExtMoves
         auto write = [&](int offset, const __m512i indices) {
@@ -109,25 +109,22 @@ struct MoveSorter {
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
-    
-    if (end - begin < 2)
-        return;
-
-    int sortedCnt = 0; // sortedEnd - begin
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
-#ifdef USE_AVX512ICL
+#ifdef USE_AVX512
+    if (begin == end)
+        return;
+
     MoveSorter sorter(*begin);
     for (; p < end; ++p)
     {
-        if (p->value >= limit || end - p + sortedCnt < MAX_SORTER_ELEMENTS)
+        if (p->value >= limit)
         {
-            if (sortedCnt + 1 >= MAX_SORTER_ELEMENTS)  // sorter full
+            if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
                 break;
 
             sorter.insert(*p);
             *p = *++sortedEnd;
-            ++sortedCnt;
         }
     }
     sorter.write_sorted(begin, sortedEnd - begin + 1);
@@ -135,14 +132,13 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 #endif
 
     for (; p < end; ++p)
-        if (p->value >= limit || end - p + sortedCnt < MAX_SORTER_ELEMENTS)
+        if (p->value >= limit)
         {
             ExtMove tmp = *p, *q;
             *p          = *++sortedEnd;
             for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
-            ++sortedCnt;
         }
 }
 
