@@ -1410,8 +1410,13 @@ bool Position::see_ge(Move m, int threshold) const {
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
     Color    stm       = sideToMove;
     Bitboard attackers = attackers_to(to, occupied);
-    Bitboard stmAttackers, bb;
+    Bitboard stmAttackers, bb = 0;
     int      res = 1;
+
+    // Least piece type each side may still have among 'attackers'. Leapers can
+    // only be consumed, never discovered, so once absent they stay absent.
+    // Sliders can reappear through x-rays, lowering the cursor again below.
+    PieceType next[COLOR_NB] = {PAWN, PAWN};
 
     while (true)
     {
@@ -1424,7 +1429,8 @@ bool Position::see_ge(Move m, int threshold) const {
 
         // Don't allow pinned pieces to attack as long as there are
         // pinners on their original square.
-        if (pinners(~stm) & occupied)
+        bool masked = bool(pinners(~stm) & occupied);
+        if (masked)
         {
             stmAttackers &= ~blockers_for_king(stm);
 
@@ -1434,57 +1440,51 @@ bool Position::see_ge(Move m, int threshold) const {
 
         res ^= 1;
 
-        // Locate and remove the next least valuable attacker, and add to
-        // the bitboard 'attackers' any X-ray attackers behind it.
-        if ((bb = stmAttackers & pieces(PAWN)))
-        {
-            if ((swap = PawnValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
+        // Locate the least valuable attacker, resuming from the least piece
+        // type this side may still have.
+        PieceType pt = next[stm];
+        while (pt < KING && !(bb = stmAttackers & pieces(pt)))
+            ++pt;
 
-            attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-        }
+        // The pin mask hides attackers only temporarily, so the cursor must not
+        // be advanced past piece types skipped while the mask was active.
+        if (!masked)
+            next[stm] = pt;
 
-        else if ((bb = stmAttackers & pieces(KNIGHT)))
-        {
-            if ((swap = KnightValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-        }
+        if (pt == KING)
+            // If we "capture" with the king but the opponent still has attackers,
+            // reverse the result.
+            return (attackers & ~pieces(stm)) ? res ^ 1 : res;
 
-        else if ((bb = stmAttackers & pieces(BISHOP)))
-        {
-            if ((swap = BishopValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-        }
-
-        else if ((bb = stmAttackers & pieces(ROOK)))
-        {
-            if ((swap = RookValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
-        }
-
-        else if ((bb = stmAttackers & pieces(QUEEN)))
+        if (pt == QUEEN)
         {
             swap = QueenValue - swap;
             //  implies that the previous recapture was done by a higher rated piece than a Queen (King is excluded)
             assert(swap >= res);
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
-                       | (attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN));
         }
+        else if ((swap = PieceValue[pt] - swap) < res)
+            break;
 
-        else  // KING
-              // If we "capture" with the king but the opponent still has attackers,
-              // reverse the result.
-            return (attackers & ~pieces(stm)) ? res ^ 1 : res;
+        // Remove the attacker and add to the bitboard 'attackers' any X-ray
+        // attackers revealed behind it. A discovered slider may belong to either
+        // color, so lower that color's cursor again.
+        occupied ^= least_significant_square_bb(bb);
+
+        Bitboard discovered = 0;
+        if (pt == PAWN || pt == BISHOP || pt == QUEEN)
+            discovered |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
+        if (pt == ROOK || pt == QUEEN)
+            discovered |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
+
+        discovered &= occupied & ~attackers;
+        if (discovered)
+        {
+            attackers |= discovered;
+            if (discovered & pieces(WHITE))
+                next[WHITE] = std::min(next[WHITE], BISHOP);
+            if (discovered & pieces(BLACK))
+                next[BLACK] = std::min(next[BLACK], BISHOP);
+        }
     }
 
     return bool(res);
