@@ -321,7 +321,7 @@ top:
 
             endCur = endGenerated = score<QUIETS>(ml);
 
-            partial_insertion_sort(cur, endCur, -3560 * depth - 250);
+            partial_insertion_sort(cur, endCur, -3700 * depth);
         }
 
         ++stage;
