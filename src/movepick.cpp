@@ -56,7 +56,7 @@ enum Stages {
     QCAPTURE
 };
 
-#ifdef USE_AVX512
+#if defined(USE_AVX512)
 // Load the Move, and the ExtMove value, into all lanes of 512-bit registers
 static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
     move  = _mm512_set1_epi32(m.raw());
@@ -104,6 +104,75 @@ struct MoveSorter {
         write(8, _mm512_setr_epi32(8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31));
     }
 };
+#elif defined(USE_AVX2)
+// Load the Move, and the ExtMove value, into all lanes of 256-bit registers
+static void splat_extmove(const ExtMove& m, __m256i& move, __m256i& value) {
+    move  = _mm256_set1_epi32(m.raw());
+    value = _mm256_set1_epi32(m.value);
+}
+
+// Sorts up to 8 moves.
+struct MoveSorter {
+    static constexpr int MAX_ELEMENTS = 8;
+    __m256i              sortedValues, sortedMoves;
+
+    explicit MoveSorter(const ExtMove& first) {
+        splat_extmove(first, sortedMoves, sortedValues);
+
+        // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
+        sortedValues = _mm256_blend_epi32(_mm256_set1_epi32(std::numeric_limits<int>::min()),
+                                          sortedValues, 1);
+    }
+
+    void insert(const ExtMove& m) {
+        __m256i move, value;
+        splat_extmove(m, move, value);
+
+        // Per-lane mask of all elements sorting below the new value. Since the elements
+        // are kept in descending order, this is a contiguous tail of the register.
+        assert(m.value != std::numeric_limits<int>::min());
+        const __m256i below = _mm256_cmpgt_epi32(value, sortedValues);
+
+        // Shift the tail elements down one lane to make room at the insertion point
+        const __m256i shift         = _mm256_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6);
+        const __m256i shiftedValues = _mm256_permutevar8x32_epi32(sortedValues, shift);
+        const __m256i shiftedMoves  = _mm256_permutevar8x32_epi32(sortedMoves, shift);
+
+        // The insertion point is the first lane of the tail
+        const __m256i shiftedBelow  = _mm256_blend_epi32(_mm256_permutevar8x32_epi32(below, shift),
+                                                         _mm256_setzero_si256(), 1);
+        const __m256i insertionLane = _mm256_andnot_si256(shiftedBelow, below);
+
+        sortedValues = _mm256_blendv_epi8(
+          sortedValues, _mm256_blendv_epi8(shiftedValues, value, insertionLane), below);
+        sortedMoves = _mm256_blendv_epi8(
+          sortedMoves, _mm256_blendv_epi8(shiftedMoves, move, insertionLane), below);
+    }
+
+    void write_sorted(ExtMove* moves, isize count) const {
+        static_assert(sizeof(ExtMove) == 8);
+        assert(count <= MAX_ELEMENTS);
+
+        // Because values and moves are stored separately, we need to reassemble the ExtMoves
+        const __m256i lo = _mm256_unpacklo_epi32(sortedMoves, sortedValues);
+        const __m256i hi = _mm256_unpackhi_epi32(sortedMoves, sortedValues);
+
+        auto write = [&](int offset, const __m256i extMoves) {
+            const isize storeCount = count - offset;
+
+            if (storeCount > 0)
+            {
+                const __m256i storeMask = _mm256_cmpgt_epi64(_mm256_set1_epi64x(storeCount),
+                                                             _mm256_setr_epi64x(0, 1, 2, 3));
+                _mm256_maskstore_epi64(reinterpret_cast<long long*>(moves + offset), storeMask,
+                                       extMoves);
+            }
+        };
+
+        write(0, _mm256_permute2x128_si256(lo, hi, 0x20));
+        write(4, _mm256_permute2x128_si256(lo, hi, 0x31));
+    }
+};
 #endif
 
 // Sort moves in descending order up to and including a given limit.
@@ -111,7 +180,7 @@ struct MoveSorter {
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
-#ifdef USE_AVX512
+#if defined(USE_AVX512) || defined(USE_AVX2)
     if (begin == end)
         return;
 
