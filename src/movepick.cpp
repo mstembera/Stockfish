@@ -164,8 +164,9 @@ struct MoveSorter {
             {
                 const __m256i storeMask = _mm256_cmpgt_epi64(_mm256_set1_epi64x(storeCount),
                                                              _mm256_setr_epi64x(0, 1, 2, 3));
-                _mm256_maskstore_epi64(reinterpret_cast<long long*>(moves + offset), storeMask,
-                                       extMoves);
+                __m256i* const dst      = reinterpret_cast<__m256i*>(moves + offset);
+                const __m256i original  = _mm256_loadu_si256(dst);
+                _mm256_storeu_si256(dst, _mm256_blendv_epi8(original, extMoves, storeMask));
             }
         };
 
