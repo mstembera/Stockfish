@@ -133,20 +133,23 @@ struct MoveSorter {
         assert(m.value != std::numeric_limits<int>::min());
         const __m256i below = _mm256_cmpgt_epi32(value, sortedValues);
 
-        // Shift the tail elements down one lane to make room at the insertion point
-        const __m256i shift         = _mm256_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6);
-        const __m256i shiftedValues = _mm256_permutevar8x32_epi32(sortedValues, shift);
-        const __m256i shiftedMoves  = _mm256_permutevar8x32_epi32(sortedMoves, shift);
+        // Emulate AVX-512 mask_expand: 'below' is -1 per tail lane, so adding it to the
+        // identity permutation shifts the tail down one lane, opening a hole at the
+        // insertion point. At k == 0 the -1 index wraps to lane 7, which is harmless
+        // because that lane is overwritten by the value blend below.
+        const __m256i iota           = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+        const __m256i expand         = _mm256_add_epi32(iota, below);
+        const __m256i expandedValues = _mm256_permutevar8x32_epi32(sortedValues, expand);
+        const __m256i expandedMoves  = _mm256_permutevar8x32_epi32(sortedMoves, expand);
 
         // The insertion point is the first lane of the tail
+        const __m256i shift         = _mm256_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6);
         const __m256i shiftedBelow  = _mm256_blend_epi32(_mm256_permutevar8x32_epi32(below, shift),
                                                          _mm256_setzero_si256(), 1);
         const __m256i insertionLane = _mm256_andnot_si256(shiftedBelow, below);
 
-        sortedValues = _mm256_blendv_epi8(
-          sortedValues, _mm256_blendv_epi8(shiftedValues, value, insertionLane), below);
-        sortedMoves = _mm256_blendv_epi8(
-          sortedMoves, _mm256_blendv_epi8(shiftedMoves, move, insertionLane), below);
+        sortedValues = _mm256_blendv_epi8(expandedValues, value, insertionLane);
+        sortedMoves  = _mm256_blendv_epi8(expandedMoves, move, insertionLane);
     }
 
     void write_sorted(ExtMove* moves, isize count) const {
