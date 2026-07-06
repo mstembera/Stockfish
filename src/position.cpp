@@ -745,8 +745,19 @@ bool Position::pseudo_legal(const Move m) const {
     else if (!(attacks_bb(type_of(pc), from, pieces()) & to))
         return false;
 
-    if (checkers())
-        return MoveList<EVASIONS>(*this).contains(m);
+    // While in check, a non-king move is an evasion only if it blocks the check
+    // or captures the (only) checking piece. King moves are generated without
+    // this constraint by the evasions generator, and legal() takes care of them.
+    if (checkers() && type_of(pc) != KING)
+    {
+        // Double check? In this case, a king move is required
+        if (more_than_one(checkers()))
+            return false;
+
+        // Our move must be a blocking interposition or a capture of the checking piece
+        if (!(between_bb(square<KING>(us), lsb(checkers())) & to))
+            return false;
+    }
 
     return true;
 }
