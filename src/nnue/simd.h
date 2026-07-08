@@ -19,7 +19,15 @@
 #ifndef NNUE_SIMD_H_INCLUDED
 #define NNUE_SIMD_H_INCLUDED
 
-#if defined(USE_AVX2)
+#if defined(USE_AMX)
+    #include <cstdlib>
+    #include <iostream>
+    #if defined(__linux__)
+        #include <sys/syscall.h>
+        #include <unistd.h>
+    #endif
+
+#elif defined(USE_AVX2)
     #include <immintrin.h>
 
 #elif defined(USE_SSE41)
@@ -584,6 +592,64 @@ dotprod_m128_add_dpbusd_epi32(int32x4_t& acc, int8x16_t a, int8x16_t b) {
 }
 
 #endif  // USE_LSX
+
+#if defined(USE_AMX)
+
+// Memory layout of the tile configuration loaded by LDTILECFG.
+struct alignas(64) AmxTileConfig {
+    u8  paletteId;
+    u8  startRow;
+    u8  reserved[14];
+    u16 colsb[16];
+    u8  rows[16];
+};
+
+// Configure the AMX tiles once per thread; on Linux additionally request the
+// per-process permission to use the AMX tile data state on first use. The
+// operating system preserves the tile configuration across context switches
+// as part of the extended (XSAVE) state, so loading it once per thread is
+// sufficient. Tile shapes (must match their use in AffineTransform::propagate):
+//   tmm0      : 1 row   x 64 bytes (64 u8 inputs)
+//   tmm1-tmm3 : 1 row   x 64 bytes (16 i32 accumulators each)
+//   tmm4-tmm7 : 16 rows x 64 bytes (weights for 64 inputs x 16 outputs, VNNI layout)
+inline void amx_thread_init() {
+    static thread_local bool initialized = [] {
+        #if defined(__linux__)
+        constexpr int ARCH_REQ_XCOMP_PERM = 0x1023;
+        constexpr int XFEATURE_XTILEDATA  = 18;
+
+        static const bool permitted =
+          syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA) == 0;
+
+        if (!permitted)
+        {
+            std::cerr << "Kernel denied permission to use AMX tile data (XTILEDATA)." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        #endif
+
+        AmxTileConfig cfg{};
+        cfg.paletteId = 1;
+        for (int t = 0; t < 8; ++t)
+        {
+            cfg.colsb[t] = 64;
+            cfg.rows[t]  = t < 4 ? 1 : 16;
+        }
+        _tile_loadconfig(&cfg);
+        return true;
+    }();
+
+    (void) initialized;
+}
+
+// Weight-generation counter, bumped whenever network parameters are (re)loaded,
+// so threads can detect stale resident weight tiles even if a reloaded network
+// reuses the same allocation address. amxResidentWeights tracks which weight
+// matrix this thread currently holds in tmm4-tmm6.
+inline std::atomic<u32> amxWeightEpoch{0};
+inline thread_local const void* amxResidentWeights = nullptr;
+inline thread_local u32         amxResidentEpoch   = 0;
+#endif  // USE_AMX
 
 
 // Compute optimal SIMD register count for feature transformer accumulation.

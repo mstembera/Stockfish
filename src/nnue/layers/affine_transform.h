@@ -188,6 +188,9 @@ class AffineTransform {
         for (IndexType i = 0; i < OutputDimensions * PaddedInputDimensions; ++i)
             weights[get_weight_index(i)] = read_little_endian<WeightType>(stream);
 
+#if defined(USE_AMX)
+        SIMD::amxWeightEpoch.fetch_add(1, std::memory_order_relaxed);
+#endif
         return !stream.fail();
     }
 
@@ -216,7 +219,62 @@ class AffineTransform {
 
         if constexpr (OutputDimensions > 1)
         {
-    #if defined(USE_AVX512)
+    #if defined(USE_AMX)
+            // TDPBUSD computes acc[m][n] += dot4(A[m][4k..4k+3], B[k][4n..4n+3]),
+            // and the scrambled weight order used under ENABLE_SEQ_OPT is exactly
+            // this B-matrix (VNNI) layout: dword row k holds, for every output n,
+            // the 4 weights of inputs 4k..4k+3, with a row stride of
+            // OutputDimensions * 4 bytes. Tiles are limited to 16 rows x 64 bytes,
+            // so one weight tile covers 64 inputs x 16 outputs.
+            static_assert(PaddedInputDimensions == 64,
+                          "Resident weight tiles require all inputs to fit one tile chunk.");
+            static_assert(OutputDimensions % 16 == 0 && OutputDimensions / 16 <= 3,
+                          "Outputs must fill 1 to 3 accumulator tiles of 16 i32 each.");
+
+            constexpr IndexType NumBTiles    = OutputDimensions / 16;
+            constexpr IndexType WeightStride = OutputDimensions * 4;
+
+            // Loads the tile configuration on first use in this thread. Must
+            // precede the residency check because LDTILECFG zeroes all tiles.
+            SIMD::amx_thread_init();
+
+            // The weights are constant, so keep them resident in tmm4-tmm6 and
+            // reload only when this thread sees a different or reloaded weight
+            // set (e.g. another NUMA replica). The shared per-thread key also
+            // handles multiple instances clobbering each other's tiles. Note
+            // that nothing else in the process may touch the tile state.
+            const u32 epoch = SIMD::amxWeightEpoch.load(std::memory_order_relaxed);
+            if (SIMD::amxResidentWeights != weights || SIMD::amxResidentEpoch != epoch)
+            {
+                SIMD::amxResidentWeights = weights;
+                SIMD::amxResidentEpoch   = epoch;
+                _tile_loadd(4, &weights[0], WeightStride);
+                if constexpr (NumBTiles > 1)
+                    _tile_loadd(5, &weights[64], WeightStride);
+                if constexpr (NumBTiles > 2)
+                    _tile_loadd(6, &weights[128], WeightStride);
+            }
+
+            // tmm0 holds the 64 inputs, tmm1-tmm3 accumulate 16 outputs each,
+            // seeded with the biases. The loads are independent and overlap in
+            // the out-of-order window.
+            _tile_loadd(0, input, 64);
+            _tile_loadd(1, &biases[0], 64);
+            _tile_dpbusd(1, 0, 4);
+            _tile_stored(1, &output[0], 64);
+            if constexpr (NumBTiles > 1)
+            {
+                _tile_loadd(2, &biases[16], 64);
+                _tile_dpbusd(2, 0, 5);
+                _tile_stored(2, &output[16], 64);
+            }
+            if constexpr (NumBTiles > 2)
+            {
+                _tile_loadd(3, &biases[32], 64);
+                _tile_dpbusd(3, 0, 6);
+                _tile_stored(3, &output[32], 64);
+            }
+    #elif defined(USE_AVX512)
             using vec_t = __m512i;
         #define vec_set_32 _mm512_set1_epi32
         #define vec_add_32 _mm512_add_epi32
@@ -248,6 +306,7 @@ class AffineTransform {
         #define vec_add_dpbusd_32 SIMD::lsx_m128_add_dpbusd_epi32
     #endif
 
+    #if !defined(USE_AMX)
             static constexpr IndexType OutputSimdWidth = sizeof(vec_t) / sizeof(OutputType);
 
             static_assert(OutputDimensions % OutputSimdWidth == 0);
@@ -305,6 +364,7 @@ class AffineTransform {
 
     #undef vec_set_32
     #undef vec_add_dpbusd_32
+    #endif
         }
         else if constexpr (OutputDimensions == 1)
         {
