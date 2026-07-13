@@ -115,19 +115,57 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     if (begin == end)
         return;
 
+    int        count1 = 1;
     MoveSorter sorter(*begin);
     for (; p < end; ++p)
     {
         if (p->value >= limit)
         {
-            if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
+            if (count1 == MoveSorter::MAX_ELEMENTS)  // sorter full
                 break;
 
             sorter.insert(*p);
             *p = *++sortedEnd;
+            ++count1;
         }
     }
-    sorter.write_sorted(begin, sortedEnd - begin + 1);
+
+    if (p < end)  // first sorter full, sort a second batch and merge the two
+    {
+        int        count2 = 1;
+        MoveSorter sorter2(*p);
+        *p = *++sortedEnd;
+        for (++p; p < end; ++p)
+        {
+            if (p->value >= limit)
+            {
+                if (count2 == MoveSorter::MAX_ELEMENTS)  // second sorter full
+                    break;
+
+                sorter2.insert(*p);
+                *p = *++sortedEnd;
+                ++count2;
+            }
+        }
+
+        ExtMove batch2[MoveSorter::MAX_ELEMENTS];
+        sorter.write_sorted(begin, count1);
+        sorter2.write_sorted(batch2, count2);
+
+        // Merge backwards so the first batch can stay in place. Taking equal-valued
+        // moves from the second batch first preserves their stable forward order.
+        ExtMove *pa = begin + count1, *out = pa + count2;
+        const ExtMove* pb = batch2 + count2;
+        while (pa != begin && pb != batch2)
+        {
+            const bool takeB = (pb - 1)->value <= (pa - 1)->value;
+            *--out           = takeB ? *--pb : *--pa;
+        }
+        while (pb != batch2)
+            *--out = *--pb;
+    }
+    else
+        sorter.write_sorted(begin, count1);
     // Use scalar implementation for any remaining elements
 #endif
 
