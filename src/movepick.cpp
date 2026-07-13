@@ -109,25 +109,29 @@ struct MoveSorter {
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+    
+    if (end - begin < 2)
+        return;
+
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
 #ifdef USE_AVX512
-    if (begin == end)
-        return;
-
-    MoveSorter sorter(*begin);
-    for (; p < end; ++p)
+    if (end - begin > 4)
     {
-        if (p->value >= limit)
+        MoveSorter sorter(*begin);
+        for (; p < end; ++p)
         {
-            if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
-                break;
+            if (p->value >= limit)
+            {
+                if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
+                    break;
 
-            sorter.insert(*p);
-            *p = *++sortedEnd;
+                sorter.insert(*p);
+                *p = *++sortedEnd;
+            }
         }
+        sorter.write_sorted(begin, sortedEnd - begin + 1);
     }
-    sorter.write_sorted(begin, sortedEnd - begin + 1);
     // Use scalar implementation for any remaining elements
 #endif
 
