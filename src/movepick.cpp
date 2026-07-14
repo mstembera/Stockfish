@@ -130,7 +130,7 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         }
     }
 
-    if (p < end)  // first sorter full, sort a second batch and merge the two
+    if (p + 5 < end)  // first sorter full, sort a second batch and merge the two
     {
         int        count2 = 1;
         MoveSorter sorter2(*p);
