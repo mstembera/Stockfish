@@ -87,9 +87,23 @@ const Magic& magic(Square s, PieceType pt);
 
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
+inline Bitboard byteswap_bb(Bitboard b) {
+    #ifdef _MSC_VER
+    return _byteswap_uint64(b);
+    #else
+    return __builtin_bswap64(b);
+    #endif
+}
+
 struct alignas(32) DualMagic {
     // file, diagonal, unused, antidiagonal
     Bitboard maskFile, maskDiag, maskNone, maskAntidiag;
+    // The masks above, byte-reversed within each 128-bit lane (matching bswap()
+    // below). Since bswap() also swaps the two 64-bit elements of each lane,
+    // these must be declared in lane-swapped order (diag/file, antidiag/none),
+    // NOT in the same order as the masks above: this+32 is loaded directly as
+    // the maskRev vector, so declaration order defines the SIMD element layout.
+    Bitboard maskDiagRev, maskFileRev, maskAntidiagRev, maskNoneRev;
     // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
     Bitboard r, rr;
 
@@ -113,14 +127,21 @@ struct alignas(32) DualMagic {
         };
 
         // Each lane contains a mask and we follow the same HQ algorithm as
-        // given above in the ARM64 code path
-        const __m256i mask = _mm256_load_si256(reinterpret_cast<const __m256i*>(this));
-        const __m256i rs   = _mm256_set1_epi64x(r);
-        const __m256i rrs  = _mm256_set1_epi64x(rr);
+        // given above in the ARM64 code path.
+        //
+        // Since bswap(occupied & mask) == bswap(occupied) & bswap(mask), and the
+        // byte-reversed masks are precomputed, the reverse chain starts from a
+        // scalar byteswap of the occupancy that runs in parallel with the forward
+        // chain, removing one shuffle from the critical path.
+        const __m256i mask    = _mm256_load_si256(reinterpret_cast<const __m256i*>(this));
+        const __m256i maskRev = _mm256_load_si256(reinterpret_cast<const __m256i*>(this) + 1);
+        const __m256i rs      = _mm256_set1_epi64x(r);
+        const __m256i rrs     = _mm256_set1_epi64x(rr);
 
         __m256i o      = _mm256_and_si256(mask, _mm256_set1_epi64x(occupied));
+        __m256i oRev   = _mm256_and_si256(maskRev, _mm256_set1_epi64x(byteswap_bb(occupied)));
         __m256i fwd    = _mm256_sub_epi64(o, rs);
-        __m256i rev    = bswap(_mm256_sub_epi64(bswap(o), rrs));
+        __m256i rev    = bswap(_mm256_sub_epi64(oRev, rrs));
         __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
 
         // Lane 0: rook attacks (file only); lane 1: bishop attacks
@@ -135,7 +156,9 @@ struct alignas(32) DualMagic {
     }
 };
 
-const DualMagic& dual_magic(Square s);
+extern DualMagic DualMagics[SQUARE_NB];
+
+inline const DualMagic& dual_magic(Square s) { return DualMagics[s]; }
 
 #else
 // Magic holds all magic bitboards relevant data for a single square
@@ -301,6 +324,14 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
     default :
         return PseudoAttacks[Pt][s];
     }
+#endif
+}
+
+inline std::pair<Bitboard, Bitboard> both_attacks_bb(Square s, Bitboard occupied) {
+#ifdef USE_DUAL_HYPERBOLA_QUINT
+    return dual_magic(s).both_attacks_bb(occupied);
+#else
+    return {attacks_bb<BISHOP>(s, occupied), attacks_bb<ROOK>(s, occupied)};
 #endif
 }
 
