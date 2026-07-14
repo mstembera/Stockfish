@@ -207,6 +207,17 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
+
+        for (auto move : ml)
+        {
+            const Square to = move.to_sq();
+            const Piece  pc = pos.moved_piece(move);
+            prefetch(&(*continuationHistory[0])[pc][to]);
+            prefetch(&(*continuationHistory[1])[pc][to]);
+            prefetch(&(*continuationHistory[2])[pc][to]);
+            prefetch(&(*continuationHistory[3])[pc][to]);
+            prefetch(&(*continuationHistory[5])[pc][to]);
+        }
     }
 
     ExtMove* it = cur;
