@@ -208,15 +208,17 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
 
-        for (auto move : ml)
+        for (PieceType pt = PAWN; pt <= KING; ++pt)
         {
-            const Square to = move.to_sq();
-            const Piece  pc = pos.moved_piece(move);
-            prefetch(&(*continuationHistory[0])[pc][to]);
-            prefetch(&(*continuationHistory[1])[pc][to]);
-            prefetch(&(*continuationHistory[2])[pc][to]);
-            prefetch(&(*continuationHistory[3])[pc][to]);
-            prefetch(&(*continuationHistory[5])[pc][to]);
+            if (!pos.pieces(us, pt))
+                continue;
+
+            const Piece pc = make_piece(us, pt);
+            for (int i : {0, 1, 2, 3, 5})
+            {
+                prefetch(&(*continuationHistory[i])[pc][SQ_A1]);
+                prefetch(&(*continuationHistory[i])[pc][SQ_A5]);
+            }
         }
     }
 
