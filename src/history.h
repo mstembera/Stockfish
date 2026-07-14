@@ -241,9 +241,8 @@ struct SharedHistories {
     }
 
     UnifiedCorrectionHistory correctionHistory;
-    ContinuationHistory      continuationHistory[2][2];
-    PawnHistory              pawnHistory;
-
+    alignas(64) ContinuationHistory continuationHistory[2][2];
+    PawnHistory pawnHistory;
 
    private:
     usize sizeMinus1, pawnHistSizeMinus1;
