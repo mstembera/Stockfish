@@ -28,11 +28,11 @@ namespace Stockfish::Attacks {
 alignas(64) DualMagic DualMagics[SQUARE_NB];
 #endif
 
-namespace {
-
 Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
 Bitboard RayPassBB[SQUARE_NB][SQUARE_NB];
+
+namespace {
 
 #ifndef USE_DUAL_HYPERBOLA_QUINT
 alignas(64) Magic Magics[SQUARE_NB][2];
@@ -88,12 +88,6 @@ static void init_dual_magics(DualMagic magics[]) {
         m.maskDiag          = line_mask(s, NORTH_EAST, SOUTH_WEST);
         m.maskNone          = 0;
         m.maskAntidiag      = line_mask(s, NORTH_WEST, SOUTH_EAST);
-        // bswap() reverses all 16 bytes of a 128-bit lane, so the two 64-bit
-        // elements of each lane swap places in addition to being byte-reversed
-        m.maskDiagRev       = byteswap_bb(m.maskDiag);
-        m.maskFileRev       = byteswap_bb(m.maskFile);
-        m.maskAntidiagRev   = byteswap_bb(m.maskAntidiag);
-        m.maskNoneRev       = byteswap_bb(m.maskNone);
         m.r                 = square_bb(s) * 2;
         m.rr                = square_bb(Square(63 - int(s))) * 2;
         m.rankAttacksLookup = RankAttacks[int(file_of(s))].data();
@@ -201,20 +195,5 @@ const Magic& magic(Square s, PieceType pt) {
     return Magics[s][pt - BISHOP];
 }
 #endif
-
-Bitboard line_bb(Square s1, Square s2) {
-    assert(is_ok(s1) && is_ok(s2));
-    return LineBB[s1][s2];
-}
-
-Bitboard between_bb(Square s1, Square s2) {
-    assert(is_ok(s1) && is_ok(s2));
-    return BetweenBB[s1][s2];
-}
-
-Bitboard ray_pass_bb(Square s1, Square s2) {
-    assert(is_ok(s1) && is_ok(s2));
-    return RayPassBB[s1][s2];
-}
 
 }  // namespace Stockfish::Attacks
