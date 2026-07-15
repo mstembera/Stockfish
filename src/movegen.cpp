@@ -214,6 +214,7 @@ Move* generate_all(const Position& pos, Move* moveList) {
     // Skip generating non-king moves when in double check
     if (Type != EVASIONS || !more_than_one(pos.checkers()))
     {
+        Move* first = moveList;
         target = Type == EVASIONS     ? Attacks::between_bb(ksq, lsb(pos.checkers()))
                : Type == NON_EVASIONS ? ~pos.pieces(Us)
                : Type == CAPTURES     ? pos.pieces(~Us)
@@ -224,6 +225,20 @@ Move* generate_all(const Position& pos, Move* moveList) {
         moveList = generate_moves<Us, BISHOP>(pos, moveList, target);
         moveList = generate_moves<Us, ROOK>(pos, moveList, target);
         moveList = generate_moves<Us, QUEEN>(pos, moveList, target);
+
+        const Bitboard pinned = pos.blockers_for_king(Us) & pos.pieces(Us);
+        if (pinned)
+        {
+            while (first != moveList)
+            {
+                if (   (pinned & first->from_sq())
+                    && first->type_of() != EN_PASSANT
+                    && !(Attacks::line_bb(first->from_sq(), first->to_sq()) & pos.pieces(Us, KING)))
+                    *first = *(--moveList);
+                else
+                    ++first;
+            }
+        }
     }
 
     Bitboard b = Attacks::attacks_bb<KING>(ksq) & (Type == EVASIONS ? ~pos.pieces(Us) : target);
