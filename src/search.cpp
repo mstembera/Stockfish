@@ -281,6 +281,7 @@ bool Search::Worker::iterative_deepening() {
     Color  us            = rootPos.side_to_move();
     double timeReduction = 1, totBestMoveChanges = 0;
     int    delta, iterIdx                        = 0;
+    int    evalStability = 0, pvStability = 0;
 
     // Allocate stack with extra size to allow access from (ss - 7) to (ss + 2):
     // (ss - 7) is needed for update_continuation_histories(ss - 1) which accesses (ss - 6),
@@ -372,7 +373,8 @@ bool Search::Worker::iterative_deepening() {
             selDepth = 0;
 
             // Reset aspiration window starting size
-            delta     = 5 + threadIdx % 8 + std::abs(rootMoves[pvIdx].meanSquaredScore) / 10588;
+            delta = 5 + threadIdx % 8 - std::min({evalStability, pvStability, 3})
+                  + std::abs(rootMoves[pvIdx].meanSquaredScore) / 10588;
             Value avg = rootMoves[pvIdx].averageScore;
             alpha     = std::max(avg - delta, -VALUE_INFINITE);
             beta      = std::min(avg + delta, VALUE_INFINITE);
@@ -508,7 +510,17 @@ bool Search::Worker::iterative_deepening() {
 
         if (!threads.stop)
         {
-            if (lastBestMovePV.empty() || lastBestMovePV[0] != rootMoves[0].pv[0])
+            if (std::abs(rootMoves[0].score - rootMoves[0].averageScore) < 12)
+                ++evalStability;
+            else
+                evalStability = 0;
+
+            if (!lastBestMovePV.empty() && lastBestMovePV[0] == rootMoves[0].pv[0])
+                ++pvStability;
+            else
+                pvStability = 0;
+
+            if (!pvStability)
                 lastBestMoveDepth = rootDepth;
 
             // Do not replace (shorter) mate scores from a previous iteration.
