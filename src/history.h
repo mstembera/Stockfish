@@ -38,6 +38,8 @@ namespace Stockfish {
 constexpr int PAWN_HISTORY_BASE_SIZE   = 8192;  // has to be a power of 2
 constexpr int UINT_16_HISTORY_SIZE     = std::numeric_limits<u16>::max() + 1;
 constexpr int CORRHIST_BASE_SIZE       = UINT_16_HISTORY_SIZE;
+constexpr int CORRHIST_BUCKETS         = 16;
+constexpr int CORRHIST_BUCKET_BASE_SIZE = CORRHIST_BASE_SIZE / CORRHIST_BUCKETS;
 constexpr int CORRECTION_HISTORY_LIMIT = 1024;
 constexpr int LOW_PLY_HISTORY_SIZE     = 5;
 
@@ -46,6 +48,12 @@ static_assert((PAWN_HISTORY_BASE_SIZE & (PAWN_HISTORY_BASE_SIZE - 1)) == 0,
 
 static_assert((CORRHIST_BASE_SIZE & (CORRHIST_BASE_SIZE - 1)) == 0,
               "CORRHIST_BASE_SIZE has to be a power of 2");
+static_assert(CORRHIST_BASE_SIZE % CORRHIST_BUCKETS == 0,
+              "CORRHIST_BASE_SIZE has to be divisible by CORRHIST_BUCKETS");
+
+constexpr usize correction_history_bucket(int rule50Count) {
+    return std::min<usize>(std::max(rule50Count - 8, 0) / 8, CORRHIST_BUCKETS - 1);
+}
 
 // StatsEntry is the container of various numerical statistics. We use a class
 // instead of a naked value to directly call history update operator<<() on
@@ -187,8 +195,9 @@ struct CorrHistTypedef<Continuation> {
 }
 
 using UnifiedCorrectionHistory =
-  DynStats<MultiArray<CorrectionBundle<i16, CORRECTION_HISTORY_LIMIT>, COLOR_NB>,
-           CORRHIST_BASE_SIZE>;
+  DynStats<MultiArray<CorrectionBundle<i16, CORRECTION_HISTORY_LIMIT>, CORRHIST_BUCKETS,
+                      COLOR_NB>,
+           CORRHIST_BUCKET_BASE_SIZE>;
 
 template<CorrHistType T>
 using CorrectionHistory = typename Detail::CorrHistTypedef<T>::type;
@@ -218,26 +227,32 @@ struct SharedHistories {
     }
 
     auto& pawn_correction_entry(const Position& pos) {
-        return correctionHistory[pos.pawn_key() & sizeMinus1];
+        return correctionHistory[pos.pawn_key() & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
     const auto& pawn_correction_entry(const Position& pos) const {
-        return correctionHistory[pos.pawn_key() & sizeMinus1];
+        return correctionHistory[pos.pawn_key() & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
 
     auto& minor_piece_correction_entry(const Position& pos) {
-        return correctionHistory[pos.minor_piece_key() & sizeMinus1];
+        return correctionHistory[pos.minor_piece_key() & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
     const auto& minor_piece_correction_entry(const Position& pos) const {
-        return correctionHistory[pos.minor_piece_key() & sizeMinus1];
+        return correctionHistory[pos.minor_piece_key() & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
 
     template<Color c>
     auto& nonpawn_correction_entry(const Position& pos) {
-        return correctionHistory[pos.non_pawn_key(c) & sizeMinus1];
+        return correctionHistory[pos.non_pawn_key(c) & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
     template<Color c>
     const auto& nonpawn_correction_entry(const Position& pos) const {
-        return correctionHistory[pos.non_pawn_key(c) & sizeMinus1];
+        return correctionHistory[pos.non_pawn_key(c) & sizeMinus1]
+                                [correction_history_bucket(pos.rule50_count())];
     }
 
     UnifiedCorrectionHistory correctionHistory;
