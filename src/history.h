@@ -158,12 +158,14 @@ template<typename T, int D>
 struct CorrectionBundle {
     StatsEntry<T, D, true> pawn;
     StatsEntry<T, D, true> minor;
+    StatsEntry<T, D, true> major;
     StatsEntry<T, D, true> nonPawnWhite;
     StatsEntry<T, D, true> nonPawnBlack;
 
     void operator=(T val) {
         pawn         = val;
         minor        = val;
+        major        = val;
         nonPawnWhite = val;
         nonPawnBlack = val;
     }
@@ -229,6 +231,13 @@ struct SharedHistories {
     }
     const auto& minor_piece_correction_entry(const Position& pos) const {
         return correctionHistory[pos.minor_piece_key() & sizeMinus1];
+    }
+
+    auto& major_piece_correction_entry(const Position& pos) {
+        return correctionHistory[pos.major_piece_key() & sizeMinus1];
+    }
+    const auto& major_piece_correction_entry(const Position& pos) const {
+        return correctionHistory[pos.major_piece_key() & sizeMinus1];
     }
 
     template<Color c>

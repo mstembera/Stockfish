@@ -487,6 +487,7 @@ void Position::set_state() const {
 
     st->key               = 0;
     st->minorPieceKey     = 0;
+    st->majorPieceKey     = 0;
     st->nonPawnKey[WHITE] = st->nonPawnKey[BLACK] = 0;
     st->pawnKey                                   = Zobrist::noPawns;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
@@ -514,6 +515,9 @@ void Position::set_state() const {
                 if (type_of(pc) <= BISHOP)
                     st->minorPieceKey ^= Zobrist::psq[pc][s];
             }
+
+            if (type_of(pc) == ROOK || type_of(pc) == QUEEN || type_of(pc) == KING)
+                st->majorPieceKey ^= Zobrist::psq[pc][s];
         }
     }
 
@@ -863,6 +867,7 @@ void Position::do_move(Move                      m,
         do_castling<true>(us, from, to, rfrom, rto, &dts, &dp);
 
         k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+        st->majorPieceKey ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         st->nonPawnKey[us] ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         captured = NO_PIECE;
     }
@@ -897,6 +902,9 @@ void Position::do_move(Move                      m,
 
             if (type_of(captured) <= BISHOP)
                 st->minorPieceKey ^= Zobrist::psq[captured][capsq];
+
+            if (type_of(captured) == ROOK || type_of(captured) == QUEEN)
+                st->majorPieceKey ^= Zobrist::psq[captured][capsq];
         }
 
         dp.remove_pc = captured;
@@ -977,6 +985,9 @@ void Position::do_move(Move                      m,
             if (pt <= BISHOP)
                 st->minorPieceKey ^= Zobrist::psq[promotion][to];
 
+            if (pt == ROOK || pt == QUEEN)
+                st->majorPieceKey ^= Zobrist::psq[promotion][to];
+
             // Update material
             st->nonPawnMaterial[us] += PieceValue[promotion];
         }
@@ -994,6 +1005,9 @@ void Position::do_move(Move                      m,
 
         if (type_of(pc) <= BISHOP)
             st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+
+        if (type_of(pc) == ROOK || type_of(pc) == QUEEN || type_of(pc) == KING)
+            st->majorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
     }
 
     if (tt)
@@ -1006,6 +1020,7 @@ void Position::do_move(Move                      m,
         prefetch(&history->pawn_entry(*this)[pc][to]);
         prefetch(&history->pawn_correction_entry(*this));
         prefetch(&history->minor_piece_correction_entry(*this));
+        prefetch(&history->major_piece_correction_entry(*this));
         prefetch(&history->nonpawn_correction_entry<WHITE>(*this));
         prefetch(&history->nonpawn_correction_entry<BLACK>(*this));
     }
