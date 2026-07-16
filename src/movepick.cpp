@@ -199,14 +199,58 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
     Color us = pos.side_to_move();
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
+    [[maybe_unused]] Bitboard offense[KING + 1] = {};
+    [[maybe_unused]] Bitboard wallPawns          = 0;
     if constexpr (Type == QUIETS)
     {
         threatByLesser[PAWN]   = 0;
         threatByLesser[KNIGHT] = threatByLesser[BISHOP] = pos.attacks_by<PAWN>(~us);
-        threatByLesser[ROOK] =
-          pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
-        threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
+        const Bitboard knightThreats = pos.attacks_by<KNIGHT>(~us);
+        const Bitboard bishopThreats = pos.attacks_by<BISHOP>(~us);
+        const Bitboard rookThreats   = pos.attacks_by<ROOK>(~us);
+        const Bitboard queenThreats  = pos.attacks_by<QUEEN>(~us);
+        const Bitboard kingThreats   = pos.attacks_by<KING>(~us);
+
+        threatByLesser[ROOK]  = knightThreats | bishopThreats | threatByLesser[KNIGHT];
+        threatByLesser[QUEEN] = rookThreats | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
+
+        const Bitboard nonPawnThreats =
+          knightThreats | bishopThreats | rookThreats | queenThreats | kingThreats;
+        const Bitboard threats    = threatByLesser[KNIGHT] | nonPawnThreats;
+        const Bitboard occupied   = pos.pieces();
+        const Bitboard enemyPieces = pos.pieces(~us);
+
+        offense[PAWN] = (us == WHITE ? pawn_attacks_bb<BLACK>(enemyPieces)
+                                     : pawn_attacks_bb<WHITE>(enemyPieces));
+        offense[PAWN] |= threatByLesser[KNIGHT]
+                       & (us == WHITE ? Rank5BB | Rank6BB : Rank3BB | Rank4BB)
+                       & ~nonPawnThreats;
+
+        Bitboard targets = (pos.pieces(~us, BISHOP) & ~threats) | pos.pieces(~us, ROOK, QUEEN);
+        while (targets)
+            offense[KNIGHT] |= Attacks::attacks_bb<KNIGHT>(pop_lsb(targets));
+
+        targets = pos.pieces(~us, ROOK);
+        while (targets)
+            offense[BISHOP] |= Attacks::attacks_bb<BISHOP>(pop_lsb(targets), occupied);
+
+        offense[ROOK] = file_bb(pos.square<KING>(~us));
+
+        targets = pos.pieces(~us, BISHOP) & ~threats;
+        while (targets)
+            offense[QUEEN] |= Attacks::attacks_bb<ROOK>(pop_lsb(targets), occupied);
+
+        targets = pos.pieces(~us, ROOK);
+        while (targets)
+            offense[QUEEN] |= Attacks::attacks_bb<BISHOP>(pop_lsb(targets), occupied);
+
+        for (PieceType pt = PAWN; pt <= QUEEN; ++pt)
+            offense[pt] &= ~threats;
+
+        const Square king = pos.square<KING>(us);
+        if (relative_rank(us, king) == RANK_1)
+            wallPawns = Attacks::attacks_bb<KING>(king) & pos.pieces(us, PAWN);
     }
 
     ExtMove* it = cur;
@@ -244,6 +288,8 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
             int v = 20 * (bool(threatByLesser[pt] & from) - bool(threatByLesser[pt] & to));
             m.value += PieceValue[pt] * v;
 
+            // bonus for safely attacking a vulnerable piece and penalty for moving a king shield pawn
+            m.value += 3584 * bool(offense[pt] & to) - 4608 * bool(wallPawns & from);
 
             if (ply < LOW_PLY_HISTORY_SIZE)
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
