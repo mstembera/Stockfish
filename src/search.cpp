@@ -1045,8 +1045,8 @@ Value Search::Worker::search(
     {
         assert(probCutBeta < VALUE_INFINITE && probCutBeta > beta);
 
-        MovePicker mp(pos, ttData.move, probCutBeta - ss->staticEval, &captureHistory);
-        Depth      probCutDepth = depth - (improving ? 5 : 3);
+        MovePicker  mp(pos, ttData.move, probCutBeta - ss->staticEval, &captureHistory);
+        const Depth probCutBaseDepth = std::max(depth - (improving ? 5 : 3), 0);
 
         while ((move = mp.next_move()) != Move::none())
         {
@@ -1062,10 +1062,28 @@ Value Search::Worker::search(
             // Perform a preliminary qsearch to verify that the move holds
             value = -qsearch<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1);
 
-            // If the qsearch held, perform the regular search
+            Depth probCutDepth = std::clamp(
+              probCutBaseDepth - (value - probCutBeta) / 320, 0, probCutBaseDepth);
+
+            // If the qsearch held, adapt the verification depth and window to its overshoot.
             if (value >= probCutBeta && probCutDepth > 0)
-                value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, probCutDepth,
-                                       !cutNode);
+            {
+                const Value adjustedBeta =
+                  std::min(probCutBeta + 192 * (probCutBaseDepth - probCutDepth), VALUE_INFINITE);
+
+                value = -search<NonPV>(pos, ss + 1, -adjustedBeta, -adjustedBeta + 1,
+                                       probCutDepth, !cutNode);
+
+                // Retry the original verification if the more selective adaptive search fails.
+                if (value < adjustedBeta && adjustedBeta > probCutBeta)
+                {
+                    probCutDepth = probCutBaseDepth;
+                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1,
+                                           probCutDepth, !cutNode);
+                }
+                else
+                    probCutBeta = adjustedBeta;
+            }
 
             undo_move(pos, move);
 
