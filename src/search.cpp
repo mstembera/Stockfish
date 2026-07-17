@@ -974,6 +974,17 @@ Value Search::Worker::search(
     if (!PvNode && eval < alpha - 483 - 318 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
+    // Reverse futility pruning while in check, using a compatible TT value
+    // because static evaluation is unavailable for checked positions.
+    if (ss->inCheck && !rootNode && depth <= 15 && is_valid(ttData.value)
+        && (ttData.bound & BOUND_LOWER) && !is_loss(beta) && !is_win(ttData.value))
+    {
+        const Value futilityMargin = -1 + 46 * depth + 526 * depth * depth / 100;
+
+        if (ttData.value - futilityMargin >= beta)
+            return std::min((ttData.value + beta) / 2, VALUE_TB_WIN_IN_MAX_PLY - 1);
+    }
+
     // Step 8. Futility pruning: child node
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 19 && eval >= beta && (!ttData.move || ttCapture) && !is_loss(beta)
