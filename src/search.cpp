@@ -292,7 +292,8 @@ bool Search::Worker::iterative_deepening() {
     {
         (ss - i)->continuationHistory =
           &continuationHistory[0][0][NO_PIECE][0];  // Use as a sentinel
-        (ss - i)->continuationCorrectionHistory = &continuationCorrectionHistory[NO_PIECE][0];
+        (ss - i)->continuationCorrectionHistory =
+          &continuationCorrectionHistory[NO_PIECE][0][0][0];
         (ss - i)->staticEval                    = VALUE_NONE;
     }
 
@@ -641,6 +642,16 @@ void Search::Worker::do_move(
     // exactly; for rare moves the prefetch lands on an unused line.
     prefetch(tt.first_entry(pos.prefetch_key(move)));
 
+    bool fromThreatened = false;
+    bool toThreatened   = false;
+    if (ss != nullptr)
+    {
+        const Bitboard occupied = pos.pieces();
+        const Color    them     = ~pos.side_to_move();
+        fromThreatened = pos.attackers_to_exist(move.from_sq(), occupied, them);
+        toThreatened   = pos.attackers_to_exist(move.to_sq(), occupied, them);
+    }
+
     bool capture = pos.capture_stage(move);
     ++nodes;
 
@@ -653,7 +664,7 @@ void Search::Worker::do_move(
         ss->continuationHistory =
           &continuationHistory[ss->inCheck][capture][dirtyPiece.pc][move.to_sq()];
         ss->continuationCorrectionHistory =
-          &continuationCorrectionHistory[dirtyPiece.pc][move.to_sq()];
+          &continuationCorrectionHistory[dirtyPiece.pc][move.to_sq()][fromThreatened][toThreatened];
     }
 }
 
@@ -661,7 +672,7 @@ void Search::Worker::do_null_move(Position& pos, StateInfo& st, Stack* const ss)
     pos.do_null_move(st);
     ss->currentMove                   = Move::null();
     ss->continuationHistory           = &continuationHistory[0][0][NO_PIECE][0];
-    ss->continuationCorrectionHistory = &continuationCorrectionHistory[NO_PIECE][0];
+    ss->continuationCorrectionHistory = &continuationCorrectionHistory[NO_PIECE][0][0][0];
 }
 
 void Search::Worker::undo_move(Position& pos, const Move move) {
@@ -683,9 +694,11 @@ void Search::Worker::clear() {
 
     ttMoveHistory = 0;
 
-    for (auto& to : continuationCorrectionHistory)
-        for (auto& h : to)
-            h.fill(5);
+    for (auto& pc : continuationCorrectionHistory)
+        for (auto& to : pc)
+            for (auto& fromThreatened : to)
+                for (auto& h : fromThreatened)
+                    h.fill(5);
 
     for (bool inCheck : {false, true})
         for (StatsType c : {NoCaptures, Captures})

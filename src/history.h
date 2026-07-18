@@ -181,7 +181,7 @@ struct CorrHistTypedef<PieceTo> {
 
 template<>
 struct CorrHistTypedef<Continuation> {
-    using type = MultiArray<CorrHistTypedef<PieceTo>::type, PIECE_NB, SQUARE_NB>;
+    using type = MultiArray<CorrHistTypedef<PieceTo>::type, PIECE_NB, SQUARE_NB, 2, 2>;
 };
 
 }
