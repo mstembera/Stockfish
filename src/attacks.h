@@ -135,7 +135,9 @@ struct alignas(32) DualMagic {
     }
 };
 
-const DualMagic& dual_magic(Square s);
+extern DualMagic DualMagics[SQUARE_NB];
+
+inline const DualMagic& dual_magic(Square s) { return DualMagics[s]; }
 
 #else
 // Magic holds all magic bitboards relevant data for a single square
@@ -164,9 +166,24 @@ const Magic& magic(Square s, PieceType pt);
 
 #endif
 
-Bitboard line_bb(Square s1, Square s2);
-Bitboard between_bb(Square s1, Square s2);
-Bitboard ray_pass_bb(Square s1, Square s2);
+extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard RayPassBB[SQUARE_NB][SQUARE_NB];
+
+inline Bitboard line_bb(Square s1, Square s2) {
+    assert(is_ok(s1) && is_ok(s2));
+    return LineBB[s1][s2];
+}
+
+inline Bitboard between_bb(Square s1, Square s2) {
+    assert(is_ok(s1) && is_ok(s2));
+    return BetweenBB[s1][s2];
+}
+
+inline Bitboard ray_pass_bb(Square s1, Square s2) {
+    assert(is_ok(s1) && is_ok(s2));
+    return RayPassBB[s1][s2];
+}
 
 // Returns the bitboard of target square for the given step
 // from the given square. If the step is off the board, returns empty bitboard.
@@ -301,6 +318,14 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
     default :
         return PseudoAttacks[Pt][s];
     }
+#endif
+}
+
+inline std::pair<Bitboard, Bitboard> both_attacks_bb(Square s, Bitboard occupied) {
+#ifdef USE_DUAL_HYPERBOLA_QUINT
+    return dual_magic(s).both_attacks_bb(occupied);
+#else
+    return {attacks_bb<BISHOP>(s, occupied), attacks_bb<ROOK>(s, occupied)};
 #endif
 }
 
