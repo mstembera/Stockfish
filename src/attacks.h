@@ -92,9 +92,15 @@ const Magic& magic(Square s, PieceType pt);
 
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
-struct alignas(32) DualMagic {
+struct alignas(64) DualMagic {
     // file, diagonal, rank (GFNI) or unused, antidiagonal
     Bitboard maskFile, maskDiag, maskRank, maskAntidiag;
+    #ifdef USE_GFNI
+    // Bit-reversed copies of the masks above. Since bit reversal is a bit
+    // permutation, rev64(mask & occ) == rev64(mask) & rev64(occ), so storing
+    // reversed masks lets us reverse the occupancy once, off the critical path.
+    Bitboard maskFileRev, maskDiagRev, maskRankRev, maskAntidiagRev;
+    #endif
     // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
     Bitboard r, rr;
 
@@ -128,9 +134,25 @@ struct alignas(32) DualMagic {
             return _mm256_gf2p8affine_epi64_epi8(
               bswap(v), _mm256_set1_epi64x(0x8040201008040201), 0);
         };
+
+        // Each lane contains a mask and we follow the same HQ algorithm as
+        // given above in the ARM64 code path. The occupancy is reversed once,
+        // in parallel with the masking, and combined with pre-reversed masks;
+        // this removes one rev64 from the dependency chain.
+        const __m256i mask = _mm256_load_si256(reinterpret_cast<const __m256i*>(this));
+        const __m256i maskRev =
+          _mm256_load_si256(reinterpret_cast<const __m256i*>(&maskFileRev));
+        const __m256i rs   = _mm256_set1_epi64x(r);
+        const __m256i rrs  = _mm256_set1_epi64x(rr);
+        const __m256i occ4 = _mm256_set1_epi64x(occupied);
+
+        __m256i o      = _mm256_and_si256(mask, occ4);
+        __m256i oRev   = _mm256_and_si256(maskRev, rev64(occ4));
+        __m256i fwd    = _mm256_sub_epi64(o, rs);
+        __m256i rev    = rev64(_mm256_sub_epi64(oRev, rrs));
+        __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
     #else
         const auto rev64 = bswap;
-    #endif
 
         // Each lane contains a mask and we follow the same HQ algorithm as
         // given above in the ARM64 code path
@@ -142,6 +164,7 @@ struct alignas(32) DualMagic {
         __m256i fwd    = _mm256_sub_epi64(o, rs);
         __m256i rev    = rev64(_mm256_sub_epi64(rev64(o), rrs));
         __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
+    #endif
 
         // Lanes 0+2: rook attacks; lanes 1+3: bishop attacks
         __m128i rookBishop =

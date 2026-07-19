@@ -83,6 +83,16 @@ constexpr auto RankAttacks = []() {
     #endif
 
 static void init_dual_magics(DualMagic magics[]) {
+    #ifdef USE_GFNI
+    // Scalar 64-bit bit reversal, only used at init time
+    const auto rev64 = [](Bitboard bb) {
+        Bitboard out = 0;
+        for (int i = 0; i < 64; ++i)
+            out |= ((bb >> i) & 1) << (63 - i);
+        return out;
+    };
+    #endif
+
     for (Square s = SQ_A1; s <= SQ_H8; ++s)
     {
         DualMagic& m   = magics[s];
@@ -93,6 +103,14 @@ static void init_dual_magics(DualMagic magics[]) {
         m.rr           = square_bb(Square(63 - int(s))) * 2;
     #ifdef USE_GFNI
         m.maskRank = line_mask(s, EAST, WEST);
+        // The SIMD rev64 byteswaps across full 128-bit halves, which also
+        // swaps adjacent 64-bit lanes (0<->1, 2<->3). It is applied an odd
+        // number of times to the mask data path, so store the reversed masks
+        // with lanes pre-swapped to compensate.
+        m.maskFileRev     = rev64(m.maskDiag);
+        m.maskDiagRev     = rev64(m.maskFile);
+        m.maskRankRev     = rev64(m.maskAntidiag);
+        m.maskAntidiagRev = rev64(m.maskRank);
     #else
         m.maskRank          = 0;
         m.rankAttacksLookup = RankAttacks[int(file_of(s))].data();
