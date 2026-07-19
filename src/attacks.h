@@ -89,22 +89,26 @@ const Magic& magic(Square s, PieceType pt);
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
 struct alignas(32) DualMagic {
-    // file, diagonal, unused, antidiagonal
-    Bitboard maskFile, maskDiag, maskNone, maskAntidiag;
+    // file, diagonal, rank (AVX512ICL) or unused, antidiagonal
+    Bitboard maskFile, maskDiag, maskRank, maskAntidiag;
     // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
     Bitboard r, rr;
 
+    #ifndef USE_AVX512ICL
     const u8* RESTRICT rankAttacksLookup;
     // 8 * rank_of(sq)
     int shift;
+    #endif
 
     // We always compute [bishop, rook] attacks at once, then rely on
     // compiler's DCE and CSE to eliminate unneeded re-computations or extractions.
     //
     // When using hyperbola quintessence, file, diagonal and antidiagonal attacks
     // can use a byte reversal rather than a full bit reversal (because all squares
-    // reside in different bytes). Rank attacks cannot. Thus, for rank attacks
-    // only, we use a compact lookup table indexed by the 8 bits of the rank's occupancy.
+    // reside in different bytes). Rank attacks cannot. With GFNI (AVX512ICL) we
+    // can reverse bits within bytes too, so rank attacks are computed in the
+    // otherwise unused third lane. Without GFNI, we instead use a compact lookup
+    // table indexed by the 8 bits of the rank's occupancy.
     std::pair<Bitboard, Bitboard> both_attacks_bb(Bitboard occupied) const {
         // Byteswap within 128-bit elements
         const auto bswap = [](__m256i v) {
@@ -112,6 +116,17 @@ struct alignas(32) DualMagic {
                                                           13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                                                           10, 11, 12, 13, 14, 15));
         };
+
+    #ifdef USE_AVX512ICL
+        // Full 64-bit bit reversal: byteswap, then reverse bits within each byte
+        // using a GF(2) affine transform with the anti-diagonal matrix
+        const auto rev64 = [&](__m256i v) {
+            return _mm256_gf2p8affine_epi64_epi8(
+              bswap(v), _mm256_set1_epi64x(0x8040201008040201), 0);
+        };
+    #else
+        const auto rev64 = bswap;
+    #endif
 
         // Each lane contains a mask and we follow the same HQ algorithm as
         // given above in the ARM64 code path
@@ -121,18 +136,23 @@ struct alignas(32) DualMagic {
 
         __m256i o      = _mm256_and_si256(mask, _mm256_set1_epi64x(occupied));
         __m256i fwd    = _mm256_sub_epi64(o, rs);
-        __m256i rev    = bswap(_mm256_sub_epi64(bswap(o), rrs));
+        __m256i rev    = rev64(_mm256_sub_epi64(rev64(o), rrs));
         __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
 
-        // Lane 0: rook attacks (file only); lane 1: bishop attacks
+        // Lanes 0+2: rook attacks; lanes 1+3: bishop attacks
         __m128i rookBishop =
           _mm_or_si128(_mm256_extracti128_si256(result, 1), _mm256_castsi256_si128(result));
 
+    #ifdef USE_AVX512ICL
+        // [bishop, rook] - rank attacks were computed in the third lane
+        return {_mm_extract_epi64(rookBishop, 1), _mm_cvtsi128_si64(rookBishop)};
+    #else
         Bitboard rowOccupancy = rankAttacksLookup[(occupied >> shift) & 0xff];
         Bitboard rankAttacks  = rowOccupancy << shift;
 
         // [bishop, rook]
         return {_mm_extract_epi64(rookBishop, 1), _mm_cvtsi128_si64(rookBishop) + rankAttacks};
+    #endif
     }
 };
 
