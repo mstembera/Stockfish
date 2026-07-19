@@ -792,7 +792,7 @@ endif
 ifeq ($(avxvnni),yes)
 	CXXFLAGS += -DUSE_VNNI -DUSE_AVXVNNI
 	ifeq ($(comp),$(filter $(comp),gcc clang mingw icx))
-		CXXFLAGS += -mavxvnni
+		CXXFLAGS += -mavxvnni -mgfni
 	endif
 endif
 

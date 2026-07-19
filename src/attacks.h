@@ -35,6 +35,10 @@
 #elif defined(USE_AVX2)
     #include <immintrin.h>
     #define USE_DUAL_HYPERBOLA_QUINT
+    // All CPUs covered by these targets also support GFNI
+    #if defined(USE_AVX512ICL) || defined(USE_AVXVNNI)
+        #define USE_GFNI
+    #endif
 #endif
 
 namespace Stockfish::Attacks {
@@ -89,12 +93,12 @@ const Magic& magic(Square s, PieceType pt);
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
 struct alignas(32) DualMagic {
-    // file, diagonal, rank (AVX512ICL) or unused, antidiagonal
+    // file, diagonal, rank (GFNI) or unused, antidiagonal
     Bitboard maskFile, maskDiag, maskRank, maskAntidiag;
     // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
     Bitboard r, rr;
 
-    #ifndef USE_AVX512ICL
+    #ifndef USE_GFNI
     const u8* RESTRICT rankAttacksLookup;
     // 8 * rank_of(sq)
     int shift;
@@ -105,10 +109,10 @@ struct alignas(32) DualMagic {
     //
     // When using hyperbola quintessence, file, diagonal and antidiagonal attacks
     // can use a byte reversal rather than a full bit reversal (because all squares
-    // reside in different bytes). Rank attacks cannot. With GFNI (AVX512ICL) we
-    // can reverse bits within bytes too, so rank attacks are computed in the
-    // otherwise unused third lane. Without GFNI, we instead use a compact lookup
-    // table indexed by the 8 bits of the rank's occupancy.
+    // reside in different bytes). Rank attacks cannot. With GFNI we can reverse
+    // bits within bytes too, so rank attacks are computed in the otherwise unused
+    // third lane. Without GFNI, we instead use a compact lookup table indexed by
+    // the 8 bits of the rank's occupancy.
     std::pair<Bitboard, Bitboard> both_attacks_bb(Bitboard occupied) const {
         // Byteswap within 128-bit elements
         const auto bswap = [](__m256i v) {
@@ -117,7 +121,7 @@ struct alignas(32) DualMagic {
                                                           10, 11, 12, 13, 14, 15));
         };
 
-    #ifdef USE_AVX512ICL
+    #ifdef USE_GFNI
         // Full 64-bit bit reversal: byteswap, then reverse bits within each byte
         // using a GF(2) affine transform with the anti-diagonal matrix
         const auto rev64 = [&](__m256i v) {
@@ -143,7 +147,7 @@ struct alignas(32) DualMagic {
         __m128i rookBishop =
           _mm_or_si128(_mm256_extracti128_si256(result, 1), _mm256_castsi256_si128(result));
 
-    #ifdef USE_AVX512ICL
+    #ifdef USE_GFNI
         // [bishop, rook] - rank attacks were computed in the third lane
         return {_mm_extract_epi64(rookBishop, 1), _mm_cvtsi128_si64(rookBishop)};
     #else

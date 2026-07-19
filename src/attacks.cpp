@@ -70,7 +70,7 @@ static void init_magics(Magic magics[][2]) {
 
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
-    #ifndef USE_AVX512ICL
+    #ifndef USE_GFNI
 // Sliding attacks within a rank, indexed by the slider's file and the
 // 8-bit rank occupancy, yielding the 8-bit attack set on that rank
 constexpr auto RankAttacks = []() {
@@ -91,7 +91,7 @@ static void init_dual_magics(DualMagic magics[]) {
         m.maskAntidiag = line_mask(s, NORTH_WEST, SOUTH_EAST);
         m.r            = square_bb(s) * 2;
         m.rr           = square_bb(Square(63 - int(s))) * 2;
-    #ifdef USE_AVX512ICL
+    #ifdef USE_GFNI
         m.maskRank = line_mask(s, EAST, WEST);
     #else
         m.maskRank          = 0;
