@@ -652,12 +652,15 @@ Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
 
 bool Position::attackers_to_exist(Square s, Bitboard occupied, Color c) const {
 
+    if (!(attacks_bb<AMAZON>(s) & pieces(c)))
+        return false;
+
     const auto [bishopAttacks, rookAttacks] = both_attacks_bb(s, occupied);
 
-    return (rookAttacks & pieces(c, ROOK, QUEEN))
-        || (bishopAttacks & pieces(c, BISHOP, QUEEN))
+    return ((rookAttacks & pieces(c, ROOK, QUEEN)) | (bishopAttacks & pieces(c, BISHOP, QUEEN)))
         || (attacks_bb<PAWN>(s, ~c) & pieces(c, PAWN))
-        || (attacks_bb<KNIGHT>(s) & pieces(c, KNIGHT)) || (attacks_bb<KING>(s) & pieces(c, KING));
+        || (attacks_bb<KNIGHT>(s) & pieces(c, KNIGHT))
+        || (attacks_bb<KING>(s) & pieces(c, KING));
 }
 
 // Tests whether a pseudo-legal move is legal

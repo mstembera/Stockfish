@@ -256,10 +256,11 @@ inline constexpr auto PseudoAttacks = []() constexpr {
         attacks[WHITE][s1] = pawn_attacks_bb<WHITE>(square_bb(s1));
         attacks[BLACK][s1] = pawn_attacks_bb<BLACK>(square_bb(s1));
 
-        attacks[KING][s1]   = pseudo_attacks(KING, s1);
         attacks[KNIGHT][s1] = pseudo_attacks(KNIGHT, s1);
-        attacks[QUEEN][s1] = attacks[BISHOP][s1] = pseudo_attacks(BISHOP, s1);
-        attacks[QUEEN][s1] |= attacks[ROOK][s1]  = pseudo_attacks(ROOK, s1);
+        attacks[QUEEN][s1]  = attacks[BISHOP][s1] = pseudo_attacks(BISHOP, s1);
+        attacks[QUEEN][s1] |= attacks[ROOK][s1]   = pseudo_attacks(ROOK, s1);
+        attacks[KING][s1]                         = pseudo_attacks(KING, s1);
+        attacks[AMAZON][s1] = attacks[KNIGHT][s1] | attacks[QUEEN][s1];
     }
 
     return attacks;

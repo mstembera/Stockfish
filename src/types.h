@@ -205,7 +205,7 @@ constexpr Value QueenValue  = 2538;
 
 // clang-format off
 enum PieceType : u8 {
-    NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
+    NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, AMAZON,
     ALL_PIECES = 0,
     PIECE_TYPE_NB = 8
 };
