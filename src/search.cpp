@@ -749,6 +749,7 @@ Value Search::Worker::search(
     ss->inCheck   = pos.checkers();
     priorCapture  = pos.captured_piece();
     Color us      = pos.side_to_move();
+    ss->threats   = pos.attacks_by(~us);
     ss->moveCount = 0;
     bestValue     = -VALUE_INFINITE;
     maxValue      = VALUE_INFINITE;
@@ -1046,7 +1047,8 @@ Value Search::Worker::search(
     {
         assert(probCutBeta < VALUE_INFINITE && probCutBeta > beta);
 
-        MovePicker mp(pos, ttData.move, probCutBeta - ss->staticEval, &captureHistory);
+        MovePicker mp(pos, ttData.move, probCutBeta - ss->staticEval, &captureHistory,
+                      ss->threats);
         Depth      probCutDepth = depth - (improving ? 5 : 3);
 
         while ((move = mp.next_move()) != Move::none())
@@ -1096,7 +1098,7 @@ moves_loop:  // When in check, search starts here
 
 
     MovePicker mp(pos, ttData.move, depth, &mainHistory, &lowPlyHistory, &captureHistory, contHist,
-                  &sharedHistory, ss->ply);
+                  &sharedHistory, ss->threats, ss->ply);
 
     value = bestValue;
 
@@ -1162,7 +1164,9 @@ moves_loop:  // When in check, search starts here
             if (capture || givesCheck)
             {
                 Piece capturedPiece = pos.piece_on(move.to_sq());
-                int   captHist = captureHistory[movedPiece][move.to_sq()][type_of(capturedPiece)];
+                int   captHist      = captureHistory[movedPiece][move.to_sq()]
+                                                    [type_of(capturedPiece)]
+                                                    [bool(ss->threats & move.to_sq())];
 
                 // Futility pruning for captures
                 if (!givesCheck && lmrDepth < 8)
@@ -1318,7 +1322,9 @@ moves_loop:  // When in check, search starts here
 
         if (capture)
             ss->statScore = 873 * int(PieceValue[pos.captured_piece()]) / 128
-                          + captureHistory[movedPiece][move.to_sq()][type_of(pos.captured_piece())];
+                          + captureHistory[movedPiece][move.to_sq()]
+                                          [type_of(pos.captured_piece())]
+                                          [bool(ss->threats & move.to_sq())];
         else
             ss->statScore =
               (2252 * mainHistory[us][move.raw()] + 1126 * (*contHist[0])[movedPiece][move.to_sq()]
@@ -1574,7 +1580,9 @@ moves_loop:  // When in check, search starts here
     {
         Piece capturedPiece = pos.captured_piece();
         assert(capturedPiece != NO_PIECE);
-        captureHistory[pos.piece_on(prevSq)][prevSq][type_of(capturedPiece)] << 892;
+        captureHistory[pos.piece_on(prevSq)][prevSq][type_of(capturedPiece)]
+                      [bool((ss - 1)->threats & prevSq)]
+          << 892;
     }
 
     if (PvNode)
@@ -1653,6 +1661,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
 
     bestMove    = Move::none();
     ss->inCheck = pos.checkers();
+    ss->threats = pos.attacks_by(~pos.side_to_move());
     moveCount   = 0;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
@@ -1737,7 +1746,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     // the moves. We presently use two stages of move generator in quiescence search:
     // captures, or evasions only when in check.
     MovePicker mp(pos, ttData.move, DEPTH_QS, &mainHistory, &lowPlyHistory, &captureHistory,
-                  contHist, &sharedHistory, ss->ply);
+                  contHist, &sharedHistory, ss->threats, ss->ply);
 
     // Step 5. Loop through all pseudo-legal moves until no moves remain or a beta
     // cutoff occurs.
@@ -1960,7 +1969,9 @@ void update_all_stats(const Position& pos,
     {
         // Increase stats for the best move in case it was a capture move
         capturedPiece = type_of(pos.piece_on(bestMove.to_sq()));
-        captureHistory[movedPiece][bestMove.to_sq()][capturedPiece] << bonus * 1427 / 1024;
+        captureHistory[movedPiece][bestMove.to_sq()][capturedPiece]
+                      [bool(ss->threats & bestMove.to_sq())]
+          << bonus * 1427 / 1024;
     }
 
     // Extra penalty for a quiet early move that was not a TT move in
@@ -1973,7 +1984,9 @@ void update_all_stats(const Position& pos,
     {
         movedPiece    = pos.moved_piece(move);
         capturedPiece = type_of(pos.piece_on(move.to_sq()));
-        captureHistory[movedPiece][move.to_sq()][capturedPiece] << -malus * 1489 / 1024;
+        captureHistory[movedPiece][move.to_sq()][capturedPiece]
+                      [bool(ss->threats & move.to_sq())]
+          << -malus * 1489 / 1024;
     }
 }
 

@@ -132,6 +132,7 @@ class Position {
     void     update_slider_blockers(Color c) const;
     template<PieceType Pt>
     Bitboard attacks_by(Color c) const;
+    Bitboard attacks_by(Color c) const;
 
     // Properties of moves
     bool  legal(Move m) const;
@@ -306,6 +307,11 @@ inline Bitboard Position::attacks_by(Color c) const {
             threats |= Attacks::attacks_bb<Pt>(pop_lsb(attackers), pieces());
         return threats;
     }
+}
+
+inline Bitboard Position::attacks_by(Color c) const {
+    return attacks_by<PAWN>(c) | attacks_by<KNIGHT>(c) | attacks_by<BISHOP>(c)
+         | attacks_by<ROOK>(c) | attacks_by<QUEEN>(c) | attacks_by<KING>(c);
 }
 
 inline Bitboard Position::checkers() const { return st->checkersBB; }

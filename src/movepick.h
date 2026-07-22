@@ -46,8 +46,9 @@ class MovePicker {
                const CapturePieceToHistory*,
                const PieceToHistory**,
                const SharedHistories*,
+               Bitboard,
                int);
-    MovePicker(const Position&, Move, int, const CapturePieceToHistory*);
+    MovePicker(const Position&, Move, int, const CapturePieceToHistory*, Bitboard);
     Move next_move();
     void skip_quiet_moves();
 
@@ -67,6 +68,7 @@ class MovePicker {
     ExtMove *                    cur, *endCur, *endBadCaptures, *endCaptures, *endGenerated;
     int                          stage;
     int                          threshold;
+    Bitboard                     threats = 0;
     Depth                        depth;
     int                          ply;
     bool                         skipQuiets = false;
