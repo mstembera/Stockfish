@@ -972,7 +972,10 @@ Value Search::Worker::search(
     // Step 7. Razoring
     // If eval is really low, skip search entirely and return the qsearch value.
     // For PvNodes, we must have a guard against mates being returned.
-    if (!PvNode && eval < alpha - 483 - 318 * depth * depth)
+    // Additional guards: don't razor when alpha is already very high, when a
+    // quiet TT move exists, or when the TT entry is a lower bound
+    if (!PvNode && eval < alpha - 483 - 318 * depth * depth && alpha < 2048
+        && !(ttData.move && !ttCapture) && !(ttData.bound & BOUND_LOWER))
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 8. Futility pruning: child node
