@@ -108,6 +108,7 @@ struct Stack {
     int                         ply;
     Move                        currentMove;
     Move                        excludedMove;
+    Bitboard                    threats;
     Value                       staticEval;
     int                         statScore;
     int                         moveCount;
