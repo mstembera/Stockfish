@@ -325,8 +325,9 @@ bool Search::Worker::iterative_deepening() {
     lowPlyHistory.fill(102);
 
     for (Color c : {WHITE, BLACK})
-        for (int i = 0; i < UINT_16_HISTORY_SIZE; i++)
-            mainHistory[c][i] = mainHistory[c][i] * 729 / 1024;
+        for (int toTh = 0; toTh < 2; toTh++)
+            for (int i = 0; i < UINT_16_HISTORY_SIZE; i++)
+                mainHistory[c][toTh][i] = mainHistory[c][toTh][i] * 729 / 1024;
 
     // Iterative deepening loop until requested to stop or the target depth is reached
     while (rootDepth + 1 < MAX_PLY && !threads.stop
@@ -749,6 +750,7 @@ Value Search::Worker::search(
     ss->inCheck   = pos.checkers();
     priorCapture  = pos.captured_piece();
     Color us      = pos.side_to_move();
+    ss->threats   = pos.attacks_by(~us);
     ss->moveCount = 0;
     bestValue     = -VALUE_INFINITE;
     maxValue      = VALUE_INFINITE;
@@ -962,7 +964,8 @@ Value Search::Worker::search(
     if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
     {
         int evalDiff = std::clamp(-int((ss - 1)->staticEval + ss->staticEval), -189, 194) + 60;
-        mainHistory[~us][((ss - 1)->currentMove).raw()] << evalDiff * 11;
+        mainHistory[~us][bool((ss - 1)->threats & prevSq)][((ss - 1)->currentMove).raw()]
+          << evalDiff * 11;
         if (!ttHit && type_of(pos.piece_on(prevSq)) != PAWN
             && ((ss - 1)->currentMove).type_of() != PROMOTION)
             sharedHistory.pawn_entry(pos)[pos.piece_on(prevSq)][prevSq] << evalDiff * 13;
@@ -1096,7 +1099,7 @@ moves_loop:  // When in check, search starts here
 
 
     MovePicker mp(pos, ttData.move, depth, &mainHistory, &lowPlyHistory, &captureHistory, contHist,
-                  &sharedHistory, ss->ply);
+                  &sharedHistory, ss->threats, ss->ply);
 
     value = bestValue;
 
@@ -1192,7 +1195,8 @@ moves_loop:  // When in check, search starts here
                 if (history < -4136 * depth)
                     continue;
 
-                history += 69 * mainHistory[us][move.raw()] / 32;
+                history +=
+                  69 * mainHistory[us][bool(ss->threats & move.to_sq())][move.raw()] / 32;
 
                 // (*Scaler): Generally, lower divisors scale well
                 lmrDepth += history / lmrDivisor[dIndex];
@@ -1320,10 +1324,10 @@ moves_loop:  // When in check, search starts here
             ss->statScore = 873 * int(PieceValue[pos.captured_piece()]) / 128
                           + captureHistory[movedPiece][move.to_sq()][type_of(pos.captured_piece())];
         else
-            ss->statScore =
-              (2252 * mainHistory[us][move.raw()] + 1126 * (*contHist[0])[movedPiece][move.to_sq()]
-               + 1093 * (*contHist[1])[movedPiece][move.to_sq()])
-              / 1024;
+            ss->statScore = (2252 * mainHistory[us][bool(ss->threats & move.to_sq())][move.raw()]
+                             + 1126 * (*contHist[0])[movedPiece][move.to_sq()]
+                             + 1093 * (*contHist[1])[movedPiece][move.to_sq()])
+                          / 1024;
 
         // Decrease/increase reduction for moves with a good/bad history
         r -= ss->statScore * 439 / 4096;
@@ -1563,7 +1567,8 @@ moves_loop:  // When in check, search starts here
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                       scaledBonus * 263 / 16384);
 
-        mainHistory[~us][((ss - 1)->currentMove).raw()] << scaledBonus * 215 / 32768;
+        mainHistory[~us][bool((ss - 1)->threats & prevSq)][((ss - 1)->currentMove).raw()]
+          << scaledBonus * 215 / 32768;
 
         if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
             sharedHistory.pawn_entry(pos)[pos.piece_on(prevSq)][prevSq] << scaledBonus * 324 / 8192;
@@ -1653,6 +1658,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
 
     bestMove    = Move::none();
     ss->inCheck = pos.checkers();
+    ss->threats = pos.attacks_by(~pos.side_to_move());
     moveCount   = 0;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
@@ -1737,7 +1743,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
     // the moves. We presently use two stages of move generator in quiescence search:
     // captures, or evasions only when in check.
     MovePicker mp(pos, ttData.move, DEPTH_QS, &mainHistory, &lowPlyHistory, &captureHistory,
-                  contHist, &sharedHistory, ss->ply);
+                  contHist, &sharedHistory, ss->threats, ss->ply);
 
     // Step 5. Loop through all pseudo-legal moves until no moves remain or a beta
     // cutoff occurs.
@@ -2012,7 +2018,8 @@ void update_quiet_histories(
   const Position& pos, Stack* ss, Search::Worker& workerThread, Move move, int bonus) {
 
     Color us = pos.side_to_move();
-    workerThread.mainHistory[us][move.raw()] << bonus;  // Untuned to prevent duplicate effort
+    workerThread.mainHistory[us][bool(ss->threats & move.to_sq())][move.raw()]
+      << bonus;  // Untuned to prevent duplicate effort
 
     if (ss->ply < LOW_PLY_HISTORY_SIZE)
         workerThread.lowPlyHistory[ss->ply][move.raw()] << bonus * 712 / 1024;
