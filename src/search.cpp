@@ -999,30 +999,46 @@ Value Search::Worker::search(
 
         // Null move dynamic reduction based on depth
         Depth R = 7 + depth / 3;
+
+        // When the TT entry is a lower bound below beta with sufficient depth,
+        // search the null move against ttValue instead of beta
+        Value nullBound = is_valid(ttData.value) && beta > ttData.value
+                              && (ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 2
+                            ? ttData.value
+                            : beta;
+
         do_null_move(pos, st, ss);
 
-        Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, false);
+        Value nullValue =
+          -search<NonPV>(pos, ss + 1, -nullBound, -nullBound + 1, depth - R, false);
 
         undo_null_move(pos);
 
         // Do not return unproven mate or TB scores
-        if (nullValue >= beta && !is_win(nullValue))
+        if (nullValue >= nullBound && !is_win(nullValue))
         {
-            if (nmpMinPly || depth < 16)
+            if ((nmpMinPly || depth < 16) && nullValue >= beta)
                 return nullValue;
 
-            assert(!nmpMinPly);  // Recursive verification is not allowed
+            if (!nmpMinPly)
+            {
+                assert(!nmpMinPly);  // Recursive verification is not allowed
 
-            // Do verification search at high depths, with null move pruning disabled
-            // until ply exceeds nmpMinPly.
-            nmpMinPly = ss->ply + 3 * (depth - R) / 4;
+                // Do verification search at high depths, with null move pruning disabled
+                // until ply exceeds nmpMinPly.
+                // Verify at half depth when the null search only beat ttValue
+                Depth verificationDepth =
+                  nullValue < beta ? std::max(depth / 2, 1) : depth - R;
 
-            Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, false);
+                nmpMinPly = ss->ply + 3 * verificationDepth / 4;
 
-            nmpMinPly = 0;
+                Value v = search<NonPV>(pos, ss, beta - 1, beta, verificationDepth, false);
 
-            if (v >= beta)
-                return nullValue;
+                nmpMinPly = 0;
+
+                if (v >= beta)
+                    return nullValue;
+            }
         }
     }
 
