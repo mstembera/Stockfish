@@ -1266,6 +1266,11 @@ moves_loop:  // When in check, search starts here
                 return value;
             }
 
+            // The exclusion search found a score above ttValue, so the ttMove is
+            // provably not the best move; stop trusting it for this node
+            else if (value > ttData.value)
+                ttData.move = Move::none();
+
             // Negative extensions
             // If other moves failed high over (ttValue - margin) without the
             // ttMove on a reduced search, but we cannot do multi-cut because
