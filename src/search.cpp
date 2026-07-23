@@ -1283,6 +1283,11 @@ moves_loop:  // When in check, search starts here
                 extension = -2;
         }
 
+        // Low Depth Singular Extension: at shallow cut nodes where the eval is
+        // clearly below alpha, extend without a singular search
+        else if (!rootNode && depth <= 7 && !ss->inCheck && cutNode && eval <= alpha - 25)
+            extension = 1;
+
         u64 nodeCount = rootNode ? u64(nodes) : 0;
 
         // Step 16. Make the move
