@@ -992,8 +992,12 @@ Value Search::Worker::search(
     }
 
     // Step 9. Null move search with verification search
+    // Skip null move pruning when the TT move is a lower-bound capture of a
+    // knight or better, as it likely refutes the null move anyway
     if (cutNode && ss->staticEval >= beta - 13 * depth - 47 * improving + 365 && !excludedMove
-        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && !is_loss(beta))
+        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && !is_loss(beta)
+        && !((ttData.bound & BOUND_LOWER) && ttCapture
+             && PieceValue[pos.piece_on(ttData.move.to_sq())] >= KnightValue))
     {
         assert((ss - 1)->currentMove != Move::null());
 
