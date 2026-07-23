@@ -1948,12 +1948,15 @@ void update_all_stats(const Position& pos,
     {
         update_quiet_histories(pos, ss, workerThread, bestMove, bonus * 899 / 1024);
 
-        int actualMalus = malus * 1159 / 1024;
         // Decrease stats for all non-best quiet moves
+        // Index-decayed maluses: later-tried quiets receive reciprocal-quadratically
+        // smaller penalties instead of geometric decay
+        int idx = 0;
         for (Move move : quietsSearched)
         {
-            actualMalus = actualMalus * 921 / 1024;
-            update_quiet_histories(pos, ss, workerThread, move, -actualMalus);
+            int denom = 1024 + 45 * idx++;
+            int scale = 1024 * 1024 / (denom * denom / 1024);
+            update_quiet_histories(pos, ss, workerThread, move, -malus * 1159 / 1024 * scale / 1024);
         }
     }
     else
