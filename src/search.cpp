@@ -1153,7 +1153,12 @@ moves_loop:  // When in check, search starts here
         if (!rootNode && pos.non_pawn_material(us) && !is_loss(bestValue))
         {
             // Skip quiet moves if movecount exceeds our threshold
-            if (moveCount >= (3 + depth * depth) / (2 - improving))
+            // Good history for this quiet move delays late-move pruning
+            int lmpHistory = !capture ? mainHistory[us][move.raw()]
+                                          + (*contHist[0])[movedPiece][move.to_sq()]
+                                          + (*contHist[1])[movedPiece][move.to_sq()]
+                                      : 0;
+            if (moveCount >= (3 + depth * depth) / (2 - improving) + lmpHistory / 7000)
                 mp.skip_quiet_moves();
 
             // Reduced depth of the next LMR search
