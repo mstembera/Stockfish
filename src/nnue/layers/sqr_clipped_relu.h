@@ -86,6 +86,17 @@ class SqrClippedReLU {
 
         const __m512i zero = _mm512_setzero_si512();
 
+    #if defined(USE_AVX512ICL)
+        // Byte order that undoes the per-128-bit-lane interleave of _mm512_packs_epi16,
+        // placing the squared activations in the lower half and the clipped ones above.
+        alignas(64) static constexpr u8 PackOrder[64] = {
+          0,  1,  2,  3,  4,  5,  6,  7,  16, 17, 18, 19, 20, 21, 22, 23,
+          32, 33, 34, 35, 36, 37, 38, 39, 48, 49, 50, 51, 52, 53, 54, 55,
+          8,  9,  10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31,
+          40, 41, 42, 43, 44, 45, 46, 47, 56, 57, 58, 59, 60, 61, 62, 63};
+        const __m512i order = _mm512_load_si512(PackOrder);
+    #endif
+
         for (IndexType i = 0; i < NumChunks; ++i)
         {
             const __m256i words0 = _mm512_cvtsepi32_epi16(_mm512_load_si512(&in[i * 2 + 0]));
@@ -94,11 +105,18 @@ class SqrClippedReLU {
 
             const __m512i sqr =
               _mm512_srli_epi16(_mm512_mulhi_epi16(words, words), SimdShiftAmount);
-            _mm256_store_si256(&sqrOut[i], _mm512_cvtsepi16_epi8(sqr));
-
             const __m512i clip =
               _mm512_srli_epi16(_mm512_max_epi16(words, zero), WeightScaleBitsLocal);
+
+    #if defined(USE_AVX512ICL)
+            // Merge both 16-to-8-bit saturating narrows into a single pack + vpermb.
+            const __m512i both = _mm512_permutexvar_epi8(order, _mm512_packs_epi16(sqr, clip));
+            _mm256_store_si256(&sqrOut[i], _mm512_castsi512_si256(both));
+            _mm256_store_si256(&clipOut[i], _mm512_extracti64x4_epi64(both, 1));
+    #else
+            _mm256_store_si256(&sqrOut[i], _mm512_cvtsepi16_epi8(sqr));
             _mm256_store_si256(&clipOut[i], _mm512_cvtsepi16_epi8(clip));
+    #endif
         }
     }
 #elif defined(USE_AVX2_PAIR_ACTIVATIONS)
