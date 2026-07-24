@@ -325,9 +325,15 @@ class AffineTransform {
         }
         else if constexpr (OutputDimensions == 1)
         {
-    // We cannot use AVX512 for the last layer because there are only 32 inputs
-    // and the buffer is not padded to 64 elements.
-    #if defined(USE_AVX2)
+    // The last layer reads the full concatenated activation buffer (128 inputs),
+    // so full 512-bit chunks are available on AVX512 targets.
+    #if defined(USE_AVX512)
+            using vec_t = __m512i;
+        #define vec_setzero() _mm512_setzero_si512()
+        #define vec_add_dpbusd_32 SIMD::m512_add_dpbusd_epi32
+        #define vec_hadd SIMD::m512_hadd
+            static_assert(PaddedInputDimensions % 64 == 0);
+    #elif defined(USE_AVX2)
             using vec_t = __m256i;
         #define vec_setzero() _mm256_setzero_si256()
         #define vec_add_dpbusd_32 SIMD::m256_add_dpbusd_epi32
