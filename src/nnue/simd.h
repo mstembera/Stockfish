@@ -51,7 +51,9 @@
 
 namespace Stockfish::Eval::NNUE::SIMD {
 
-#if defined(USE_AVX2) && !defined(USE_VNNI) && !defined(USE_AVX512)
+#if defined(USE_AVX512)
+    #define USE_AVX512_PAIR_ACTIVATIONS
+#elif defined(USE_AVX2)
     #define USE_AVX2_PAIR_ACTIVATIONS
 #endif
 
