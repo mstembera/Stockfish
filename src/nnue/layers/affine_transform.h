@@ -330,22 +330,26 @@ class AffineTransform {
     #if defined(USE_AVX512)
             using vec_t = __m512i;
         #define vec_setzero() _mm512_setzero_si512()
+        #define vec_add1_32 _mm512_add_epi32
         #define vec_add_dpbusd_32 SIMD::m512_add_dpbusd_epi32
         #define vec_hadd SIMD::m512_hadd
             static_assert(PaddedInputDimensions % 64 == 0);
     #elif defined(USE_AVX2)
             using vec_t = __m256i;
         #define vec_setzero() _mm256_setzero_si256()
+        #define vec_add1_32 _mm256_add_epi32
         #define vec_add_dpbusd_32 SIMD::m256_add_dpbusd_epi32
         #define vec_hadd SIMD::m256_hadd
     #elif defined(USE_SSSE3)
             using vec_t = __m128i;
         #define vec_setzero() _mm_setzero_si128()
+        #define vec_add1_32 _mm_add_epi32
         #define vec_add_dpbusd_32 SIMD::m128_add_dpbusd_epi32
         #define vec_hadd SIMD::m128_hadd
     #elif defined(USE_NEON_DOTPROD)
             using vec_t = int32x4_t;
         #define vec_setzero() vdupq_n_s32(0)
+        #define vec_add1_32 vaddq_s32
         #define vec_add_dpbusd_32(acc, a, b) \
             SIMD::dotprod_m128_add_dpbusd_epi32(acc, vreinterpretq_s8_s32(a), \
                                                 vreinterpretq_s8_s32(b))
@@ -353,11 +357,13 @@ class AffineTransform {
     #elif defined(USE_LASX)
             using vec_t = __m256i;
         #define vec_setzero() __lasx_xvldi(0)
+        #define vec_add1_32 __lasx_xvadd_w
         #define vec_add_dpbusd_32 SIMD::lasx_m256_add_dpbusd_epi32
         #define vec_hadd SIMD::lasx_m256_hadd
     #elif defined(USE_LSX)
             using vec_t = __m128i;
         #define vec_setzero() __lsx_vldi(0)
+        #define vec_add1_32 __lsx_vadd_w
         #define vec_add_dpbusd_32 SIMD::lsx_m128_add_dpbusd_epi32
         #define vec_hadd SIMD::lsx_m128_hadd
     #endif
@@ -366,20 +372,23 @@ class AffineTransform {
 
             static constexpr IndexType InputSimdWidth = sizeof(vec_t) / sizeof(InputType);
 
-            static_assert(PaddedInputDimensions % InputSimdWidth == 0);
+            static_assert(PaddedInputDimensions % (2 * InputSimdWidth) == 0);
 
             constexpr IndexType NumChunks = PaddedInputDimensions / InputSimdWidth;
+            // Two accumulators split the dot-product dependency chain in half
             vec_t               sum0      = vec_setzero();
+            vec_t               sum1      = vec_setzero();
             const auto          row0      = reinterpret_cast<const vec_t*>(&weights[0]);
 
-            for (int j = 0; j < int(NumChunks); ++j)
+            for (int j = 0; j < int(NumChunks); j += 2)
             {
-                const vec_t in = inputVector[j];
-                vec_add_dpbusd_32(sum0, in, row0[j]);
+                vec_add_dpbusd_32(sum0, inputVector[j], row0[j]);
+                vec_add_dpbusd_32(sum1, inputVector[j + 1], row0[j + 1]);
             }
-            output[0] = vec_hadd(sum0, biases[0]);
+            output[0] = vec_hadd(vec_add1_32(sum0, sum1), biases[0]);
 
     #undef vec_setzero
+    #undef vec_add1_32
     #undef vec_add_dpbusd_32
     #undef vec_hadd
         }
