@@ -375,17 +375,40 @@ class AffineTransform {
             static_assert(PaddedInputDimensions % (2 * InputSimdWidth) == 0);
 
             constexpr IndexType NumChunks = PaddedInputDimensions / InputSimdWidth;
-            // Two accumulators split the dot-product dependency chain in half
-            vec_t               sum0      = vec_setzero();
-            vec_t               sum1      = vec_setzero();
             const auto          row0      = reinterpret_cast<const vec_t*>(&weights[0]);
 
-            for (int j = 0; j < int(NumChunks); j += 2)
+            if constexpr (NumChunks % 4 == 0)
             {
-                vec_add_dpbusd_32(sum0, inputVector[j], row0[j]);
-                vec_add_dpbusd_32(sum1, inputVector[j + 1], row0[j + 1]);
+                // Four accumulators keep the dot-product dependency chains short
+                // enough to cover the latency of the dot-product instructions
+                vec_t sum0 = vec_setzero();
+                vec_t sum1 = vec_setzero();
+                vec_t sum2 = vec_setzero();
+                vec_t sum3 = vec_setzero();
+
+                for (int j = 0; j < int(NumChunks); j += 4)
+                {
+                    vec_add_dpbusd_32(sum0, inputVector[j], row0[j]);
+                    vec_add_dpbusd_32(sum1, inputVector[j + 1], row0[j + 1]);
+                    vec_add_dpbusd_32(sum2, inputVector[j + 2], row0[j + 2]);
+                    vec_add_dpbusd_32(sum3, inputVector[j + 3], row0[j + 3]);
+                }
+                output[0] = vec_hadd(
+                  vec_add1_32(vec_add1_32(sum0, sum1), vec_add1_32(sum2, sum3)), biases[0]);
             }
-            output[0] = vec_hadd(vec_add1_32(sum0, sum1), biases[0]);
+            else
+            {
+                // Two accumulators split the dot-product dependency chain in half
+                vec_t sum0 = vec_setzero();
+                vec_t sum1 = vec_setzero();
+
+                for (int j = 0; j < int(NumChunks); j += 2)
+                {
+                    vec_add_dpbusd_32(sum0, inputVector[j], row0[j]);
+                    vec_add_dpbusd_32(sum1, inputVector[j + 1], row0[j + 1]);
+                }
+                output[0] = vec_hadd(vec_add1_32(sum0, sum1), biases[0]);
+            }
 
     #undef vec_setzero
     #undef vec_add1_32
