@@ -1325,12 +1325,19 @@ moves_loop:  // When in check, search starts here
                + 1093 * (*contHist[1])[movedPiece][move.to_sq()])
               / 1024;
 
+        // Captures in ttPv nodes that are not expected cut nodes are the most
+        // likely ones to actually change the PV, so they get their own LMR class.
+        const bool importantCapture = ss->ttPv && capture && !cutNode;
+
         // Decrease/increase reduction for moves with a good/bad history
-        r -= ss->statScore * 439 / 4096;
+        r -= ss->statScore * (importantCapture ? 585 : 439) / 4096;
 
         // Scale up reductions for expected ALL nodes
         if (allNode)
             r += r * 276 / (256 * depth + 268);
+
+        if (importantCapture)
+            r = r * 921 / 1024 - 450;
 
         // Step 17. Late moves reduction / extension (LMR)
         if (depth >= 2 && moveCount > 1)
