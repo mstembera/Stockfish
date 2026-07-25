@@ -1357,7 +1357,12 @@ moves_loop:  // When in check, search starts here
 
                 newDepth += doDeeperSearch - doShallowerSearch;
 
-                if (newDepth > d)
+                // Skip the re-search if the transposition table already tells us,
+                // with enough depth, that this move fails low.
+                const bool ttFailLow = is_valid(ttData.value) && ttData.value < alpha
+                                    && (ttData.bound & BOUND_UPPER) && ttData.depth - 4 >= newDepth;
+
+                if (newDepth > d && !ttFailLow)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
 
                 // Post LMR continuation history updates
