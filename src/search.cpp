@@ -839,6 +839,17 @@ Value Search::Worker::search(
                        unadjustedStaticEval, tt.generation());
     }
 
+    // Measures how strongly the (usable) transposition table value disagrees
+    // with the corrected static evaluation. A large disagreement means the search
+    // has learned something the evaluation does not know, so the correction history
+    // observation made at the end of this node is more informative. Only trust the
+    // transposition table value when its bound actually brackets the static
+    // evaluation, and when it is not a mate or tablebase score.
+    int ttComplexity = 0;
+    if (ttHit && is_valid(ttData.value) && !is_decisive(ttData.value)
+        && (ttData.bound & (ttData.value > ss->staticEval ? BOUND_LOWER : BOUND_UPPER)))
+        ttComplexity = std::abs(ss->staticEval - ttData.value);
+
     // Set up the improving flag, which is true if current static evaluation is
     // bigger than the previous static evaluation at our turn (if we were in
     // check at our previous move we go back until we weren't in check) and is
@@ -1600,9 +1611,13 @@ moves_loop:  // When in check, search starts here
     if (!ss->inCheck && !(bestMove && pos.capture(bestMove))
         && (bestValue > ss->staticEval) == bool(bestMove))
     {
-        auto bonus =
-          std::clamp(int(bestValue - ss->staticEval) * depth * (bestMove ? 12 : 18) / 128,
-                     -CORRECTION_HISTORY_LIMIT / 4, CORRECTION_HISTORY_LIMIT / 4);
+        // Scale the bonus by ~(1 + log2(ttComplexity + 1) / 10), so that nodes
+        // where the search strongly contradicted the static evaluation contribute more.
+        int  complexityFactor = 1024 + 102 * int(msb(u64(ttComplexity) + 1));
+        i64  rawBonus         = i64(bestValue - ss->staticEval) * depth * (bestMove ? 12 : 18)
+                     * complexityFactor / (128 * 1024);
+        auto bonus = int(std::clamp(rawBonus, i64(-CORRECTION_HISTORY_LIMIT / 4),
+                                    i64(CORRECTION_HISTORY_LIMIT / 4)));
         update_correction_history(pos, ss, *this, 1061 * bonus / 1024);
     }
 
