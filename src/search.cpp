@@ -105,6 +105,19 @@ Value to_corrected_static_eval(const Value v, const int cv) {
     return std::clamp(v + cv / 131072, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 }
 
+// Cheap static estimate of the material a move wins: the value of the piece on
+// the target square, plus the piece swapped in by a promotion. Unlike a full SEE
+// this ignores recaptures, but it also reads only the target square, so it is
+// safe to call on an unverified TT move.
+int estimated_see(const Position& pos, const Move m) {
+    int value = PieceValue[pos.piece_on(m.to_sq())];
+
+    if (m.type_of() == PROMOTION)
+        value += PieceValue[m.promotion_type()] - PawnValue;
+
+    return value;
+}
+
 void update_correction_history(const Position& pos,
                                Stack* const    ss,
                                Search::Worker& workerThread,
@@ -993,7 +1006,15 @@ Value Search::Worker::search(
 
     // Step 9. Null move search with verification search
     if (cutNode && ss->staticEval >= beta - 13 * depth - 47 * improving + 365 && !excludedMove
-        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && !is_loss(beta))
+        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && !is_loss(beta)
+        // Skip the null move search when the transposition table already tells us
+        // it is worthless: an upper bound below beta means this node is expected to
+        // fail low anyway.
+        && !(ttData.bound == BOUND_UPPER && is_valid(ttData.value) && ttData.value < beta)
+        // Likewise, a fail-high whose move is an obviously winning capture is
+        // tactical in nature, so passing the move proves nothing about it.
+        && !(ttData.bound == BOUND_LOWER && ttData.move
+             && estimated_see(pos, ttData.move) > 2 * PawnValue))
     {
         assert((ss - 1)->currentMove != Move::null());
 
