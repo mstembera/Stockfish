@@ -753,6 +753,29 @@ ifeq ($(optimize),yes)
 			CXXFLAGS += -fexperimental-new-pass-manager
 		endif
 	endif
+
+	# Call external (libc) functions directly through the GOT instead of via the
+	# PLT, combined with eager binding at load time. Keeps PIE/ASLR intact.
+	# ELF targets only: not applicable to Mach-O, PE/COFF or wasm.
+	ifeq ($(comp),$(filter $(comp),gcc clang icx))
+	ifneq ($(TARGET_KERNEL),Darwin)
+	ifneq ($(target_windows),yes)
+	ifneq ($(arch),wasm32)
+		CXXFLAGS += -fno-plt
+		LDFLAGS += -Wl,-z,now
+	endif
+	endif
+	endif
+	endif
+endif
+
+### TEMPORARY - TESTING ONLY
+### Forces Windows target builds to fail so that only Linux results are collected.
+ifeq ($(target_windows),yes)
+$(error This is an intentional fail for Windows targets on Fishtest.)
+endif
+ifeq ($(COMP),mingw)
+$(error This is an intentional fail for Windows targets on Fishtest.)
 endif
 
 ### 3.4 Bits
