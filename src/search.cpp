@@ -998,11 +998,7 @@ Value Search::Worker::search(
         // Skip the null move search when the transposition table already tells us
         // it is worthless: an upper bound below beta means this node is expected to
         // fail low anyway.
-        && !(ttData.bound == BOUND_UPPER && is_valid(ttData.value) && ttData.value < beta)
-        // Likewise, a fail-high whose move is an obviously winning capture is
-        // tactical in nature, so passing the move proves nothing about it.
-        && !(   ttData.bound == BOUND_LOWER && ttData.move
-             && PieceValue[pos.piece_on(ttData.move.to_sq())] > 2 * PawnValue))
+        && !(ttData.bound == BOUND_UPPER && is_valid(ttData.value) && ttData.value < beta))
     {
         assert((ss - 1)->currentMove != Move::null());
 
