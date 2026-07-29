@@ -995,10 +995,10 @@ Value Search::Worker::search(
     // Step 9. Null move search with verification search
     if (cutNode && ss->staticEval >= beta - 13 * depth - 47 * improving + 365 && !excludedMove
         && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && beta >= -2000
-        // Skip the null move search when the transposition table already tells us
-        // it is worthless: an upper bound below beta means this node is expected to
-        // fail low anyway.
-        && !(ttData.bound == BOUND_UPPER && is_valid(ttData.value) && ttData.value < beta))
+        // A fail-high whose move is an obviously winning capture is
+        // tactical in nature, so passing the move proves nothing about it.
+        && !(   ttData.bound == BOUND_LOWER && ttData.move
+             && PieceValue[pos.piece_on(ttData.move.to_sq())] > 2 * PawnValue))
     {
         assert((ss - 1)->currentMove != Move::null());
 
