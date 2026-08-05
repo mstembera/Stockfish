@@ -68,6 +68,11 @@ struct MoveSorter {
     static constexpr int MAX_ELEMENTS = 16;
     __m512i              sortedValues, sortedMoves;
 
+    // Permutation index moving every element one slot down, as a constant it keeps the
+    // shift off the dependency chain of the compare in insert()
+    static inline const __m512i ShiftDown =
+      _mm512_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+
     explicit MoveSorter(const ExtMove& first) {
         splat_extmove(first, sortedMoves, sortedValues);
 
@@ -79,12 +84,20 @@ struct MoveSorter {
         __m512i move, value;
         splat_extmove(m, move, value);
 
-        // Mask of all elements except the insertion point
         assert(m.value != std::numeric_limits<int>::min());
-        const u16 expand = _kadd_mask16(_mm512_cmplt_epi32_mask(sortedValues, value), -1);
+        // Mask of the insertion point and all elements beyond it
+        const u16 beyond    = _mm512_cmplt_epi32_mask(sortedValues, value);
+        const u16 insertion = _kandn_mask16(_kadd_mask16(beyond, -1), beyond);
 
-        sortedValues = _mm512_mask_expand_epi32(value, expand, sortedValues);
-        sortedMoves  = _mm512_mask_expand_epi32(move, expand, sortedMoves);
+        auto shuffle = [=](__m512i& sorted, __m512i splat) {
+            const __m512i shifted = _mm512_permutexvar_epi32(ShiftDown, sorted);
+
+            sorted = _mm512_mask_mov_epi32(sorted, beyond, shifted);
+            sorted = _mm512_mask_mov_epi32(sorted, insertion, splat);
+        };
+
+        shuffle(sortedValues, value);
+        shuffle(sortedMoves, move);
     }
 
     void write_sorted(ExtMove* moves, isize count) const {
