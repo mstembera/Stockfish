@@ -99,31 +99,6 @@ int correction_value(const Worker& w, const Position& pos, const Stack* const ss
     return 15341 * pcv + 10569 * micv + 12906 * (wnpcv + bnpcv) + cntcv;
 }
 
-// True if the opponent has an easy capture available, i.e. one of our pieces
-// is attacked by a lesser enemy piece. Each tier narrows the candidate targets
-// and widens the threat set, so the expensive attack generation is only
-// reached when cheaper targets have already been ruled out.
-bool opponent_easy_capture(const Position& pos) {
-
-    const Color us = pos.side_to_move();
-    Bitboard targets = pos.pieces(us, KNIGHT, BISHOP, ROOK, QUEEN);
-    Bitboard threats = pos.attacks_by<PAWN>(~us);
-
-    if (targets & threats)
-        return true;
-
-    targets &= pos.pieces(ROOK, QUEEN);
-    if (!targets)
-        return false;
-
-    threats |= pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us);
-    if (targets & threats)
-        return true;
-
-    targets &= pos.pieces(QUEEN);
-    return targets && (targets & pos.attacks_by<ROOK>(~us));
-}
-
 // Add correctionHistory value to raw staticEval and guarantee evaluation
 // does not hit the tablebase range.
 Value to_corrected_static_eval(const Value v, const int cv) {
@@ -764,7 +739,7 @@ Value Search::Worker::search(
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
-    bool  capture, ttCapture, opponentEasyCapture;
+    bool  capture, ttCapture;
     int   priorReduction;
     Piece movedPiece;
 
@@ -1001,8 +976,6 @@ Value Search::Worker::search(
     if (!PvNode && eval < alpha - 483 - 318 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
-    opponentEasyCapture = opponent_easy_capture(pos);
-
     // Step 8. Futility pruning: child node
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 19 && eval >= beta && (!ttData.move || ttCapture) && !is_loss(beta)
@@ -1012,8 +985,7 @@ Value Search::Worker::search(
         futilityMult -= 20 * !ss->ttHit;
 
         Value futilityMargin = futilityMult * depth
-                             - (2789 * (improving && !opponentEasyCapture) + 335 * opponentWorsening)
-                                 * futilityMult / 1024
+                             - (2789 * improving + 335 * opponentWorsening) * futilityMult / 1024
                              + std::abs(correctionValue) / 198435;
 
         if (eval - futilityMargin >= beta)
@@ -1021,8 +993,8 @@ Value Search::Worker::search(
     }
 
     // Step 9. Null move search with verification search
-    if (cutNode && !opponentEasyCapture && ss->staticEval >= beta - 13 * depth - 47 * improving + 365
-        && !excludedMove && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && beta >= -2000)
+    if (cutNode && ss->staticEval >= beta - 13 * depth - 47 * improving + 365 && !excludedMove
+        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && beta >= -2000)
     {
         assert((ss - 1)->currentMove != Move::null());
 
@@ -1315,6 +1287,9 @@ moves_loop:  // When in check, search starts here
             // if we are on a cutNode
             else if (ttData.value >= beta || cutNode)
                 extension = -3;
+
+            else if (ttData.value <= alpha)
+                extension = -1;
         }
 
         u64 nodeCount = rootNode ? u64(nodes) : 0;
