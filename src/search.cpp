@@ -1311,6 +1311,9 @@ moves_loop:  // When in check, search starts here
             // if we are on a cutNode
             else if (ttData.value >= beta || cutNode)
                 extension = -3;
+
+            else if (ttData.value <= alpha)
+                extension = -2;
         }
 
         u64 nodeCount = rootNode ? u64(nodes) : 0;
@@ -1976,10 +1979,7 @@ void update_all_stats(const Position& pos,
 
     if (!pos.capture_stage(bestMove))
     {
-        // Only increase the best move history when it wasn't trivial,
-        // i.e. when other quiets were tried or we searched deep enough.
-        if (quietsSearched.size() > 0 || depth > 5)
-            update_quiet_histories(pos, ss, workerThread, bestMove, bonus * 899 / 1024);
+        update_quiet_histories(pos, ss, workerThread, bestMove, bonus * 899 / 1024);
 
         int actualMalus = malus * 1159 / 1024;
         // Decrease stats for all non-best quiet moves
