@@ -973,7 +973,9 @@ Value Search::Worker::search(
     // Step 7. Razoring
     // If eval is really low, skip search entirely and return the qsearch value.
     // For PvNodes, we must have a guard against mates being returned.
-    if (!PvNode && eval < alpha - 483 - 318 * depth * depth)
+    // A quiet ttMove is evidence the node is not hopeless,
+    // so only razor when there is no ttMove or the ttMove is a capture.
+    if (!PvNode && (!ttData.move || ttCapture) && eval < alpha - 483 - 318 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 8. Futility pruning: child node
@@ -1102,10 +1104,6 @@ moves_loop:  // When in check, search starts here
     value = bestValue;
 
     int moveCount = 0;
-
-    // Count how often alpha is raised at this node; later moves
-    // become progressively less likely to be best after each improvement.
-    int alphaRaises = 0;
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -1310,9 +1308,6 @@ moves_loop:  // When in check, search starts here
         r -= moveCount * 65;
         r -= std::abs(correctionValue) / 26310;
 
-        // Increase reduction for every alpha raise seen so far
-        r += alphaRaises * 700;
-
         // Increase reduction for cut nodes
         if (cutNode)
             r += 4026 + 933 * !ttData.move;
@@ -1513,9 +1508,6 @@ moves_loop:  // When in check, search starts here
                     assert(value >= beta);  // Fail high
                     break;
                 }
-
-                // Record the alpha raise for later reductions
-                ++alphaRaises;
 
                 // Reduce other moves if we have found at least one score improvement
                 if (depth > 3 && depth < 12 && !is_decisive(value))
