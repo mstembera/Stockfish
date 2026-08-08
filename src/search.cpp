@@ -973,9 +973,7 @@ Value Search::Worker::search(
     // Step 7. Razoring
     // If eval is really low, skip search entirely and return the qsearch value.
     // For PvNodes, we must have a guard against mates being returned.
-    // A quiet ttMove is evidence the node is not hopeless,
-    // so only razor when there is no ttMove or the ttMove is a capture.
-    if (!PvNode && (!ttData.move || ttCapture) && eval < alpha - 483 - 318 * depth * depth)
+    if (!PvNode && eval < alpha - 483 - 318 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 8. Futility pruning: child node
@@ -1547,8 +1545,12 @@ moves_loop:  // When in check, search starts here
     // we update the stats of searched moves.
     else if (bestMove)
     {
-        update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched, depth,
-                         ttData.move, PvNode);
+        // Treat the update as one ply deeper when the best score
+        // beat the static eval, since that is stronger evidence for the move.
+        Depth historyDepth = depth + (!ss->inCheck && ss->staticEval <= bestValue);
+
+        update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched,
+                         historyDepth, ttData.move, PvNode);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 918 : -747);
     }
