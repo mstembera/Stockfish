@@ -1438,6 +1438,11 @@ bool Position::see_ge(Move m, int threshold) const {
     Bitboard stmAttackers, bb;
     int      res = 1;
 
+    // A pinned piece can still legally capture on the target square when that
+    // square lies on its own pin ray, so those attackers must not be discarded below.
+    const Bitboard kingRay[COLOR_NB] = {line_bb(square<KING>(WHITE), to),
+                                        line_bb(square<KING>(BLACK), to)};
+
     while (true)
     {
         stm = ~stm;
@@ -1451,7 +1456,8 @@ bool Position::see_ge(Move m, int threshold) const {
         // pinners on their original square.
         if (pinners(~stm) & occupied)
         {
-            stmAttackers &= ~blockers_for_king(stm);
+            // Pinned attackers on the pin ray remain usable
+            stmAttackers &= ~(blockers_for_king(stm) & ~kingRay[stm]);
 
             if (!stmAttackers)
                 break;
