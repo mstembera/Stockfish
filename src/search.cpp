@@ -846,7 +846,11 @@ Value Search::Worker::search(
     // false otherwise. The improving flag is used in various pruning heuristics.
     // Similarly, opponentWorsening is true if our static evaluation is better
     // for us than at the last ply.
-    improving         = ss->staticEval > (ss - 2)->staticEval;
+    // Fall back to the ply-4 static eval when the ply-2 one is
+    // unavailable, and assume we are improving when neither reference exists.
+    improving         = !is_valid((ss - 2)->staticEval)
+                        ? (!is_valid((ss - 4)->staticEval) || ss->staticEval > (ss - 4)->staticEval)
+                        : ss->staticEval > (ss - 2)->staticEval;
     opponentWorsening = ss->staticEval > -(ss - 1)->staticEval;
 
     // Hindsight adjustment of reductions based on static evaluation difference.
@@ -1545,12 +1549,8 @@ moves_loop:  // When in check, search starts here
     // we update the stats of searched moves.
     else if (bestMove)
     {
-        // Treat the update as one ply deeper when the best score
-        // beat the static eval, since that is stronger evidence for the move.
-        Depth historyDepth = depth + (!ss->inCheck && ss->staticEval <= bestValue);
-
-        update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched,
-                         historyDepth, ttData.move, PvNode);
+        update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched, depth,
+                         ttData.move, PvNode);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 918 : -747);
     }
