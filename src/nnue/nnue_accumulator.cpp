@@ -671,6 +671,36 @@ Bitboard get_changed_pieces(const std::array<Piece, SQUARE_NB>& oldPieces,
 #endif
 }
 
+// Writes the indices of the changed features, picking between the vectorized
+// and the scalar path based on how many features actually changed.
+void write_changed_indices(const std::array<Piece, SQUARE_NB>& oldPieces,
+                           const std::array<Piece, SQUARE_NB>& newPieces,
+                           Bitboard                            removedBB,
+                           Bitboard                            addedBB,
+                           Color                               perspective,
+                           Square                              ksq,
+                           PSQFeatureSet::IndexList&           removed,
+                           PSQFeatureSet::IndexList&           added) {
+#if defined(USE_AVX512ICL)
+    if (popcount(removedBB) + popcount(addedBB) > 2)
+    {
+        PSQFeatureSet::write_indices(oldPieces, newPieces, removedBB, addedBB, perspective, ksq,
+                                     removed, added);
+        return;
+    }
+#endif
+    while (removedBB)
+    {
+        Square sq = pop_lsb(removedBB);
+        removed.push_back(PSQFeatureSet::make_index(perspective, sq, oldPieces[sq], ksq));
+    }
+    while (addedBB)
+    {
+        Square sq = pop_lsb(addedBB);
+        added.push_back(PSQFeatureSet::make_index(perspective, sq, newPieces[sq], ksq));
+    }
+}
+
 // Updates accumulator for a king move, and also updates the accumulator cache
 // for the new king position.
 void update_accumulator_hybrid(Color                     perspective,
@@ -728,35 +758,10 @@ void update_accumulator_hybrid(Color                     perspective,
     Bitboard newRemovedBB = newChangedBB & newEntry.pieceBB;
     Bitboard newAddedBB   = newChangedBB & pos.pieces();
 
-#if defined(USE_AVX512ICL)
-    PSQFeatureSet::write_indices(oldEntry.pieces, previousPieces, oldRemovedBB, oldAddedBB,
-                                 perspective, oldKsq, oldRemove, oldAdd);
-    PSQFeatureSet::write_indices(newEntry.pieces, currentPieces, newRemovedBB, newAddedBB,
-                                 perspective, newKsq, newRemove, newAdd);
-#else
-    while (oldRemovedBB)
-    {
-        Square sq = pop_lsb(oldRemovedBB);
-        oldRemove.push_back(
-          PSQFeatureSet::make_index(perspective, sq, oldEntry.pieces[sq], oldKsq));
-    }
-    while (oldAddedBB)
-    {
-        Square sq = pop_lsb(oldAddedBB);
-        oldAdd.push_back(PSQFeatureSet::make_index(perspective, sq, previousPieces[sq], oldKsq));
-    }
-    while (newRemovedBB)
-    {
-        Square sq = pop_lsb(newRemovedBB);
-        newRemove.push_back(
-          PSQFeatureSet::make_index(perspective, sq, newEntry.pieces[sq], newKsq));
-    }
-    while (newAddedBB)
-    {
-        Square sq = pop_lsb(newAddedBB);
-        newAdd.push_back(PSQFeatureSet::make_index(perspective, sq, currentPieces[sq], newKsq));
-    }
-#endif
+write_changed_indices(oldEntry.pieces, previousPieces, oldRemovedBB, oldAddedBB, perspective,
+                      oldKsq, oldRemove, oldAdd);
+write_changed_indices(newEntry.pieces, currentPieces, newRemovedBB, newAddedBB, perspective,
+                      newKsq, newRemove, newAdd);
 
     ThreatFeatureSet::IndexList thrRemoved, thrAdded;  // also contain pp indices
     const auto*                 threatPpBase = &featureTransformer.threatAndPpWeights[0];
@@ -936,24 +941,11 @@ void update_accumulator_refresh_cache(Color                     perspective,
     PSQFeatureSet::IndexList removed, added;
 
     const Bitboard changedBB = get_changed_pieces(entry.pieces, pos.piece_array());
-    Bitboard       removedBB = changedBB & entry.pieceBB;
-    Bitboard       addedBB   = changedBB & pos.pieces();
+    const Bitboard removedBB = changedBB & entry.pieceBB;
+    const Bitboard addedBB   = changedBB & pos.pieces();
 
-#if defined(USE_AVX512ICL)
-    PSQFeatureSet::write_indices(entry.pieces, pos.piece_array(), removedBB, addedBB, perspective,
-                                 ksq, removed, added);
-#else
-    while (removedBB)
-    {
-        Square sq = pop_lsb(removedBB);
-        removed.push_back(PSQFeatureSet::make_index(perspective, sq, entry.pieces[sq], ksq));
-    }
-    while (addedBB)
-    {
-        Square sq = pop_lsb(addedBB);
-        added.push_back(PSQFeatureSet::make_index(perspective, sq, pos.piece_on(sq), ksq));
-    }
-#endif
+    write_changed_indices(entry.pieces, pos.piece_array(), removedBB, addedBB, perspective, ksq,
+                          removed, added);
 
     entry.pieceBB = pos.pieces();
     entry.pieces  = pos.piece_array();
