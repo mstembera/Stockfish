@@ -230,14 +230,6 @@ constexpr IndexType Dimensions = FeatureTransformer::OutputDimensions;
 
 using Tiling = SIMDTiling<Dimensions, Dimensions, PSQTBuckets>;
 
-#if defined(__clang__)
-    #define SHORT_LOOP _Pragma("clang loop unroll(disable)")
-#elif defined(__GNUC__)
-    #define SHORT_LOOP _Pragma("GCC unroll 1")
-#else
-    #define SHORT_LOOP
-#endif
-
 template<int sign>
 sf_always_inline inline void apply_psq_features(IndexType                       j,
                                                 vec_t                           acc[],
@@ -246,7 +238,6 @@ sf_always_inline inline void apply_psq_features(IndexType                       
     static_assert(sign == 1 || sign == -1);
 
     const usize tileOff = j * Tiling::TileHeight;
-    SHORT_LOOP
     for (int i = 0; i < list.ssize(); ++i)
     {
         auto* column = reinterpret_cast<const vec_t*>(&ft.weights[list[i] * Dimensions + tileOff]);
@@ -318,7 +309,6 @@ sf_always_inline inline void apply_psqt(IndexType                         j,
     static_assert(sign == 1 || sign == -1);
 
     const usize psqtTileOff = j * Tiling::PsqtTileHeight;
-    SHORT_LOOP
     for (int i = 0; i < list.ssize(); ++i)
     {
         auto* column =
@@ -329,6 +319,14 @@ sf_always_inline inline void apply_psqt(IndexType                         j,
             else
                 psqt[k] = vec_sub_psqt_32(psqt[k], column[k]);
     }
+}
+
+template<typename WeightT, usize MaxLen, typename IdxType>
+sf_always_inline inline void prefetch_columns(const ValueList<IdxType, MaxLen>& list,
+                                              const WeightT*                    weights,
+                                              usize                             stride) {
+    for (int i = 0; i < list.ssize(); ++i)
+        prefetch(&weights[list[i] * stride]);
 }
 
 #endif
@@ -352,6 +350,9 @@ void apply_combined(Color                              perspective,
 
     vec_t      acc[Tiling::NumRegs];
     psqt_vec_t psqt[Tiling::NumPsqtRegs];
+
+    prefetch_columns(psqRemoved, featureTransformer.weights.data(), Dimensions);
+    prefetch_columns(psqAdded, featureTransformer.weights.data(), Dimensions);
 
     for (IndexType j = 0; j < Dimensions / Tiling::TileHeight; ++j)
     {
