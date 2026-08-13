@@ -145,7 +145,9 @@ void update_all_stats(const Position& pos,
                       SearchedList&   capturesSearched,
                       Depth           depth,
                       Move            ttMove,
-                      bool            PvNode);
+                      bool            PvNode,
+                      Value           bestValue,
+                      Value           beta);
 
 // Detect shuffling moves in order to limit search explosions
 // Added in #6447 as non-regression, and so its parameters should not be tuned
@@ -1570,7 +1572,7 @@ moves_loop:  // When in check, search starts here
     else if (bestMove)
     {
         update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched, depth,
-                         ttData.move, PvNode);
+                         ttData.move, PvNode, bestValue, beta);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 918 : -747);
     }
@@ -1959,15 +1961,20 @@ void update_all_stats(const Position& pos,
                       SearchedList&   capturesSearched,
                       Depth           depth,
                       Move            ttMove,
-                      bool            PvNode) {
+                      bool            PvNode,
+                      Value           bestValue,
+                      Value           beta) {
 
     CapturePieceToHistory& captureHistory = workerThread.captureHistory;
     Piece                  movedPiece     = pos.moved_piece(bestMove);
     PieceType              capturedPiece;
 
-    int bonus =
-      std::min(133 * depth - 81, 1487) + 364 * (bestMove == ttMove) + (ss - 1)->statScore / 28;
-    int malus = std::min(968 * depth - 235, 2244);
+    // Bump history depth when the cutoff score clears beta by a margin
+    const Depth histDepth = depth + (bestValue >= beta + 42);
+
+    int bonus = std::min(133 * histDepth - 81, 1487) + 364 * (bestMove == ttMove)
+              + (ss - 1)->statScore / 28;
+    int malus = std::min(968 * histDepth - 235, 2244);
 
     if (!PvNode)
         // Important: don't remove the cast to a 64-bit number else the multiplication
