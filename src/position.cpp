@@ -1228,24 +1228,17 @@ void Position::update_piece_threats(Piece               pc,
         }
     };
 
-    if constexpr (ComputeRay)
-#ifdef USE_AVX512ICL
-        // For ICL, direct threats are processed later (all_attackers)
-        process_sliders(false);
-#else
-        // Kings emit no direct threats
-        process_sliders(pt != KING);
-#endif
-
+    // Kings emit no direct threats
     if (pt == KING)
+    {
+        if constexpr (ComputeRay)
+            process_sliders(false);
         return;
+    }
 
-    Bitboard threatTargets = occupiedNoK;
-    if (pt == PAWN)
-        threatTargets = pieces(KNIGHT, ROOK);
-    else if (pt == BISHOP || pt == ROOK)
-        threatTargets = pieces(PAWN, KNIGHT, BISHOP, ROOK);
-
+    const Bitboard threatTargets = pt == PAWN                 ? pieces(KNIGHT, ROOK)
+                                 : pt == BISHOP || pt == ROOK ? pieces(PAWN, KNIGHT, BISHOP, ROOK)
+                                                              : occupiedNoK;
     Bitboard threatened = (pt == BISHOP ? bAttacks
                          : pt == ROOK   ? rAttacks
                          : pt == QUEEN  ? sliderAttacks
@@ -1259,16 +1252,16 @@ void Position::update_piece_threats(Piece               pc,
                          | (attacks_bb<PAWN>(s, BLACK) & pieces(WHITE, PAWN));
 
 #ifdef USE_AVX512ICL
-    DirtyThreat dtTemplate{pc, NO_PIECE, s, Square(0), putPiece};
     write_multiple_dirties<DirtyThreat::ThreatenedSqOffset, DirtyThreat::ThreatenedPcOffset>(
-      *this, threatened, dtTemplate, dts);
+      *this, threatened, {pc, NO_PIECE, s, Square(0), putPiece}, dts);
 
     const Bitboard directSliders = pt == QUEEN ? sliders & pieces(QUEEN) : sliders;
-    const Bitboard allAttackers  = directSliders | incomingThreats;
-
-    dtTemplate = {NO_PIECE, pc, Square(0), s, putPiece};
     write_multiple_dirties<DirtyThreat::PcSqOffset, DirtyThreat::PcOffset>(
-      *this, allAttackers, dtTemplate, dts);
+      *this, directSliders | incomingThreats, {NO_PIECE, pc, Square(0), s, putPiece}, dts);
+
+    // For ICL, direct threats were written above
+    if constexpr (ComputeRay)
+        process_sliders(false);
 #else
     while (threatened)
     {
@@ -1280,11 +1273,10 @@ void Position::update_piece_threats(Piece               pc,
         add_dirty_threat(dts, putPiece, pc, threatenedPc, s, threatenedSq);
     }
 
-    if constexpr (!ComputeRay)
-    {
-        const Bitboard directSliders = pt == QUEEN ? sliders & pieces(QUEEN) : sliders;
-        incomingThreats |= directSliders;
-    }
+    if constexpr (ComputeRay)
+        process_sliders(true);
+    else
+        incomingThreats |= pt == QUEEN ? sliders & pieces(QUEEN) : sliders;
 
     while (incomingThreats)
     {
