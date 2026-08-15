@@ -145,9 +145,7 @@ void update_all_stats(const Position& pos,
                       SearchedList&   capturesSearched,
                       Depth           depth,
                       Move            ttMove,
-                      bool            PvNode,
-                      Value           bestValue,
-                      Value           beta);
+                      bool            PvNode);
 
 // Detect shuffling moves in order to limit search explosions
 // Added in #6447 as non-regression, and so its parameters should not be tuned
@@ -1572,7 +1570,7 @@ moves_loop:  // When in check, search starts here
     else if (bestMove)
     {
         update_all_stats(pos, ss, *this, bestMove, prevSq, quietsSearched, capturesSearched, depth,
-                         ttData.move, PvNode, bestValue, beta);
+                         ttData.move, PvNode);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 918 : -747);
     }
@@ -1818,8 +1816,12 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             if (!capture)
                 continue;
 
+            // Raise the SEE bar as alpha rises above the static eval, since
+            // small material gains cannot bridge the gap there
+            int seeThreshold = ss->inCheck ? -74 : -74 + 184 * (alpha - ss->staticEval) / 1024;
+
             // Do not search moves with bad enough SEE values
-            if (!pos.see_ge(move, -74))
+            if (!pos.see_ge(move, seeThreshold))
                 continue;
         }
 
@@ -1961,9 +1963,7 @@ void update_all_stats(const Position& pos,
                       SearchedList&   capturesSearched,
                       Depth           depth,
                       Move            ttMove,
-                      bool            PvNode,
-                      Value           bestValue,
-                      Value           beta) {
+                      bool            PvNode) {
 
     CapturePieceToHistory& captureHistory = workerThread.captureHistory;
     Piece                  movedPiece     = pos.moved_piece(bestMove);
@@ -1972,10 +1972,6 @@ void update_all_stats(const Position& pos,
     int bonus =
       std::min(133 * depth - 81, 1487) + 364 * (bestMove == ttMove) + (ss - 1)->statScore / 28;
     int malus = std::min(968 * depth - 235, 2244);
-
-    // Scale bonus by how far the cutoff cleared the static eval
-    if (bestValue >= beta && !ss->inCheck)
-        bonus += 800 * std::max(0, bestValue - ss->staticEval) / 1024;
 
     if (!PvNode)
         // Important: don't remove the cast to a 64-bit number else the multiplication
