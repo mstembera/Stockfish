@@ -1969,12 +1969,13 @@ void update_all_stats(const Position& pos,
     Piece                  movedPiece     = pos.moved_piece(bestMove);
     PieceType              capturedPiece;
 
-    // Bump history depth when the cutoff score clears beta by a margin
-    const Depth histDepth = depth + (bestValue >= beta + 42);
+    int bonus =
+      std::min(133 * depth - 81, 1487) + 364 * (bestMove == ttMove) + (ss - 1)->statScore / 28;
+    int malus = std::min(968 * depth - 235, 2244);
 
-    int bonus = std::min(133 * histDepth - 81, 1487) + 364 * (bestMove == ttMove)
-              + (ss - 1)->statScore / 28;
-    int malus = std::min(968 * histDepth - 235, 2244);
+    // Scale bonus by how far the cutoff cleared the static eval
+    if (bestValue >= beta && !ss->inCheck)
+        bonus += 800 * std::max(0, bestValue - ss->staticEval) / 1024;
 
     if (!PvNode)
         // Important: don't remove the cast to a 64-bit number else the multiplication
