@@ -57,64 +57,90 @@ enum Stages {
 };
 
 #ifdef USE_AVX512
-// Load the Move, and the ExtMove value, into all lanes of 512-bit registers
-static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
-    move  = _mm512_set1_epi32(m.raw());
-    value = _mm512_set1_epi32(m.value);
-}
 
-// Sorts up to 16 moves.
+// Maintains up to 16 moves in descending score order.
+//
+// Moves and scores are kept in separate 16-lane vectors. To insert a move,
+// all scores are compared in parallel to find the insertion point. A copy
+// shifted one lane right is blended in from that point onward, freeing a
+// lane for the new move and score.
+//
+// Unused score lanes contain INT_MIN, which guarantees an insertion point for
+// every valid score. When writing the result, the move and score vectors are
+// interleaved again to reconstruct ExtMove objects.
 struct MoveSorter {
-    static constexpr int MAX_ELEMENTS = 16;
-    __m512i              sortedValues, sortedMoves;
+    static constexpr isize MAX_ELEMENTS = 16;
 
-    // Permutation index moving every element one slot down, as a constant it keeps the
-    // shift off the dependency chain of the compare in insert()
-    static inline const __m512i ShiftDown =
-      _mm512_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+    __m512i sortedValues;
+    __m512i sortedMoves;
+    __m512i shiftIndex;
 
     explicit MoveSorter(const ExtMove& first) {
-        splat_extmove(first, sortedMoves, sortedValues);
+        sortedMoves  = _mm512_set1_epi32(first.raw());
+        sortedValues = _mm512_set1_epi32(first.value);
+
+        shiftIndex = _mm512_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
 
         // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
-        sortedValues = _mm512_mask_set1_epi32(sortedValues, ~1, std::numeric_limits<int>::min());
+        sortedValues = _mm512_mask_set1_epi32(sortedValues, static_cast<__mmask16>(0xFFFE),
+                                              std::numeric_limits<int>::min());
     }
 
     void insert(const ExtMove& m) {
-        __m512i move, value;
-        splat_extmove(m, move, value);
-
         assert(m.value != std::numeric_limits<int>::min());
-        // Mask of the insertion point and all elements beyond it
-        const u16 beyond    = _mm512_cmplt_epi32_mask(sortedValues, value);
-        const u16 insertion = _kandn_mask16(_kadd_mask16(beyond, -1), beyond);
 
-        auto shuffle = [=](__m512i& sorted, __m512i splat) {
-            const __m512i shifted = _mm512_permutexvar_epi32(ShiftDown, sorted);
+        const __m512i value = _mm512_set1_epi32(m.value);
+        const __m512i move  = _mm512_set1_epi32(m.raw());
 
-            sorted = _mm512_mask_mov_epi32(sorted, beyond, shifted);
-            sorted = _mm512_mask_mov_epi32(sorted, insertion, splat);
-        };
+        const __mmask16 beyond = _mm512_cmplt_epi32_mask(sortedValues, value);
 
-        shuffle(sortedValues, value);
-        shuffle(sortedMoves, move);
+        // INT_MIN sentinels guarantee at least one bit is set.
+        assert(beyond != 0);
+
+        // If beyond = 11111000...
+        // subtracting 1 gives 11110111...
+        // i.e. every lane except the insertion lane.
+        const __mmask16 allButInsertion = _kadd_mask16(beyond, static_cast<__mmask16>(0xFFFF));
+
+        // Shift every lane right by one. Constant index, so this runs in
+        // parallel with the compare rather than waiting on it.
+        const __m512i shiftedValues = _mm512_permutexvar_epi32(shiftIndex, sortedValues);
+        const __m512i shiftedMoves  = _mm512_permutexvar_epi32(shiftIndex, sortedMoves);
+
+        // Inner blend takes the shifted lanes from the insertion point onward,
+        // outer blend overwrites the freed insertion lane with the new move.
+        sortedValues = _mm512_mask_blend_epi32(
+          allButInsertion, value, _mm512_mask_blend_epi32(beyond, sortedValues, shiftedValues));
+
+        sortedMoves = _mm512_mask_blend_epi32(
+          allButInsertion, move, _mm512_mask_blend_epi32(beyond, sortedMoves, shiftedMoves));
     }
 
     void write_sorted(ExtMove* moves, isize count) const {
         static_assert(sizeof(ExtMove) == 8);
+
+        assert(count >= 1);
         assert(count <= MAX_ELEMENTS);
 
-        // Because values and moves are stored separately, we need to reassemble the ExtMoves
-        auto write = [&](int offset, const __m512i indices) {
-            const __m512i extMoves = _mm512_permutex2var_epi32(sortedMoves, indices, sortedValues);
-            const isize   storeCount = count - offset;
+        // First 8 ExtMoves
+        const __m512i loIndices =
+          _mm512_setr_epi32(0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23);
+        const __m512i lo = _mm512_permutex2var_epi32(sortedMoves, loIndices, sortedValues);
 
-            if (storeCount > 0)
-                _mm512_mask_storeu_epi64(moves + offset, (1 << storeCount) - 1, extMoves);
-        };
+        // count is <= 16. Truncation to __mmask8 intentionally
+        // gives 0xFF when count >= 8.
+        const __mmask8 loMask = static_cast<__mmask8>((1u << count) - 1u);
+        _mm512_mask_storeu_epi64(moves, loMask, lo);
 
-        write(0, _mm512_setr_epi32(0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23));
-        write(8, _mm512_setr_epi32(8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31));
+        if (count <= 8)
+            return;
+
+        const __m512i hiIndices =
+          _mm512_setr_epi32(8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31);
+        const __m512i hi = _mm512_permutex2var_epi32(sortedMoves, hiIndices, sortedValues);
+
+        const __mmask8 hiMask = static_cast<__mmask8>((1u << (count - 8)) - 1u);
+        _mm512_mask_storeu_epi64(moves + 8, hiMask, hi);
     }
 };
 #endif
@@ -122,37 +148,47 @@ struct MoveSorter {
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
-    ExtMove *sortedEnd = begin, *p = begin + 1;
 
-#ifdef USE_AVX512
-    if (begin == end)
+    if (end - begin < 2)
         return;
 
-    MoveSorter sorter(*begin);
-    for (; p < end; ++p)
-    {
-        if (p->value >= limit)
-        {
-            if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
-                break;
+    ExtMove *sortedEnd = begin, *p = begin + 1;
 
-            sorter.insert(*p);
-            *p = *++sortedEnd;
-        }
+#ifdef USE_AVX512    
+
+    MoveSorter sorter(*begin);
+    isize count = 1;
+
+    for (; p != end; ++p)
+    {
+        if (p->value < limit)
+            continue;
+
+        if (count == MoveSorter::MAX_ELEMENTS)
+            break;
+
+        sorter.insert(*p);
+        *p = begin[count++];
     }
-    sorter.write_sorted(begin, sortedEnd - begin + 1);
-    // Use scalar implementation for any remaining elements
+
+    sorter.write_sorted(begin, count);
+    sortedEnd = begin + count - 1;
+
 #endif
 
-    for (; p < end; ++p)
-        if (p->value >= limit)
-        {
-            ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
-                *q = *(q - 1);
-            *q = tmp;
-        }
+    // Scalar implementation.
+    for (; p != end; ++p)
+    {
+        if (p->value < limit)
+            continue;
+
+        ExtMove tmp = *p, *q;
+        *p = *++sortedEnd;
+
+        for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            *q = *(q - 1);
+        *q = tmp;
+    }
 }
 
 }  // namespace
