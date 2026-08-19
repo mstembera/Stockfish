@@ -1313,7 +1313,7 @@ moves_loop:  // When in check, search starts here
                 extension = -3;
 
             else if (ttData.value <= alpha)
-                extension = -2;
+                extension = -1;
         }
 
         u64 nodeCount = rootNode ? u64(nodes) : 0;
