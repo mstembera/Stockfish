@@ -56,21 +56,13 @@ enum Stages {
     QCAPTURE
 };
 
+
+constexpr isize MAX_SORTER_ELEMENTS = 16;
+
 #ifdef USE_AVX512
 
-// Maintains up to 16 moves in descending score order.
-//
-// Moves and scores are kept in separate 16-lane vectors. To insert a move,
-// all scores are compared in parallel to find the insertion point. A copy
-// shifted one lane right is blended in from that point onward, freeing a
-// lane for the new move and score.
-//
-// Unused score lanes contain INT_MIN, which guarantees an insertion point for
-// every valid score. When writing the result, the move and score vectors are
-// interleaved again to reconstruct ExtMove objects.
+// Sorts up to 16 moves.
 struct MoveSorter {
-    static constexpr isize MAX_ELEMENTS = 16;
-
     __m512i sortedValues;
     __m512i sortedMoves;
     __m512i shiftIndex;
@@ -97,8 +89,7 @@ struct MoveSorter {
         // INT_MIN sentinels guarantee at least one bit is set.
         assert(beyond != 0);
 
-        // If beyond = 11111000...
-        // subtracting 1 gives 11110111...
+        // If beyond = 11111000... then subtracting 1 gives 11110111...
         // i.e. every lane except the insertion lane.
         const __mmask16 allButInsertion = _kadd_mask16(beyond, static_cast<__mmask16>(0xFFFF));
 
@@ -120,7 +111,7 @@ struct MoveSorter {
         static_assert(sizeof(ExtMove) == 8);
 
         assert(count >= 1);
-        assert(count <= MAX_ELEMENTS);
+        assert(count <= MAX_SORTED_ELEMENTS);
 
         // First 8 ExtMoves
         const __m512i loIndices =
@@ -152,6 +143,10 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     if (end - begin < 2)
         return;
 
+    // Lower limit if all moves fit
+    if (end - begin <= MAX_SORTER_ELEMENTS && limit > std::numeric_limits<int>::min() + 500)
+        limit -= 500;
+
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
 #ifdef USE_AVX512    
@@ -164,7 +159,7 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         if (p->value < limit)
             continue;
 
-        if (count == MoveSorter::MAX_ELEMENTS)
+        if (count == MAX_SORTER_ELEMENTS)
             break;
 
         sorter.insert(*p);
