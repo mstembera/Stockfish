@@ -143,10 +143,7 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     if (end - begin < 2)
         return;
 
-    // Lower limit if all moves fit
-    if (end - begin <= MAX_SORTER_ELEMENTS && limit > std::numeric_limits<int>::min() + 500)
-        limit -= 500;
-
+    const int lowLimit = limit < std::numeric_limits<int>::min() + 500 ? limit : limit - 500;
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
 #ifdef USE_AVX512    
@@ -156,6 +153,9 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
     for (; p != end; ++p)
     {
+        if (limit != lowLimit && count + (end - p) <= MAX_SORTER_ELEMENTS)
+            limit = lowLimit;
+
         if (p->value < limit)
             continue;
 
@@ -174,6 +174,9 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     // Scalar implementation.
     for (; p != end; ++p)
     {
+        if (limit != lowLimit && sortedEnd - begin + 1 + (end - p) <= MAX_SORTER_ELEMENTS)
+            limit = lowLimit;
+
         if (p->value < limit)
             continue;
 
