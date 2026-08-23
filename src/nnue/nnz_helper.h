@@ -62,7 +62,8 @@ struct NNZInfo {
     struct NNZCursor {
         NNZInfo& info;
         __m512i  indices;
-        // Groups whose 4 channels sum to no more than this count as zero; 0 gives the exact test
+        // Groups whose 4 channels have squares summing to no more than this count as zero;
+        // 0 gives the exact test
         __m512i  threshold;
         unsigned count;
 
@@ -76,13 +77,13 @@ struct NNZInfo {
     #endif
             count(count_) {}
 
-        // Sum of the four u8 channels of each 32-bit group
-        static __m512i group_sums(SIMD::vec_t neurons) {
-            const __m512i ones = _mm512_set1_epi8(1);
+        // Sum of the squares of the four u8 channels of each 32-bit group. Channels are at most 127
+        // (see transform_perspective), so they are also valid as i8 and the products cannot saturate
+        static __m512i group_sq_sums(SIMD::vec_t neurons) {
     #if defined(USE_VNNI)
-            return _mm512_dpbusd_epi32(_mm512_setzero_si512(), neurons, ones);
+            return _mm512_dpbusd_epi32(_mm512_setzero_si512(), neurons, neurons);
     #else
-            return _mm512_madd_epi16(_mm512_maddubs_epi16(neurons, ones), _mm512_set1_epi16(1));
+            return _mm512_madd_epi16(_mm512_maddubs_epi16(neurons, neurons), _mm512_set1_epi16(1));
     #endif
         }
 
@@ -95,8 +96,10 @@ struct NNZInfo {
             __mmask32 nnzMask;
             if constexpr (Lossy)
             {
+                // Sums up to 4 * 127^2 saturate to 32767 here, which still exceeds any sane
+                // threshold, so the comparison is unaffected
                 const __m512i sums =
-                  _mm512_packs_epi32(group_sums(neurons1), group_sums(neurons2));
+                  _mm512_packs_epi32(group_sq_sums(neurons1), group_sq_sums(neurons2));
                 nnzMask = _mm512_cmpgt_epi16_mask(sums, threshold);
             }
             else
@@ -119,7 +122,7 @@ struct NNZInfo {
                 // Get a bitmask and gather non zero indices
                 __mmask16 nnzMask;
                 if constexpr (Lossy)
-                    nnzMask = _mm512_cmpgt_epi32_mask(group_sums(neurons), threshold);
+                    nnzMask = _mm512_cmpgt_epi32_mask(group_sq_sums(neurons), threshold);
                 else
                     nnzMask = _mm512_test_epi32_mask(neurons, neurons);
 
