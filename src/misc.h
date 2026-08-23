@@ -551,13 +551,14 @@ void move_to_front(std::vector<T>& vec, Predicate pred) {
     #define __has_builtin(x) 0
 #endif
 
+// Implies inline, so definitions must not repeat it (MSVC warns C4141)
 #if defined(__GNUC__)
-    #define sf_always_inline __attribute__((always_inline))
+    #define sf_always_inline inline __attribute__((always_inline))
 #elif defined(_MSC_VER)
     #define sf_always_inline __forceinline
 #else
-    // do nothing for other compilers
-    #define sf_always_inline
+    // plain inline for other compilers
+    #define sf_always_inline inline
 #endif
 
 #if defined(__clang__)

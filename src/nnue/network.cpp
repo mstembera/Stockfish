@@ -48,6 +48,15 @@
 // Note that this does not work in Microsoft Visual Studio.
 #if !defined(UNIVERSAL_BINARY) && !defined(_MSC_VER) && !defined(NNUE_EMBEDDING_OFF)
 INCBIN(EmbeddedNNUE, EvalFileDefaultName);
+#elif defined(NNUE_EMBED_RESOURCE) && defined(_MSC_VER)
+// For MSVC the build supplies the net as an RCDATA resource, named by the macro.
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+static const HRSRC nnueResource =
+  FindResourceA(nullptr, stringify(NNUE_EMBED_RESOURCE), RT_RCDATA);
+const unsigned char* const gEmbeddedNNUEData =
+  static_cast<const unsigned char*>(LockResource(LoadResource(nullptr, nnueResource)));
+const unsigned int gEmbeddedNNUESize = SizeofResource(nullptr, nnueResource);
 #elif defined(UNIVERSAL_BINARY_MACOS_X86_SLICE)
 // Determined at runtime, see universal/nnue_embed.cpp
 extern const unsigned char* const gEmbeddedNNUEData;
