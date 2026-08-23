@@ -226,7 +226,7 @@ class FeatureTransformer {
                   OutputType*                                 output,
                   int                                         bucket,
                   [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo,
-                  [[maybe_unused]] bool                       lossyNnz = false) const {
+                  int                                         nnzThreshold = 0) const {
         accumulatorStack.evaluate(pos, *this, cache);
         const auto& accumulatorState = accumulatorStack.latest();
 
@@ -238,12 +238,14 @@ class FeatureTransformer {
 
         const auto& accumulation = accumulatorState.accumulation;
 
-        if (lossyNnz)
-            for (IndexType p = 0; p < 2; ++p)
-                transform_perspective<true>(accumulation[perspectives[p]], output, p, nnzInfo);
-        else
-            for (IndexType p = 0; p < 2; ++p)
-                transform_perspective<false>(accumulation[perspectives[p]], output, p, nnzInfo);
+        for (IndexType p = 0; p < 2; ++p)
+        {
+            if (nnzThreshold > 0)
+                transform_perspective<true>(accumulation[perspectives[p]], output, p, nnzInfo,
+                                            nnzThreshold);
+            else
+                transform_perspective<false>(accumulation[perspectives[p]], output, p, nnzInfo, 0);
+        }
 
         return psqt;
     }
@@ -253,14 +255,15 @@ class FeatureTransformer {
     static void transform_perspective(const std::array<i16, HalfDimensions>&      accumulation,
                                       OutputType*                                 output,
                                       IndexType                                   perspective,
-                                      [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo) {
+                                      [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo,
+                                      [[maybe_unused]] int                        nnzThreshold) {
 
         using namespace SIMD;
         const IndexType offset = (HalfDimensions / 2) * perspective;
 
 #if defined(VECTOR)
 
-        [[maybe_unused]] auto cursor = nnzInfo.make_cursor(perspective);
+        [[maybe_unused]] auto cursor = nnzInfo.make_cursor(perspective, nnzThreshold);
 
         constexpr IndexType OutputChunkSize = MaxChunkSize;
         static_assert((HalfDimensions / 2) % OutputChunkSize == 0);

@@ -54,8 +54,10 @@ Value Eval::evaluate(const Eval::NNUE::Network&     network,
 
     assert(!pos.checkers());
 
-    auto [psqt, positional] =
-      network.evaluate(pos, accumulators, caches, std::abs(simple_eval(pos)) > 900);
+    const int nnzThreshold =
+      std::clamp(interpolate(std::abs(simple_eval(pos)), 800, 2500, 0, 4), 0, 4);
+
+    auto [psqt, positional] = network.evaluate(pos, accumulators, caches, nnzThreshold);
 
     Value nnue = psqt + positional;
 

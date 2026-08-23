@@ -59,27 +59,30 @@ struct NNZInfo {
     }();
     #endif
 
-    // In lossy mode a 4-channel group is treated as zero unless its channels sum to at least this
-    static constexpr int LossyGroupThreshold = 3;
-
     struct NNZCursor {
         NNZInfo& info;
         __m512i  indices;
+        // Groups whose 4 channels sum to no more than this count as zero; 0 gives the exact test
+        __m512i  threshold;
         unsigned count;
 
-        NNZCursor(NNZInfo& info_, bool perspective, unsigned count_) :
+        NNZCursor(NNZInfo& info_, bool perspective, unsigned count_, int nnzThreshold) :
             info(info_),
-            count(count_) {
-            indices = _mm512_load_si512(&Indices[perspective]);
-        }
+            indices(_mm512_load_si512(&Indices[perspective])),
+    #if defined(USE_AVX512ICL)
+            threshold(_mm512_set1_epi16(nnzThreshold)),
+    #else
+            threshold(_mm512_set1_epi32(nnzThreshold)),
+    #endif
+            count(count_) {}
 
         // Sum of the four u8 channels of each 32-bit group
         static __m512i group_sums(SIMD::vec_t neurons) {
+            const __m512i ones = _mm512_set1_epi8(1);
     #if defined(USE_VNNI)
-            return _mm512_dpbusd_epi32(_mm512_setzero_si512(), neurons, _mm512_set1_epi8(1));
+            return _mm512_dpbusd_epi32(_mm512_setzero_si512(), neurons, ones);
     #else
-            return _mm512_madd_epi16(_mm512_maddubs_epi16(neurons, _mm512_set1_epi8(1)),
-                                     _mm512_set1_epi16(1));
+            return _mm512_madd_epi16(_mm512_maddubs_epi16(neurons, ones), _mm512_set1_epi16(1));
     #endif
         }
 
@@ -94,7 +97,7 @@ struct NNZInfo {
             {
                 const __m512i sums =
                   _mm512_packs_epi32(group_sums(neurons1), group_sums(neurons2));
-                nnzMask = _mm512_cmpge_epi16_mask(sums, _mm512_set1_epi16(LossyGroupThreshold));
+                nnzMask = _mm512_cmpgt_epi16_mask(sums, threshold);
             }
             else
             {
@@ -116,8 +119,7 @@ struct NNZInfo {
                 // Get a bitmask and gather non zero indices
                 __mmask16 nnzMask;
                 if constexpr (Lossy)
-                    nnzMask = _mm512_cmpge_epi32_mask(group_sums(neurons),
-                                                      _mm512_set1_epi32(LossyGroupThreshold));
+                    nnzMask = _mm512_cmpgt_epi32_mask(group_sums(neurons), threshold);
                 else
                     nnzMask = _mm512_test_epi32_mask(neurons, neurons);
 
@@ -133,7 +135,9 @@ struct NNZInfo {
         ~NNZCursor() { info.count = count; }
     };
 
-    NNZCursor make_cursor(bool perspective) { return {*this, perspective, count}; }
+    NNZCursor make_cursor(bool perspective, int nnzThreshold) {
+        return {*this, perspective, count, nnzThreshold};
+    }
 #elif defined(USE_RVV)
     usize count = 0;
     u16   nnz[Dimensions];  // indices of non-zero chunks
@@ -196,7 +200,9 @@ struct NNZInfo {
     #endif
     };
 
-    NNZCursor make_cursor(bool perspective) { return {*this, perspective}; }
+    NNZCursor make_cursor(bool perspective, [[maybe_unused]] int nnzThreshold) {
+        return {*this, perspective};
+    }
 #endif
 };
 }  // namespace Stockfish::Eval::NNUE
