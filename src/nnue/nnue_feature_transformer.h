@@ -225,7 +225,8 @@ class FeatureTransformer {
                   AccumulatorCaches&                          cache,
                   OutputType*                                 output,
                   int                                         bucket,
-                  [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo) const {
+                  [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo,
+                  [[maybe_unused]] bool                       lossyNnz = false) const {
         accumulatorStack.evaluate(pos, *this, cache);
         const auto& accumulatorState = accumulatorStack.latest();
 
@@ -237,13 +238,18 @@ class FeatureTransformer {
 
         const auto& accumulation = accumulatorState.accumulation;
 
-        for (IndexType p = 0; p < 2; ++p)
-            transform_perspective(accumulation[perspectives[p]], output, p, nnzInfo);
+        if (lossyNnz)
+            for (IndexType p = 0; p < 2; ++p)
+                transform_perspective<true>(accumulation[perspectives[p]], output, p, nnzInfo);
+        else
+            for (IndexType p = 0; p < 2; ++p)
+                transform_perspective<false>(accumulation[perspectives[p]], output, p, nnzInfo);
 
         return psqt;
     }
 
    private:
+    template<bool Lossy>
     static void transform_perspective(const std::array<i16, HalfDimensions>&      accumulation,
                                       OutputType*                                 output,
                                       IndexType                                   perspective,
@@ -370,7 +376,7 @@ class FeatureTransformer {
                 packed[k] = out[j + k] = result;
             }
 
-            cursor.record2(packed[0], packed[1]);
+            cursor.record2<Lossy>(packed[0], packed[1]);
         }
 
 #elif defined(USE_RVV)

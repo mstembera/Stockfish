@@ -67,7 +67,8 @@ class Network {
 
     NetworkOutput evaluate(const Position&    pos,
                            AccumulatorStack&  accumulatorStack,
-                           AccumulatorCaches& cache) const;
+                           AccumulatorCaches& cache,
+                           bool               lossyNnz = false) const;
 
 
     void verify(const std::function<void(std::string_view)>& f,

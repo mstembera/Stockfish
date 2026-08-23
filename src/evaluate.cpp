@@ -37,6 +37,13 @@
 
 namespace Stockfish {
 
+static Value simple_eval(const Position& pos) {
+
+    const Color c = pos.side_to_move();
+    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
+        + pos.non_pawn_material(c) - pos.non_pawn_material(~c);
+}
+
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
 Value Eval::evaluate(const Eval::NNUE::Network&     network,
@@ -47,7 +54,8 @@ Value Eval::evaluate(const Eval::NNUE::Network&     network,
 
     assert(!pos.checkers());
 
-    auto [psqt, positional] = network.evaluate(pos, accumulators, caches);
+    auto [psqt, positional] =
+      network.evaluate(pos, accumulators, caches, std::abs(simple_eval(pos)) > 900);
 
     Value nnue = psqt + positional;
 

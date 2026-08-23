@@ -59,6 +59,9 @@ struct NNZInfo {
     }();
     #endif
 
+    // In lossy mode a 4-channel group is treated as zero unless its channels sum to at least this
+    static constexpr int LossyGroupThreshold = 3;
+
     struct NNZCursor {
         NNZInfo& info;
         __m512i  indices;
@@ -70,13 +73,34 @@ struct NNZInfo {
             indices = _mm512_load_si512(&Indices[perspective]);
         }
 
+        // Sum of the four u8 channels of each 32-bit group
+        static __m512i group_sums(SIMD::vec_t neurons) {
+    #if defined(USE_VNNI)
+            return _mm512_dpbusd_epi32(_mm512_setzero_si512(), neurons, _mm512_set1_epi8(1));
+    #else
+            return _mm512_madd_epi16(_mm512_maddubs_epi16(neurons, _mm512_set1_epi8(1)),
+                                     _mm512_set1_epi16(1));
+    #endif
+        }
+
+        template<bool Lossy>
         void record2(SIMD::vec_t neurons1, SIMD::vec_t neurons2) {
     #if defined(USE_AVX512ICL)
             const __m512i increment = _mm512_set1_epi16(32);
 
             // Get a bitmask and gather non zero indices
-            const __m512i   inputV01 = _mm512_packs_epi32(neurons1, neurons2);
-            const __mmask32 nnzMask  = _mm512_test_epi16_mask(inputV01, inputV01);
+            __mmask32 nnzMask;
+            if constexpr (Lossy)
+            {
+                const __m512i sums =
+                  _mm512_packs_epi32(group_sums(neurons1), group_sums(neurons2));
+                nnzMask = _mm512_cmpge_epi16_mask(sums, _mm512_set1_epi16(LossyGroupThreshold));
+            }
+            else
+            {
+                const __m512i inputV01 = _mm512_packs_epi32(neurons1, neurons2);
+                nnzMask                = _mm512_test_epi16_mask(inputV01, inputV01);
+            }
 
             // Avoid _mm512_mask_compressstoreu_epi16() as it's 256 uOps on Zen4
             __m512i nnzIndices = _mm512_maskz_compress_epi16(nnzMask, indices);
@@ -90,8 +114,14 @@ struct NNZInfo {
             for (auto neurons : {neurons1, neurons2})
             {
                 // Get a bitmask and gather non zero indices
-                const __mmask16 nnzMask = _mm512_test_epi32_mask(neurons, neurons);
-                const __m512i   nnzV    = _mm512_maskz_compress_epi32(nnzMask, indices);
+                __mmask16 nnzMask;
+                if constexpr (Lossy)
+                    nnzMask = _mm512_cmpge_epi32_mask(group_sums(neurons),
+                                                      _mm512_set1_epi32(LossyGroupThreshold));
+                else
+                    nnzMask = _mm512_test_epi32_mask(neurons, neurons);
+
+                const __m512i nnzV = _mm512_maskz_compress_epi32(nnzMask, indices);
                 _mm512_mask_cvtepi32_storeu_epi16(info.nnz + count, 0xFFFF, nnzV);
 
                 count += popcount(nnzMask);
@@ -119,6 +149,8 @@ struct NNZInfo {
         }
 
     #if (defined(USE_SSSE3) || defined(USE_LSX) || defined(USE_LASX) || (USE_NEON >= 8))
+        // Lossy grouping is only implemented for AVX512
+        template<bool Lossy>
         void record2(SIMD::vec_t neurons1, SIMD::vec_t neurons2) {
             using namespace SIMD;
 
@@ -159,6 +191,7 @@ struct NNZInfo {
         #endif
         }
     #elif defined(VECTOR)
+        template<bool Lossy>
         void record2(SIMD::vec_t, SIMD::vec_t) {}
     #endif
     };
