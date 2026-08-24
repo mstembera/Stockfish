@@ -114,8 +114,8 @@ constexpr auto index_lut2_array() {
 }
 
 constexpr auto init_threat_offsets() {
-    std::array<HelperOffsets, PIECE_NB>                    indices{};
-    std::array<std::array<IndexType, SQUARE_NB>, PIECE_NB> offsets{};
+    std::array<HelperOffsets, PIECE_NB>              indices{};
+    std::array<std::array<u16, SQUARE_NB>, PIECE_NB> offsets{};
 
     int cumulativeOffset = 0;
     for (Piece piece : AllPieces)
@@ -154,7 +154,7 @@ constexpr auto helper_offsets = init_threat_offsets().first;
 constexpr auto offsets = init_threat_offsets().second;
 
 constexpr auto init_index_luts() {
-    std::array<std::array<std::array<u32, 2>, PIECE_NB>, PIECE_NB> indices{};
+    std::array<std::array<std::array<u16, 2>, PIECE_NB>, PIECE_NB> indices{};
 
     for (Piece attacker : AllPieces)
     {

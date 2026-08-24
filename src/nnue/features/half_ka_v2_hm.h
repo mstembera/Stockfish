@@ -66,7 +66,7 @@ class HalfKAv2_hm {
 
 #define B(v) (v * PS_NB)
     // clang-format off
-    static constexpr IndexType KingBuckets[SQUARE_NB] = {
+    static constexpr u16 KingBuckets[SQUARE_NB] = {
         B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28),
         B(24), B(25), B(26), B(27), B(27), B(26), B(25), B(24),
         B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20),
@@ -80,7 +80,7 @@ class HalfKAv2_hm {
 #undef B
     // clang-format off
     // Orient a square according to perspective (rotates by 180 for black)
-    static constexpr IndexType OrientTBL[SQUARE_NB] = {
+    static constexpr i8 OrientTBL[SQUARE_NB] = {
         SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
         SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
         SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
