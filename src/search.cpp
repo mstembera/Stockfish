@@ -1159,8 +1159,7 @@ moves_loop:  // When in check, search starts here
 
         // Increase reduction for ttPv nodes (*Scaler)
         // Larger values scale well
-        if (ss->ttPv)
-            r += 929;
+        r += ss->ttPv * 929;
 
         // Step 15. Pruning at shallow depths.
         // Depth conditions are important for mate finding.
@@ -1315,29 +1314,27 @@ moves_loop:  // When in check, search starts here
         // Step 18. Compute and apply late moves reduction (LMR) (or possibly extension)
 
         // Decrease reduction for PvNodes (*Scaler)
-        if (ss->ttPv)
-            r -= 3023 + PvNode * 1004 + (ttData.value > alpha) * 885
-               + (ttData.depth >= depth) * (816 + cutNode * 940);
+        r -= ss->ttPv
+           * (3023 + PvNode * 1004 + (ttData.value > alpha) * 885
+              + (ttData.depth >= depth) * (816 + cutNode * 940));
 
         r += 697;  // Base reduction offset to compensate for other tweaks
         r -= moveCount * 65;
         r -= std::abs(correctionValue) / 26310;
 
         // Increase reduction for cut nodes
-        if (cutNode)
-            r += 4026 + 933 * !ttData.move;
+        r += cutNode * (4026 + 933 * !ttData.move);
 
         // Increase reduction if ttMove is a capture
-        if (ttCapture)
-            r += 1079;
+        r += ttCapture * 1079;
+
+        const bool manyCutoffs = (ss + 1)->cutoffCnt > 1;
 
         // Increase reduction if next ply has a lot of fail high
-        if ((ss + 1)->cutoffCnt > 1)
-            r += 264 + 1095 * ((ss + 1)->cutoffCnt > 2) + 1138 * allNode;
+        r += manyCutoffs * (264 + 1095 * ((ss + 1)->cutoffCnt > 2) + 1138 * allNode);
 
         // For first picked move (ttMove) reduce reduction
-        else if (move == ttData.move)
-            r -= 2179;
+        r -= (!manyCutoffs && move == ttData.move) * 2179;
 
         if (capture)
             ss->statScore = 873 * int(PieceValue[pos.captured_piece()]) / 128
@@ -1351,8 +1348,7 @@ moves_loop:  // When in check, search starts here
         // Decrease/increase reduction for moves with a good/bad history
         r -= ss->statScore * 439 / 4096;
 
-        if (!capture && !is_decisive(alpha))
-            r += 3 * std::clamp(alpha - eval, -64, 96);
+        r += 3 * (!capture && !is_decisive(alpha)) * std::clamp(alpha - eval, -64, 96);
 
         // Scale up reductions for expected ALL nodes
         if (allNode)
