@@ -259,9 +259,7 @@ class AffineTransform {
             constexpr IndexType NumAccums = OutputDimensions / OutputSimdWidth;
 
             constexpr IndexType ChainSplit =
-    #if defined(USE_VNNI) && defined(USE_AVX512)
-              4;
-    #elif defined(USE_AVXVNNI) || defined(USE_NEON_DOTPROD)
+    #if defined(USE_VNNI) || defined(USE_NEON_DOTPROD)
               2;
     #else
               1;
@@ -349,7 +347,7 @@ class AffineTransform {
             constexpr IndexType NumChunks = PaddedInputDimensions / InputSimdWidth;
             constexpr IndexType ChainSplit =
     #if defined(USE_VNNI) || defined(USE_NEON_DOTPROD)
-              NumChunks < 4 ? NumChunks : 4;
+              NumChunks < 2 ? NumChunks : 2;
     #else
               1;
     #endif
