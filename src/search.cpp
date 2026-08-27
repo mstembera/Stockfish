@@ -1046,8 +1046,7 @@ Value Search::Worker::search(
     // Step 11. Internal iterative reductions
     // At sufficient depth, reduce depth for PV/Cut nodes without a TTMove.
     // (*Scaler) Making IIR more aggressive scales poorly.
-    // At shallow depth reduce when the TT has no entry at all.
-    if (!ss->followPV && !allNode && (depth >= 6 ? !ttData.move : depth > 1 && !ss->ttHit))
+    if (!ss->followPV && !allNode && depth >= 6 && !ttData.move)
         depth--;
 
     // Step 12. ProbCut
@@ -1785,13 +1784,14 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         // Step 6. Pruning
         if (!is_loss(bestValue))
         {
-            // Futility pruning and moveCount pruning
+            // Stop after a few moves, including checks and promotions
+            if (moveCount > 2)
+                break;
+
+            // Futility pruning
             if (!givesCheck && move.to_sq() != prevSq && !is_loss(futilityBase)
                 && move.type_of() != PROMOTION)
             {
-                if (moveCount > 2)
-                    continue;
-
                 Value futilityValue = futilityBase + PieceValue[pos.piece_on(move.to_sq())];
 
                 // If static eval + value of piece we are going to capture is
