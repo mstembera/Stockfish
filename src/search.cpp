@@ -998,19 +998,21 @@ Value Search::Worker::search(
         Value futilityMult = std::min(45 + depth * 4, 85);
         futilityMult -= 20 * !ss->ttHit;
 
+        // Raise the margin when a piece of ours is attacked by a pawn
+        bool hasThreat =
+          bool(pos.attacks_by<PAWN>(~us) & pos.pieces(us, KNIGHT, BISHOP, ROOK, QUEEN));
+
         Value futilityMargin = futilityMult * depth
                              - (2789 * improving + 335 * opponentWorsening) * futilityMult / 1024
-                             + std::abs(correctionValue) / 198435;
+                             + std::abs(correctionValue) / 198435 + 85 * hasThreat;
 
         if (eval - futilityMargin >= beta)
             return (661 * beta + 363 * eval) / 1024;
     }
 
     // Step 10. Null move search with verification search
-    // Skip when the TT already predicts a fail low.
     if (cutNode && ss->staticEval >= beta - 13 * depth - 47 * improving + 365 && !excludedMove
-        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && beta >= -2000
-        && !((ttData.bound & BOUND_UPPER) && is_valid(ttData.value) && ttData.value < beta))
+        && pos.non_pawn_material(us) && ss->ply >= nmpMinPly && beta >= -2000)
     {
         assert((ss - 1)->currentMove != Move::null());
 
