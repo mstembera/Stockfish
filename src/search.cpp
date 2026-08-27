@@ -1615,18 +1615,21 @@ moves_loop:  // When in check, search starts here
 
     // Step 24. Write gathered information in transposition table. Note that the
     // static evaluation is saved as it was before correction history.
+    const Bound bound = bestValue >= beta  ? BOUND_LOWER
+                      : PvNode && bestMove ? BOUND_EXACT
+                                           : BOUND_UPPER;
+
     if (!excludedMove && !(rootNode && pvIdx))
-        ttWriter.write(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv,
-                       bestValue >= beta    ? BOUND_LOWER
-                       : PvNode && bestMove ? BOUND_EXACT
-                                            : BOUND_UPPER,
+        ttWriter.write(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv, bound,
                        moveCount != 0 ? depth : std::min(MAX_PLY - 1, depth + 6), bestMove,
                        unadjustedStaticEval, tt.generation());
 
     // Adjust correction history if the best move is not a capture
     // and the error direction matches whether we are above/below bounds.
+    // Exact scores update regardless of the error direction.
     if (!ss->inCheck && !(bestMove && pos.capture(bestMove))
-        && (bestValue > ss->staticEval) == bool(bestMove))
+        && !(bound == BOUND_LOWER && bestValue <= ss->staticEval)
+        && !(bound == BOUND_UPPER && bestValue >= ss->staticEval))
     {
         auto bonus =
           std::clamp(int(bestValue - ss->staticEval) * depth * (bestMove ? 12 : 18) / 128,
@@ -1784,14 +1787,13 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
         // Step 6. Pruning
         if (!is_loss(bestValue))
         {
-            // Stop after a few moves, including checks and promotions
-            if (moveCount > 2)
-                break;
-
-            // Futility pruning
+            // Futility pruning and moveCount pruning
             if (!givesCheck && move.to_sq() != prevSq && !is_loss(futilityBase)
                 && move.type_of() != PROMOTION)
             {
+                if (moveCount > 2)
+                    continue;
+
                 Value futilityValue = futilityBase + PieceValue[pos.piece_on(move.to_sq())];
 
                 // If static eval + value of piece we are going to capture is
