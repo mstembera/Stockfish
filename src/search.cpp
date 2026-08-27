@@ -987,26 +987,8 @@ Value Search::Worker::search(
     // Step 8. Razoring
     // If eval is really low, skip search entirely and return the qsearch value.
     // For PvNodes, we must have a guard against mates being returned.
-    // Above depth 1 the fail low must be confirmed by a verification
-    // qsearch, and the node loses a ply of depth when it is not.
-    if (!PvNode)
-    {
-        const Value razorMargin = 482 * depth * depth;
-
-        if (eval + razorMargin < alpha)
-        {
-            if (depth == 1)
-                return qsearch<NonPV>(pos, ss, alpha, beta);
-
-            Value razorAlpha = std::max(alpha - razorMargin, VALUE_TB_LOSS_IN_MAX_PLY + 1);
-            Value razorValue = qsearch<NonPV>(pos, ss, razorAlpha, razorAlpha + 1);
-
-            if (razorValue <= razorAlpha)
-                return razorValue;
-
-            depth--;
-        }
-    }
+    if (!PvNode && eval < alpha - 482 * depth * depth)
+        return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 9. Futility pruning: child node
     // The depth condition is important for mate finding. It shouldn't be tuned.
@@ -1064,7 +1046,8 @@ Value Search::Worker::search(
     // Step 11. Internal iterative reductions
     // At sufficient depth, reduce depth for PV/Cut nodes without a TTMove.
     // (*Scaler) Making IIR more aggressive scales poorly.
-    if (!ss->followPV && !allNode && depth >= 6 && !ttData.move)
+    // At shallow depth reduce when the TT has no entry at all.
+    if (!ss->followPV && !allNode && (depth >= 6 ? !ttData.move : depth > 1 && !ss->ttHit))
         depth--;
 
     // Step 12. ProbCut
