@@ -987,8 +987,26 @@ Value Search::Worker::search(
     // Step 8. Razoring
     // If eval is really low, skip search entirely and return the qsearch value.
     // For PvNodes, we must have a guard against mates being returned.
-    if (!PvNode && eval < alpha - 482 * depth * depth)
-        return qsearch<NonPV>(pos, ss, alpha, beta);
+    // Above depth 1 the fail low must be confirmed by a verification
+    // qsearch, and the node loses a ply of depth when it is not.
+    if (!PvNode)
+    {
+        const Value razorMargin = 482 * depth * depth;
+
+        if (eval + razorMargin < alpha)
+        {
+            if (depth == 1)
+                return qsearch<NonPV>(pos, ss, alpha, beta);
+
+            Value razorAlpha = std::max(alpha - razorMargin, VALUE_TB_LOSS_IN_MAX_PLY + 1);
+            Value razorValue = qsearch<NonPV>(pos, ss, razorAlpha, razorAlpha + 1);
+
+            if (razorValue <= razorAlpha)
+                return razorValue;
+
+            depth--;
+        }
+    }
 
     // Step 9. Futility pruning: child node
     // The depth condition is important for mate finding. It shouldn't be tuned.
@@ -998,13 +1016,9 @@ Value Search::Worker::search(
         Value futilityMult = std::min(45 + depth * 4, 85);
         futilityMult -= 20 * !ss->ttHit;
 
-        // Raise the margin when a piece of ours is attacked by a pawn
-        bool hasThreat =
-          bool(pos.attacks_by<PAWN>(~us) & pos.pieces(us, KNIGHT, BISHOP, ROOK, QUEEN));
-
         Value futilityMargin = futilityMult * depth
                              - (2789 * improving + 335 * opponentWorsening) * futilityMult / 1024
-                             + std::abs(correctionValue) / 198435 + 85 * hasThreat;
+                             + std::abs(correctionValue) / 198435;
 
         if (eval - futilityMargin >= beta)
             return (661 * beta + 363 * eval) / 1024;
