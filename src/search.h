@@ -348,7 +348,7 @@ class Worker {
     ButterflyHistory mainHistory;
     LowPlyHistory    lowPlyHistory;
 
-    CapturePieceToHistory           captureHistory;
+    alignas(64) CapturePieceToHistory captureHistory;
     CorrectionHistory<Continuation> continuationCorrectionHistory;
 
     TTMoveHistory    ttMoveHistory;
