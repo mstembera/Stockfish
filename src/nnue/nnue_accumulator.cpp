@@ -275,6 +275,19 @@ sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data) {
 }
 
 template<int sign>
+sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data0, const i16* data1) {
+    static_assert(sign == 1 || sign == -1);
+    usize      vl  = __riscv_vsetvl_e16m8(Dimensions - j);
+    vint16m8_t sum = __riscv_vadd_vv_i16m8(__riscv_vle16_v_i16m8(data0 + j, vl),
+                                           __riscv_vle16_v_i16m8(data1 + j, vl), vl);
+    if constexpr (sign == +1)
+        acc = __riscv_vadd_vv_i16m8(acc, sum, vl);
+    else
+        acc = __riscv_vsub_vv_i16m8(acc, sum, vl);
+    return acc;
+}
+
+template<int sign>
 sf_always_inline PsqtTile apply(IndexType j, PsqtTile acc, const i32* data) {
     static_assert(sign == 1 || sign == -1);
     usize      vl       = __riscv_vsetvl_e32m1(PSQTBuckets - j);
@@ -441,6 +454,21 @@ sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data) {
 }
 
 template<int sign>
+sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data0, const i16* data1) {
+    const auto* column0 = reinterpret_cast<const vec_t*>(data0 + j);
+    const auto* column1 = reinterpret_cast<const vec_t*>(data1 + j);
+    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+    {
+        const auto sum = vec_add_16(column0[k], column1[k]);
+        if constexpr (sign == +1)
+            acc[k] = vec_add_16(acc[k], sum);
+        else
+            acc[k] = vec_sub_16(acc[k], sum);
+    }
+    return acc;
+}
+
+template<int sign>
 sf_always_inline PsqtTile apply(IndexType j, PsqtTile acc, const i32* data) {
     const auto* column = reinterpret_cast<const psqt_vec_t*>(data + j);
     for (IndexType k = 0; k < Tiling::NumPsqtRegs; ++k)
@@ -462,9 +490,11 @@ sf_always_inline Tile apply_psq_features(IndexType                       j,
     if constexpr (Incremental)
     {
         assert(list.size() == 1 || list.size() == 2);
-        acc = apply<sign>(j, acc, &ft.weights[list[0] * Dimensions]);
-        if (list.size() > 1)
-            acc = apply<sign>(j, acc, &ft.weights[list[1] * Dimensions]);
+        if (list.size() == 1)
+            acc = apply<sign>(j, acc, &ft.weights[list[0] * Dimensions]);
+        else
+            acc = apply<sign>(j, acc, &ft.weights[list[0] * Dimensions],
+                              &ft.weights[list[1] * Dimensions]);
         return acc;
     }
     for (int i = 0; i < list.ssize(); ++i)
