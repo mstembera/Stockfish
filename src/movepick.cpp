@@ -317,6 +317,12 @@ top:
     case QUIET_INIT :
         if (!skipQuiets)
         {
+            const Piece   firstPc        = make_piece(pos.side_to_move(), PAWN);
+            const auto*   row            = sharedHistory->pawn_entry(pos)[firstPc].data();
+            constexpr int entriesPerLine = 64 / sizeof(*row);
+            for (int i = 0; i < KING * SQUARE_NB; i += entriesPerLine)
+                prefetch(row + i);
+
             MoveList<QUIETS> ml(pos);
 
             endCur = endGenerated = score<QUIETS>(ml);
