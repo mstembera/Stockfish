@@ -198,6 +198,12 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
     Color us = pos.side_to_move();
 
+    // Rows of the continuation histories for the piece currently being scored.
+    // The move list is grouped by piece, so each row is looked up once per group.
+    [[maybe_unused]] Piece                             rowPc     = NO_PIECE;
+    [[maybe_unused]] const PawnPieceToHistory*         pawnEntry = nullptr;
+    [[maybe_unused]] const PieceToHistory::value_type* contRow[5]{};
+
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     if constexpr (Type == QUIETS)
     {
@@ -207,6 +213,8 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
           pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatByLesser[KNIGHT];
         threatByLesser[QUEEN] = pos.attacks_by<ROOK>(~us) | threatByLesser[ROOK];
         threatByLesser[KING]  = 0;
+
+        pawnEntry = &sharedHistory->pawn_entry(pos);
     }
 
     ExtMove* it = cur;
@@ -227,14 +235,24 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
         else if constexpr (Type == QUIETS)
         {
+            if (pc != rowPc)
+            {
+                rowPc      = pc;
+                contRow[0] = &(*continuationHistory[0])[pc];
+                contRow[1] = &(*continuationHistory[1])[pc];
+                contRow[2] = &(*continuationHistory[2])[pc];
+                contRow[3] = &(*continuationHistory[3])[pc];
+                contRow[4] = &(*continuationHistory[5])[pc];
+            }
+
             // histories
             m.value = 2 * (*mainHistory)[us][m.raw()];
-            m.value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
-            m.value += (*continuationHistory[0])[pc][to];
-            m.value += (*continuationHistory[1])[pc][to];
-            m.value += (*continuationHistory[2])[pc][to];
-            m.value += (*continuationHistory[3])[pc][to];
-            m.value += (*continuationHistory[5])[pc][to];
+            m.value += 2 * (*pawnEntry)[pc][to];
+            m.value += (*contRow[0])[to];
+            m.value += (*contRow[1])[to];
+            m.value += (*contRow[2])[to];
+            m.value += (*contRow[3])[to];
+            m.value += (*contRow[4])[to];
 
             // bonus for checks
             m.value += ((pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
@@ -317,12 +335,6 @@ top:
     case QUIET_INIT :
         if (!skipQuiets)
         {
-            const Piece   firstPc        = make_piece(pos.side_to_move(), PAWN);
-            const auto*   row            = sharedHistory->pawn_entry(pos)[firstPc].data();
-            constexpr int entriesPerLine = 64 / sizeof(*row);
-            for (int i = 0; i < KING * SQUARE_NB; i += entriesPerLine)
-                prefetch(row + i);
-
             MoveList<QUIETS> ml(pos);
 
             endCur = endGenerated = score<QUIETS>(ml);
