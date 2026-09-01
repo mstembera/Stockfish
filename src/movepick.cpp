@@ -215,9 +215,9 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
         ExtMove& m = *it++;
         m          = move;
 
-        const Square    from          = m.from_sq();
-        const Square    to            = m.to_sq();
-        const Piece     pc            = pos.moved_piece(m);
+        const Square    from          = move.from_sq();
+        const Square    to            = move.to_sq();
+        const Piece     pc            = pos.moved_piece(move);
         const PieceType pt            = type_of(pc);
         const Piece     capturedPiece = pos.piece_on(to);
 
@@ -227,10 +227,10 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
         else if constexpr (Type == QUIETS)
         {
-            // Use a local accumulator to eliminate redundant stores to m.value
+            // Accumulate locally, the stores to m.value would not fold
 
             // histories
-            int value = 2 * (*mainHistory)[us][m.raw()];
+            int value = 2 * (*mainHistory)[us][move.raw()];
             value += 2 * sharedHistory->pawn_entry(pos)[pc][to];
             value += (*continuationHistory[0])[pc][to];
             value += (*continuationHistory[1])[pc][to];
@@ -239,7 +239,7 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
             value += (*continuationHistory[5])[pc][to];
 
             // bonus for checks
-            value += ((pos.check_squares(pt) & to) && pos.see_ge(m, -75)) * 16384;
+            value += ((pos.check_squares(pt) & to) && pos.see_ge(move, -75)) * 16384;
 
             // penalty for moving to a square threatened by a lesser piece
             // or bonus for escaping an attack by a lesser piece.
@@ -248,17 +248,17 @@ ExtMove* MovePicker::score(const MoveList<Type>& ml) {
 
 
             if (ply < LOW_PLY_HISTORY_SIZE)
-                value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
+                value += 8 * (*lowPlyHistory)[ply][move.raw()] / (1 + ply);
 
             m.value = value;
         }
 
         else  // Type == EVASIONS
         {
-            if (pos.capture_stage(m))
+            if (pos.capture_stage(move))
                 m.value = PieceValue[capturedPiece] + (1 << 28);
             else
-                m.value = (*mainHistory)[us][m.raw()] + (*continuationHistory[0])[pc][to];
+                m.value = (*mainHistory)[us][move.raw()] + (*continuationHistory[0])[pc][to];
         }
     }
     return it;

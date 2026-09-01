@@ -116,10 +116,16 @@ void update_correction_history(const Position& pos,
     constexpr int nonPawnWeight = 186;
     auto&         shared        = workerThread.sharedHistory;
 
-    shared.pawn_correction_entry(pos)[us].pawn << bonus;
-    shared.minor_piece_correction_entry(pos)[us].minor << bonus * 150 / 128;
-    shared.nonpawn_correction_entry<WHITE>(pos)[us].nonPawnWhite << bonus * nonPawnWeight / 128;
-    shared.nonpawn_correction_entry<BLACK>(pos)[us].nonPawnBlack << bonus * nonPawnWeight / 128;
+    // Resolve all entries first, atomic stores block reuse of the position keys
+    auto& pawnEntry    = shared.pawn_correction_entry(pos)[us];
+    auto& minorEntry   = shared.minor_piece_correction_entry(pos)[us];
+    auto& whiteNpEntry = shared.nonpawn_correction_entry<WHITE>(pos)[us];
+    auto& blackNpEntry = shared.nonpawn_correction_entry<BLACK>(pos)[us];
+
+    pawnEntry.pawn << bonus;
+    minorEntry.minor << bonus * 150 / 128;
+    whiteNpEntry.nonPawnWhite << bonus * nonPawnWeight / 128;
+    blackNpEntry.nonPawnBlack << bonus * nonPawnWeight / 128;
 
     if (m.is_ok())
     {
@@ -1591,13 +1597,15 @@ moves_loop:  // When in check, search starts here
         // multipliers larger than 900
         const int scaledBonus = std::min(150 * depth - 85, 1337) * bonusScale;
 
-        update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
-                                      scaledBonus * 263 / 16384);
+        // Read the board first, atomic history stores block reuse across the updates
+        const Piece prevPc = pos.piece_on(prevSq);
+
+        update_continuation_histories(ss - 1, prevPc, prevSq, scaledBonus * 263 / 16384);
 
         mainHistory[~us][((ss - 1)->currentMove).raw()] << scaledBonus * 215 / 32768;
 
-        if (type_of(pos.piece_on(prevSq)) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
-            sharedHistory.pawn_entry(pos)[pos.piece_on(prevSq)][prevSq] << scaledBonus * 324 / 8192;
+        if (type_of(prevPc) != PAWN && ((ss - 1)->currentMove).type_of() != PROMOTION)
+            sharedHistory.pawn_entry(pos)[prevPc][prevSq] << scaledBonus * 324 / 8192;
     }
 
     // Bonus for prior capture countermove that caused the fail low
@@ -2051,9 +2059,13 @@ void update_quiet_histories(
     if (ss->ply < LOW_PLY_HISTORY_SIZE)
         workerThread.lowPlyHistory[ss->ply][move.raw()] << bonus * 712 / 1024;
 
-    update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus * 750 / 1024);
+    // Read the board first, atomic history stores block reuse across the updates
+    const Piece  movedPiece = pos.moved_piece(move);
+    const Square to         = move.to_sq();
 
-    workerThread.sharedHistory.pawn_entry(pos)[pos.moved_piece(move)][move.to_sq()]
+    update_continuation_histories(ss, movedPiece, to, bonus * 750 / 1024);
+
+    workerThread.sharedHistory.pawn_entry(pos)[movedPiece][to]
       << bonus * (bonus > -4 ? 1104 : 459) / 1024;
 }
 }
