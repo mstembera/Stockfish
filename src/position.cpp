@@ -612,21 +612,21 @@ string Position::fen() const {
 // and the slider pieces of color ~c pinning pieces of color c to the king.
 void Position::update_slider_blockers(Color c) const {
 
-    Square ksq = square<KING>(c);
+    const Square ksq = square<KING>(c);
 
     // Snipers are sliders that attack 's' when a piece and other snipers are removed
     Bitboard snipers = ((attacks_bb<ROOK>(ksq) & pieces(QUEEN, ROOK))
                         | (attacks_bb<BISHOP>(ksq) & pieces(QUEEN, BISHOP)))
                      & pieces(~c);
-    Bitboard occupancy = pieces() ^ snipers;
+    const Bitboard occupancy = pieces() ^ snipers;
 
     // Accumulate locally, the stores to st would force a reload of the piece bitboards
     Bitboard blockers = 0, pinners = 0;
 
     while (snipers)
     {
-        Square   sniperSq = pop_lsb(snipers);
-        Bitboard b        = between_bb(ksq, sniperSq) & occupancy;
+        const Square   sniperSq = pop_lsb(snipers);
+        const Bitboard b        = between_bb(ksq, sniperSq) & occupancy;
 
         if (b && !more_than_one(b))
         {

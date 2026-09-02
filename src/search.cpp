@@ -2059,13 +2059,12 @@ void update_quiet_histories(
     if (ss->ply < LOW_PLY_HISTORY_SIZE)
         workerThread.lowPlyHistory[ss->ply][move.raw()] << bonus * 712 / 1024;
 
-    // Read the board first, atomic history stores block reuse across the updates
-    const Piece  movedPiece = pos.moved_piece(move);
-    const Square to         = move.to_sq();
+    // Read the board once, atomic history stores block reuse of the load
+    const Piece movedPiece = pos.moved_piece(move);
 
-    update_continuation_histories(ss, movedPiece, to, bonus * 750 / 1024);
+    update_continuation_histories(ss, movedPiece, move.to_sq(), bonus * 750 / 1024);
 
-    workerThread.sharedHistory.pawn_entry(pos)[movedPiece][to]
+    workerThread.sharedHistory.pawn_entry(pos)[movedPiece][move.to_sq()]
       << bonus * (bonus > -4 ? 1104 : 459) / 1024;
 }
 }
