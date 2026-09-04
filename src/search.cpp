@@ -988,7 +988,8 @@ Value Search::Worker::search(
 
     // Step 8. Razoring
     // If eval is really low, skip search entirely and return the qsearch value
-    if (!PvNode && eval < alpha - 482 * depth * depth)
+    // Suppress razoring for lower-bound TT entries.
+    if (!PvNode && ttData.bound != BOUND_LOWER && eval < alpha - 482 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 9. Futility pruning: child node
@@ -1247,10 +1248,7 @@ moves_loop:  // When in check, search starts here
             && is_valid(ttData.value) && !is_decisive(ttData.value) && (ttData.bound & BOUND_LOWER)
             && ttData.depth >= depth - 3 && !is_shuffling(move, ss, pos) && !seekMate)
         {
-            // Use a smaller base singular margin for exact TT scores.
-            Value singularBeta  = ttData.value
-                                - ((ttData.bound == BOUND_EXACT ? 15 : 59)
-                                   + 66 * (ss->ttPv && !PvNode)) * depth / 63;
+            Value singularBeta  = ttData.value - (59 + 66 * (ss->ttPv && !PvNode)) * depth / 63;
             Depth singularDepth = newDepth / 2;
 
             ss->excludedMove = move;
