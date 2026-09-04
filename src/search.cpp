@@ -976,9 +976,7 @@ Value Search::Worker::search(
         goto moves_loop;
 
     // Use static evaluation difference to improve quiet move ordering
-    // Skip eval-based history updates at deep TT hits.
-    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture
-        && (!ttHit || depth < 6))
+    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
     {
         int evalDiff = std::clamp(-int((ss - 1)->staticEval + ss->staticEval), -189, 194) + 60;
         mainHistory[~us][((ss - 1)->currentMove).raw()] << evalDiff * 11;
@@ -1817,8 +1815,12 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             if (!capture)
                 continue;
 
+            // Adjust qsearch SEE with capture history.
+            const int captHist =
+              captureHistory[pos.moved_piece(move)][move.to_sq()][type_of(pos.piece_on(move.to_sq()))];
+
             // Do not search moves with bad enough SEE values
-            if (!pos.see_ge(move, -74))
+            if (!pos.see_ge(move, -74 - 34 * captHist / 1024))
                 continue;
         }
 
