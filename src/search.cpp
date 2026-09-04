@@ -988,8 +988,7 @@ Value Search::Worker::search(
 
     // Step 8. Razoring
     // If eval is really low, skip search entirely and return the qsearch value
-    // Suppress razoring for lower-bound TT entries.
-    if (!PvNode && ttData.bound != BOUND_LOWER && eval < alpha - 482 * depth * depth)
+    if (!PvNode && eval < alpha - 482 * depth * depth)
         return qsearch<NonPV>(pos, ss, alpha, beta);
 
     // Step 9. Futility pruning: child node
@@ -1358,6 +1357,9 @@ moves_loop:  // When in check, search starts here
         // Scale up reductions for expected ALL nodes
         if (allNode)
             r += r * 276 / (256 * depth + 268);
+
+        // Add node-based jitter to LMR and full-depth reductions.
+        r += int(u64(nodes) & 127) - 64;
 
         // Apply the computed LMR
         if (depth >= 2 && moveCount > 1)
