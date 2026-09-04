@@ -1210,8 +1210,10 @@ moves_loop:  // When in check, search starts here
                 // (*Scaler): Generally, lower divisors scale well
                 lmrDepth += history / lmrDivisor[dIndex];
 
+                // Relax quiet futility pruning with correction magnitude.
                 Value futilityValue =
-                  ss->staticEval + 119 * lmrDepth + 90 * (ss->staticEval > alpha) + 164;
+                  ss->staticEval + 119 * lmrDepth + 90 * (ss->staticEval > alpha) + 164
+                  + std::abs(correctionValue) / 262144;
 
                 // Futility pruning: parent node
                 // (*Scaler): Generally, more frequent futility pruning scales well
@@ -1815,12 +1817,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             if (!capture)
                 continue;
 
-            // Adjust qsearch SEE with capture history.
-            const int captHist =
-              captureHistory[pos.moved_piece(move)][move.to_sq()][type_of(pos.piece_on(move.to_sq()))];
-
             // Do not search moves with bad enough SEE values
-            if (!pos.see_ge(move, -74 - 34 * captHist / 1024))
+            if (!pos.see_ge(move, -74))
                 continue;
         }
 
