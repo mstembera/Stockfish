@@ -24,7 +24,6 @@
 #include <deque>
 #include <iosfwd>
 #include <memory>
-#include <new>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -144,10 +143,11 @@ class Position {
 
     // Doing and undoing moves
     void do_move(Move m, StateInfo& newSt, const TranspositionTable* tt);
+    // Null dirties disable NNUE change tracking.
     void do_move(Move                      m,
                  StateInfo&                newSt,
                  bool                      givesCheck,
-                 Dirties&                  dirties,
+                 Dirties*                  dirties,
                  const TranspositionTable* tt,
                  const SharedHistories*    worker);
     void undo_move(Move m);
@@ -228,7 +228,6 @@ class Position {
     int        gamePly;
     Color      sideToMove;
     bool       chess960;
-    Dirties    scratchDirties;
 };
 
 std::ostream& operator<<(std::ostream& os, const Position& pos);
@@ -435,9 +434,8 @@ inline void Position::swap_piece(Square s, Piece pc, DirtyThreats* const dts) {
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt, const TranspositionTable* tt = nullptr) {
-    new (&scratchDirties.dirtyThreats) DirtyThreats;
-    new (&scratchDirties.dirtyPawnPairs) DirtyPawnPairs;
-    do_move(m, newSt, gives_check(m), scratchDirties, tt, nullptr);
+    // These callers do not consume NNUE updates.
+    do_move(m, newSt, gives_check(m), nullptr, tt, nullptr);
 }
 
 inline StateInfo* Position::state() const { return st; }

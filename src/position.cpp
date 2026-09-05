@@ -817,7 +817,7 @@ bool Position::gives_check(Move m) const {
 void Position::do_move(Move                      m,
                        StateInfo&                newSt,
                        bool                      givesCheck,
-                       Dirties&                  dirties,
+                       Dirties*                  dirties,
                        const TranspositionTable* tt      = nullptr,
                        const SharedHistories*    history = nullptr) {
 
@@ -839,13 +839,6 @@ void Position::do_move(Move                      m,
     ++st->rule50;
     ++st->pliesFromNull;
 
-    auto& dpps = dirties.dirtyPawnPairs;
-    auto& dts  = dirties.dirtyThreats;
-    auto& dp   = dirties.dirtyPiece;
-
-    dpps.before[WHITE] = pieces(WHITE, PAWN);
-    dpps.before[BLACK] = pieces(BLACK, PAWN);
-
     Color  us       = sideToMove;
     Color  them     = ~us;
     Square from     = m.from_sq();
@@ -853,10 +846,20 @@ void Position::do_move(Move                      m,
     Piece  pc       = piece_on(from);
     Piece  captured = m.type_of() == EN_PASSANT ? make_piece(them, PAWN) : piece_on(to);
 
-    dp.pc     = pc;
-    dp.from   = from;
-    dp.to     = to;
-    dp.add_sq = SQ_NONE;
+    // Record feature changes only for accumulator-stack callers.
+    auto* const dts = dirties ? &dirties->dirtyThreats : nullptr;
+    auto* const dp  = dirties ? &dirties->dirtyPiece : nullptr;
+    if (dirties)
+    {
+        auto& dpps = dirties->dirtyPawnPairs;
+        dpps.before[WHITE] = pieces(WHITE, PAWN);
+        dpps.before[BLACK] = pieces(BLACK, PAWN);
+
+        dp->pc     = pc;
+        dp->from   = from;
+        dp->to     = to;
+        dp->add_sq = SQ_NONE;
+    }
 
     assert(color_of(pc) == us);
     assert(captured == NO_PIECE || color_of(captured) == (m.type_of() != CASTLING ? them : us));
@@ -868,7 +871,7 @@ void Position::do_move(Move                      m,
         assert(captured == make_piece(us, ROOK));
 
         Square rfrom, rto;
-        do_castling<true>(us, from, to, rfrom, rto, &dts, &dp);
+        do_castling<true>(us, from, to, rfrom, rto, dts, dp);
 
         k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         st->nonPawnKey[us] ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
@@ -893,7 +896,7 @@ void Position::do_move(Move                      m,
                 assert(piece_on(capsq) == make_piece(them, PAWN));
 
                 // Update board and piece lists in ep case, normal captures are updated later
-                remove_piece(capsq, &dts);
+                remove_piece(capsq, dts);
             }
 
             st->pawnKey ^= Zobrist::psq[captured][capsq];
@@ -907,8 +910,11 @@ void Position::do_move(Move                      m,
                 st->minorPieceKey ^= Zobrist::psq[captured][capsq];
         }
 
-        dp.remove_pc = captured;
-        dp.remove_sq = capsq;
+        if (dp)
+        {
+            dp->remove_pc = captured;
+            dp->remove_sq = capsq;
+        }
 
         k ^= Zobrist::psq[captured][capsq];
         st->materialKey ^=
@@ -917,8 +923,8 @@ void Position::do_move(Move                      m,
         // Reset rule 50 counter
         st->rule50 = 0;
     }
-    else
-        dp.remove_sq = SQ_NONE;
+    else if (dp)
+        dp->remove_sq = SQ_NONE;
 
     // Update hash key
     k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
@@ -971,9 +977,12 @@ void Position::do_move(Move                      m,
             assert(relative_rank(us, to) == RANK_8);
             assert(pt >= KNIGHT && pt <= QUEEN);
 
-            dp.add_pc = promotion;
-            dp.add_sq = to;
-            dp.to     = SQ_NONE;
+            if (dp)
+            {
+                dp->add_pc = promotion;
+                dp->add_sq = to;
+                dp->to     = SQ_NONE;
+            }
 
             // Update hash keys
             // Zobrist::psq[pc][to] is zero, so we don't need to clear it
@@ -1027,15 +1036,15 @@ void Position::do_move(Move                      m,
 
         if (captured && m.type_of() != EN_PASSANT)
         {
-            remove_piece(from, &dts);
-            swap_piece(to, toPc, &dts);
+            remove_piece(from, dts);
+            swap_piece(to, toPc, dts);
         }
         else if (pc == toPc)
-            move_piece(from, to, &dts);
+            move_piece(from, to, dts);
         else
         {
-            remove_piece(from, &dts);
-            put_piece(toPc, to, &dts);
+            remove_piece(from, dts);
+            put_piece(toPc, to, dts);
         }
     }
 
@@ -1071,13 +1080,17 @@ void Position::do_move(Move                      m,
 
     assert(pos_is_ok());
 
-    dpps.after[WHITE] = pieces(WHITE, PAWN);
-    dpps.after[BLACK] = pieces(BLACK, PAWN);
+    if (dirties)
+    {
+        auto& dpps = dirties->dirtyPawnPairs;
+        dpps.after[WHITE] = pieces(WHITE, PAWN);
+        dpps.after[BLACK] = pieces(BLACK, PAWN);
 
-    assert(dp.pc != NO_PIECE);
-    assert(!(bool(captured) || m.type_of() == CASTLING) ^ (dp.remove_sq != SQ_NONE));
-    assert(dp.from != SQ_NONE);
-    assert(!(dp.add_sq != SQ_NONE) ^ (m.type_of() == PROMOTION || m.type_of() == CASTLING));
+        assert(dp->pc != NO_PIECE);
+        assert(!(bool(captured) || m.type_of() == CASTLING) ^ (dp->remove_sq != SQ_NONE));
+        assert(dp->from != SQ_NONE);
+        assert(!(dp->add_sq != SQ_NONE) ^ (m.type_of() == PROMOTION || m.type_of() == CASTLING));
+    }
 }
 
 
@@ -1321,9 +1334,9 @@ void Position::do_castling(Color               us,
     rto           = relative_square(us, kingSide ? SQ_F1 : SQ_D1);
     to            = relative_square(us, kingSide ? SQ_G1 : SQ_C1);
 
-    assert(!Do || dp);
+    assert(!dts || dp);  // Castling can omit all NNUE logging.
 
-    if (Do)
+    if (Do && dp)
     {
         dp->to        = to;
         dp->remove_pc = dp->add_pc = make_piece(us, ROOK);

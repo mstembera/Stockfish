@@ -658,7 +658,7 @@ void Search::Worker::do_move(
     ++nodes;
 
     Dirties& dirties = accumulatorStack.push();
-    pos.do_move(move, st, givesCheck, dirties, &tt, &sharedHistory);
+    pos.do_move(move, st, givesCheck, &dirties, &tt, &sharedHistory);
 
     if (ss != nullptr)
     {
