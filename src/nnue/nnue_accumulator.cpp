@@ -910,9 +910,33 @@ void update_accumulator_refresh_cache(Color                     perspective,
     entry.pieceBB = pos.pieces();
     entry.pieces  = pos.piece_array();
 
+    // Rebuild pawn-pair sums when a refresh encounters changed pawns.
+    auto& pawnPairs = cache.pawnPairs[perspective][(int(ksq) & 4) != 0];
+    const std::array<Bitboard, COLOR_NB> pawns = {pos.pieces(WHITE, PAWN), pos.pieces(BLACK, PAWN)};
+    if (!pawnPairs.computed || pawnPairs.pawns != pawns)
+    {
+        ThreatFeatureSet::IndexList pairs;
+        PairFeatureSet::append_active_indices(perspective, pos, pairs);
+        pawnPairs.accumulation.fill(0);
+        pawnPairs.psqtAccumulation.fill(0);
+        for (IndexType j = 0; j < Dimensions; increment_index(j))
+        {
+            auto acc = load_tile(j, pawnPairs.accumulation.data());
+            acc = apply_threat_features<+1>(j, acc, pairs, featureTransformer);
+            store_tile(j, pawnPairs.accumulation.data(), acc);
+        }
+        for (IndexType j = 0; j < PSQTBuckets; increment_psqt_index(j))
+        {
+            auto psqt = load_psqt(j, pawnPairs.psqtAccumulation.data());
+            psqt = apply_psqt<+1>(j, psqt, pairs, featureTransformer.threatAndPpPsqtWeights.data());
+            store_psqt(j, pawnPairs.psqtAccumulation.data(), psqt);
+        }
+        pawnPairs.pawns = pawns;
+        pawnPairs.computed = true;
+    }
+
     ThreatFeatureSet::IndexList active;
     ThreatFeatureSet::append_active_indices(perspective, pos, active);
-    PairFeatureSet::append_active_indices(perspective, pos, active);
 
     accumulator.computed[perspective] = true;
 
@@ -929,6 +953,7 @@ void update_accumulator_refresh_cache(Color                     perspective,
         store_tile(j, &entry.accumulation[0], acc);
 
         acc = apply_threat_features<+1>(j, acc, active, featureTransformer);
+        acc = apply<+1>(j, acc, pawnPairs.accumulation.data());
 
         store_tile(j, accumulator.accumulation[perspective].data(), acc);
     }
@@ -943,6 +968,7 @@ void update_accumulator_refresh_cache(Color                     perspective,
         store_psqt(j, entry.psqtAccumulation.data(), psqt);
 
         psqt = apply_psqt<+1>(j, psqt, active, featureTransformer.threatAndPpPsqtWeights.data());
+        psqt = apply<+1>(j, psqt, pawnPairs.psqtAccumulation.data());
 
         store_psqt(j, accumulator.psqtAccumulation[perspective].data(), psqt);
     }

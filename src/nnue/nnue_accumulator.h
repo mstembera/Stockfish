@@ -76,16 +76,28 @@ struct AccumulatorCaches {
         }
     };
 
+    // Cache pawn-pair sums by pawn placement, perspective and king-file half.
+    struct alignas(CacheLineSize) PawnPairEntry {
+        std::array<BiasType, L1>               accumulation;
+        std::array<PSQTWeightType, PSQTBuckets> psqtAccumulation;
+        std::array<Bitboard, COLOR_NB>         pawns;
+        bool                                  computed = false;
+    };
+
     template<typename Network>
     void clear(const Network& network) {
         for (auto& entries1D : entries)
             for (auto& entry : entries1D)
                 entry.clear(network.featureTransformer.biases);
+        for (auto& entries1D : pawnPairs)
+            for (auto& entry : entries1D)
+                entry.computed = false;
     }
 
     std::array<Entry, COLOR_NB>& operator[](Square sq) { return entries[sq]; }
 
     std::array<std::array<Entry, COLOR_NB>, SQUARE_NB> entries;
+    std::array<std::array<PawnPairEntry, 2>, COLOR_NB> pawnPairs;
 };
 
 
