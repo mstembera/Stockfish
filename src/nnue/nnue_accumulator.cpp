@@ -122,12 +122,14 @@ void AccumulatorStack::evaluate_side(Color                     perspective,
     {
         const auto& dirtyPiece = latest().dirtyPiece;
 
+        // Threat and pawn-pair indices depend on the king square only through its
+        // orientation, so a king move that stays on the same half of the board
+        // (including kingside castling) can reuse the previous accumulator.
         if (dirtyPiece.pc == make_piece(perspective, KING)
             && accumulators[size - 2].computed[perspective]
             && pos.count<ALL_PIECES>() >= MIN_PC_COUNT_HYBRID
-            && ((int(dirtyPiece.from) & 0b100) == (int(dirtyPiece.to) & 0b100))
-            && dirtyPiece.add_sq == SQ_NONE  // excludes castling
-        )
+            && dirtyPiece.from != dirtyPiece.to  // Chess960 castling may leave the king in place
+            && ((int(dirtyPiece.from) & 0b100) == (int(dirtyPiece.to) & 0b100)))
         {
             update_accumulator_hybrid(perspective, pos, featureTransformer, mut_latest(),
                                       accumulators[size - 2], cache);
@@ -744,20 +746,37 @@ void update_accumulator_hybrid(Color                     perspective,
 
     assert(previousPieces[newKsq] == dirtyPiece.pc);
 
-    if (dirtyPiece.remove_sq != SQ_NONE)
+    if (dirtyPiece.add_sq != SQ_NONE)
     {
-        assert(dirtyPiece.remove_sq == newKsq);
-        previousPieces[newKsq] = dirtyPiece.remove_pc;
+        // Castling: undo both the king and the rook move. Clear the destination
+        // squares first since they may overlap the origin squares in Chess960.
+        assert(dirtyPiece.add_pc == dirtyPiece.remove_pc && type_of(dirtyPiece.add_pc) == ROOK);
+
+        previousPieces[newKsq]            = NO_PIECE;
+        previousPieces[dirtyPiece.add_sq] = NO_PIECE;
+        previousPieceBB &= ~(square_bb(newKsq) | square_bb(dirtyPiece.add_sq));
+
+        previousPieces[oldKsq]               = make_piece(perspective, KING);
+        previousPieces[dirtyPiece.remove_sq] = dirtyPiece.remove_pc;
+        previousPieceBB |= square_bb(oldKsq) | square_bb(dirtyPiece.remove_sq);
     }
     else
     {
-        previousPieces[newKsq] = NO_PIECE;
-        previousPieceBB &= ~square_bb(newKsq);
-    }
+        if (dirtyPiece.remove_sq != SQ_NONE)
+        {
+            assert(dirtyPiece.remove_sq == newKsq);
+            previousPieces[newKsq] = dirtyPiece.remove_pc;
+        }
+        else
+        {
+            previousPieces[newKsq] = NO_PIECE;
+            previousPieceBB &= ~square_bb(newKsq);
+        }
 
-    assert(previousPieces[oldKsq] == NO_PIECE);
-    previousPieces[oldKsq] = make_piece(perspective, KING);
-    previousPieceBB |= square_bb(oldKsq);
+        assert(previousPieces[oldKsq] == NO_PIECE);
+        previousPieces[oldKsq] = make_piece(perspective, KING);
+        previousPieceBB |= square_bb(oldKsq);
+    }
 
     const auto& oldEntry = cache[oldKsq][perspective];
     auto&       newEntry = cache[newKsq][perspective];
