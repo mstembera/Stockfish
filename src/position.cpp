@@ -1410,7 +1410,6 @@ bool Position::see_ge(Move m, int threshold) const {
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
     Color    stm       = sideToMove;
     Bitboard attackers = attackers_to(to, occupied);
-    Bitboard stmAttackers, bb;
 
     const Bitboard bishopSliders = attacks_bb<BISHOP>(to) & pieces(BISHOP, QUEEN);
     const Bitboard rookSliders   = attacks_bb<ROOK>(to) & pieces(ROOK, QUEEN);
@@ -1420,8 +1419,10 @@ bool Position::see_ge(Move m, int threshold) const {
         stm = ~stm;
         attackers &= occupied;
 
+        Bitboard stmAttackers = attackers & pieces(stm);
+
         // If stm has no more attackers then give up: stm loses
-        if (!(stmAttackers = attackers & pieces(stm)))
+        if (!stmAttackers)
             return stm != sideToMove;
 
         // Don't allow pinned pieces to attack as long as there are
@@ -1434,68 +1435,40 @@ bool Position::see_ge(Move m, int threshold) const {
                 return stm != sideToMove;
         }
 
+        // Locate the next least valuable attacker
+        PieceType pt = PAWN;
+        Bitboard  bb = stmAttackers & pieces(pt);
+        while (!bb && ++pt < KING)
+            bb = stmAttackers & pieces(pt);
+
+        // If we "capture" with the king but the opponent still has attackers,
+        // reverse the result.
+        if (pt == KING)
+            return (attackers & pieces(~stm)) ? stm != sideToMove : stm == sideToMove;
+
         // +1 folds in the alternating tie-break.
-        // Locate and remove the next least valuable attacker, and add to
-        // the bitboard 'attackers' any X-ray attackers behind it.
-        if ((bb = stmAttackers & pieces(PAWN)))
+        if ((swap = PieceValue[pt] + 1 - swap) <= 0)
+            return stm == sideToMove;
+
+        // Remove the attacker and add to the bitboard 'attackers'
+        // any X-ray attackers behind it.
+        bb = least_significant_square_bb(bb);
+        occupied ^= bb;
+
+        if (pt != KNIGHT)
         {
-            if ((swap = PawnValue + 1 - swap) <= 0)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            if (bishopSliders & occupied & ~attackers)
-                attackers |= attacks_bb<BISHOP>(to, occupied) & bishopSliders;
-        }
-
-        else if ((bb = stmAttackers & pieces(KNIGHT)))
-        {
-            if ((swap = KnightValue + 1 - swap) <= 0)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-        }
-
-        else if ((bb = stmAttackers & pieces(BISHOP)))
-        {
-            if ((swap = BishopValue + 1 - swap) <= 0)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            if (bishopSliders & occupied & ~attackers)
-                attackers |= attacks_bb<BISHOP>(to, occupied) & bishopSliders;
-        }
-
-        else if ((bb = stmAttackers & pieces(ROOK)))
-        {
-            if ((swap = RookValue + 1 - swap) <= 0)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            if (rookSliders & occupied & ~attackers)
+            // Queens expose only one ray family.
+            if (pt < ROOK || (bb & bishopSliders))
+            {
+                if (bishopSliders & occupied & ~attackers)
+                    attackers |= attacks_bb<BISHOP>(to, occupied) & bishopSliders;
+            }
+            else if (rookSliders & occupied & ~attackers)
                 attackers |= attacks_bb<ROOK>(to, occupied) & rookSliders;
         }
-
-        else if ((bb = stmAttackers & pieces(QUEEN)))
-        {
-            swap = QueenValue + 1 - swap;
-            //  implies that the previous recapture was done by a higher rated piece than a Queen (King is excluded)
-            assert(swap > 0);
-            occupied ^= least_significant_square_bb(bb);
-
-            if ((bishopSliders | rookSliders) & occupied & ~attackers)
-            {
-                const auto [bishopAttacks, rookAttacks] = both_attacks_bb(to, occupied);
-                attackers |= (bishopAttacks & bishopSliders) | (rookAttacks & rookSliders);
-            }
-        }
-
-        else  // KING
-              // If we "capture" with the king but the opponent still has attackers,
-              // reverse the result.
-            return (attackers & ~pieces(stm)) ? stm != sideToMove : stm == sideToMove;
     }
-
-    return stm == sideToMove;
 }
+
 
 // Tests whether the position is drawn by 50-move rule
 // or by repetition. It does not detect stalemates.
