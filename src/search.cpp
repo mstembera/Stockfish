@@ -1820,7 +1820,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
               captureHistory[pos.moved_piece(move)][move.to_sq()][type_of(pos.piece_on(move.to_sq()))];
 
             // Do not search moves with bad enough SEE values
-            if (!pos.see_ge(move, -74 - 50 * captHist / 1024))
+            if (!pos.see_ge(move, -74 - 23 * captHist / 1024))
                 continue;
         }
 
