@@ -349,6 +349,14 @@ inline Bitboard attacks_bb(Piece pc, Square s, Bitboard occupied) {
                                : attacks_bb(type_of(pc), s, occupied);
 }
 
+inline bool attacks_square(PieceType pt, Square from, Square to, Bitboard occupied) {
+
+    assert(pt >= KNIGHT && pt <= KING && is_ok(from) && is_ok(to));
+
+    return (PseudoAttacks[pt][from] & to)
+        && (pt == KNIGHT || pt == KING || !((between_bb(from, to) ^ to) & occupied));
+}
+
 }  // namespace Stockfish::Attacks
 
 #endif  // #ifndef ATTACKS_H_INCLUDED

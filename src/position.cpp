@@ -744,7 +744,7 @@ bool Position::pseudo_legal(const Move m) const {
         if (!(isCapture || isSinglePush || isDoublePush))
             return false;
     }
-    else if (!(attacks_bb(type_of(pc), from, pieces()) & to))
+    else if (!attacks_square(type_of(pc), from, to, pieces()))
         return false;
 
     if (checkers() && type_of(pc) != KING)
@@ -785,7 +785,7 @@ bool Position::gives_check(Move m) const {
         return false;
 
     case PROMOTION :
-        return attacks_bb(m.promotion_type(), to, pieces() ^ from) & pieces(~sideToMove, KING);
+        return attacks_square(m.promotion_type(), to, square<KING>(~sideToMove), pieces() ^ from);
 
     // En passant capture with check? We have already handled the case of direct
     // checks and ordinary discovered check, so the only case we need to handle
