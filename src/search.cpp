@@ -979,7 +979,7 @@ Value Search::Worker::search(
     // Use static evaluation difference to improve quiet move ordering
     // Skip eval-based history updates at deep TT hits.
     if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture
-        && (!ttHit || depth < 5))
+        && (!ttHit || depth < 7))
     {
         int evalDiff = std::clamp(-int((ss - 1)->staticEval + ss->staticEval), -189, 194) + 60;
         mainHistory[~us][((ss - 1)->currentMove).raw()] << evalDiff * 11;
