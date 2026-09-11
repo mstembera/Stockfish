@@ -29,6 +29,24 @@
 
 namespace Stockfish::Eval::NNUE::Features {
 
+// PieceSquareIndex and KingBuckets are multiples of 64, while s and orient
+// use only the low six bits. Therefore no carry crosses bit 6, and
+// (s ^ orient) + psi[pc] + bucket == s ^ (psi[pc] + bucket + orient),
+// allowing the orientation to be folded into the per-piece lookup offset.
+alignas(64) constexpr std::array<std::array<u16, PIECE_NB>, COLOR_NB * SQUARE_NB> HalfKAv2_hm::offsets = [] {
+    std::array<std::array<u16, PIECE_NB>, COLOR_NB * SQUARE_NB> table{};
+    for (int p = 0; p < COLOR_NB; ++p)
+        for (int k = 0; k < SQUARE_NB; ++k)
+        {
+            const u16 flip   = 56 * p;
+            const u16 orient = u16(OrientTBL[k]) ^ flip;
+            for (int pc = 0; pc < PIECE_NB; ++pc)
+                table[p * SQUARE_NB + k][pc] =
+                  PieceSquareIndex[p][pc] + KingBuckets[k ^ flip] + orient;
+        }
+    return table;
+}();
+
 #if defined(USE_AVX512ICL)
 void HalfKAv2_hm::write_indices(const std::array<Piece, SQUARE_NB>& oldPieces,
                                 const std::array<Piece, SQUARE_NB>& newPieces,
@@ -79,9 +97,7 @@ void HalfKAv2_hm::write_indices(const std::array<Piece, SQUARE_NB>& oldPieces,
 // Index of a feature for a given king position and another piece on some square
 
 IndexType HalfKAv2_hm::make_index(Color perspective, Square s, Piece pc, Square ksq) {
-    const IndexType flip = 56 * perspective;
-    return (IndexType(s) ^ OrientTBL[ksq] ^ flip) + PieceSquareIndex[perspective][pc]
-         + KingBuckets[int(ksq) ^ flip];
+    return IndexType(s) ^ offsets[perspective * SQUARE_NB + ksq][pc];
 }
 
 // Get a list of indices for recently changed features

@@ -21,6 +21,8 @@
 #ifndef NNUE_FEATURES_HALF_KA_V2_HM_H_INCLUDED
 #define NNUE_FEATURES_HALF_KA_V2_HM_H_INCLUDED
 
+#include <array>
+
 #include "../../misc.h"
 #include "../../types.h"
 #include "../nnue_common.h"
@@ -55,6 +57,8 @@ class HalfKAv2_hm {
        PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE},
       {PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE,
        PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE}};
+
+    alignas(64) static const std::array<std::array<u16, PIECE_NB>, COLOR_NB * SQUARE_NB> offsets;
 
    public:
     // Hash value embedded in the evaluation file
