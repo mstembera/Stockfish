@@ -49,12 +49,21 @@ void HalfKAv2_hm::write_indices(const std::array<Piece, SQUARE_NB>& oldPieces,
     // use only the low six bits. Therefore no carry crosses bit 6, and
     // (s ^ orient) + psi[pc] + bucket == s ^ (psi[pc] + bucket + orient),
     // allowing the orientation to be folded into the per-piece lookup offset.
-    const u16     flip   = 56 * perspective;
-    const u16     orient = u16(OrientTBL[ksq]) ^ flip;
-    const __m512i psi =
-      _mm512_castsi256_si512(_mm256_loadu_si256((const __m256i*) PieceSquareIndex[perspective]));
-    const __m512i psi_plus_offset =
-      _mm512_add_epi16(psi, _mm512_set1_epi16(u16(KingBuckets[int(ksq) ^ flip] + orient)));
+    alignas(64) static constexpr auto offsets = [] {
+        std::array<std::array<u16, PIECE_NB>, COLOR_NB * SQUARE_NB> table{};
+        for (int p = 0; p < COLOR_NB; ++p)
+            for (int k = 0; k < SQUARE_NB; ++k)
+            {
+                const u16 flip   = 56 * p;
+                const u16 orient = u16(OrientTBL[k]) ^ flip;
+                for (int pc = 0; pc < PIECE_NB; ++pc)
+                    table[p * SQUARE_NB + k][pc] =
+                      PieceSquareIndex[p][pc] + KingBuckets[k ^ flip] + orient;
+            }
+        return table;
+    }();
+    const __m512i psi_plus_offset = _mm512_zextsi256_si512(_mm256_loadu_si256(
+      (const __m256i*) offsets[perspective * SQUARE_NB + ksq].data()));
 
     __m512i removed_squares = _mm512_maskz_compress_epi8(removedBB, AllSquares);
     __m512i added_squares   = _mm512_maskz_compress_epi8(addedBB, AllSquares);
