@@ -132,7 +132,7 @@ struct alignas(32) DualMagic {
         Bitboard rankAttacks  = rowOccupancy << shift;
 
         // [bishop, rook]
-        return {_mm_cvtsi128_si64(bishop) | _mm_cvtsi128_si64(_mm_srli_si128(bishop, 8)),
+        return {_mm_cvtsi128_si64(_mm_or_si128(bishop, _mm_srli_si128(bishop, 8))),
                 _mm_cvtsi128_si64(_mm256_extracti128_si256(result, 1)) + rankAttacks};
     }
 };
