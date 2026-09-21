@@ -1429,7 +1429,7 @@ else ifeq ($(TARGET_KERNEL),Linux)
 else    # windows
   UNIVERSAL_FINAL_FLAGS += -Wl,--allow-multiple-definition -static
   ifeq ($(COMP),clang)
-    UNIVERSAL_FINAL_FLAGS += -lpthread
+    UNIVERSAL_FINAL_FLAGS += -lpthread -fuse-ld=lld
   endif
 endif
 
