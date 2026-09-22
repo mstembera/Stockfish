@@ -1408,10 +1408,12 @@ bool Position::see_ge(Move m, int threshold) const {
 
     assert(color_of(piece_on(from)) == sideToMove);
     Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
-    Color    stm       = sideToMove;
+    const Bitboard bishopSliders = attacks_bb(BISHOP, to) & pieces(BISHOP, QUEEN);
+    const Bitboard rookSliders   = attacks_bb(ROOK, to) & pieces(ROOK, QUEEN);
     Bitboard attackers = attackers_to(to, occupied);
-    Bitboard stmAttackers, bb;
-    int      res = 1;
+    Color    stm       = sideToMove;
+    Bitboard       stmAttackers, bb;
+    int            res           = 1;
 
     while (true)
     {
@@ -1442,7 +1444,8 @@ bool Position::see_ge(Move m, int threshold) const {
                 break;
             occupied ^= least_significant_square_bb(bb);
 
-            attackers |= attacks_bb(BISHOP, to, occupied) & pieces(BISHOP, QUEEN);
+            if (bishopSliders & occupied & ~attackers)
+                attackers |= attacks_bb(BISHOP, to, occupied) & bishopSliders;
         }
 
         else if ((bb = stmAttackers & pieces(KNIGHT)))
@@ -1458,7 +1461,8 @@ bool Position::see_ge(Move m, int threshold) const {
                 break;
             occupied ^= least_significant_square_bb(bb);
 
-            attackers |= attacks_bb(BISHOP, to, occupied) & pieces(BISHOP, QUEEN);
+            if (bishopSliders & occupied & ~attackers)
+                attackers |= attacks_bb(BISHOP, to, occupied) & bishopSliders;
         }
 
         else if ((bb = stmAttackers & pieces(ROOK)))
@@ -1467,7 +1471,8 @@ bool Position::see_ge(Move m, int threshold) const {
                 break;
             occupied ^= least_significant_square_bb(bb);
 
-            attackers |= attacks_bb(ROOK, to, occupied) & pieces(ROOK, QUEEN);
+            if (rookSliders & occupied & ~attackers)
+                attackers |= attacks_bb(ROOK, to, occupied) & rookSliders;
         }
 
         else if ((bb = stmAttackers & pieces(QUEEN)))
@@ -1477,9 +1482,11 @@ bool Position::see_ge(Move m, int threshold) const {
             assert(swap >= res);
             occupied ^= least_significant_square_bb(bb);
 
-            const auto [bishopAttacks, rookAttacks] = both_attacks_bb(to, occupied);
-            attackers |=
-              (bishopAttacks & pieces(BISHOP, QUEEN)) | (rookAttacks & pieces(ROOK, QUEEN));
+            if ((bishopSliders | rookSliders) & occupied & ~attackers)
+            {
+                const auto [bishopAttacks, rookAttacks] = both_attacks_bb(to, occupied);
+                attackers |= (bishopAttacks & bishopSliders) | (rookAttacks & rookSliders);
+            }
         }
 
         else  // KING
