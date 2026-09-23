@@ -92,7 +92,8 @@ struct NNZInfo {
                 // Get a bitmask and gather non zero indices
                 const __mmask16 nnzMask = _mm512_test_epi32_mask(neurons, neurons);
                 const __m512i   nnzV    = _mm512_maskz_compress_epi32(nnzMask, indices);
-                _mm512_mask_cvtepi32_storeu_epi16(info.nnz + count, 0xFFFF, nnzV);
+                _mm256_storeu_si256(reinterpret_cast<__m256i*>(info.nnz + count),
+                                    _mm512_cvtepi32_epi16(nnzV));
 
                 count += popcount(nnzMask);
                 indices = _mm512_add_epi32(indices, increment);
