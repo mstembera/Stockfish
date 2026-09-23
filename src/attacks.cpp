@@ -82,8 +82,8 @@ static constexpr auto make_dual_magics() {
     for (Square s = SQ_A1; s <= SQ_H8; ++s)
     {
         DualMagic& m        = magics[s];
-        m.maskFile          = line_mask(s, NORTH, SOUTH);
         m.maskDiag          = line_mask(s, NORTH_EAST, SOUTH_WEST);
+        m.maskFile          = line_mask(s, NORTH, SOUTH);
         m.maskNone          = 0;
         m.maskAntidiag      = line_mask(s, NORTH_WEST, SOUTH_EAST);
         m.r                 = square_bb(s) * 2;

@@ -90,8 +90,8 @@ const Magic& magic(Square s, PieceType pt);
 #elif defined(USE_DUAL_HYPERBOLA_QUINT)
 
 struct alignas(32) DualMagic {
-    // file, diagonal, antidiagonal, unused
-    Bitboard maskFile, maskDiag, maskAntidiag, maskNone;
+    // diagonal, file, antidiagonal, unused
+    Bitboard maskDiag, maskFile, maskAntidiag, maskNone;
     // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
     Bitboard r, rr;
 
@@ -126,16 +126,16 @@ struct alignas(32) DualMagic {
         __m256i rev    = bswap(_mm256_sub_epi64(bswap(o), rrs));
         __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
 
-        // Lane 0: rook attacks (file only); lanes 1 and 2: bishop attacks
-        const __m256i rookBishop =
-          _mm256_or_si256(result, _mm256_permute4x64_epi64(result, _MM_SHUFFLE(3, 1, 2, 0)));
+        // Swap 128-bit halves: lane 0 = diag | antidiag (bishop), lane 1 = file | 0 (rook)
+        const __m256i bishopRook =
+          _mm256_or_si256(result, _mm256_permute4x64_epi64(result, _MM_SHUFFLE(1, 0, 3, 2)));
 
         Bitboard rowOccupancy = rankAttacksLookup[(occupied >> (shift + 1)) & 0x3f];
         Bitboard rankAttacks  = rowOccupancy << shift;
 
         // [bishop, rook]
-        return {_mm_extract_epi64(_mm256_castsi256_si128(rookBishop), 1),
-                _mm_cvtsi128_si64(_mm256_castsi256_si128(result)) + rankAttacks};
+        return {_mm_cvtsi128_si64(_mm256_castsi256_si128(bishopRook)),
+                _mm_extract_epi64(_mm256_castsi256_si128(result), 1) + rankAttacks};
     }
 };
 
