@@ -85,7 +85,7 @@ using psqt_vec_t = __m256i;
 
     #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
 
-    #define NumRegistersSIMD 16
+    #define NumRegistersSIMD 8
     #define MaxChunkSize 64
 
 #elif USE_AVX2
