@@ -114,7 +114,7 @@ using psqt_vec_t = __m256i;
     #define vec_nnz(a) \
         _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
 
-    #define NumRegistersSIMD 12
+    #define NumRegistersSIMD 8
     #define MaxChunkSize 32
 
 #elif USE_SSE2
