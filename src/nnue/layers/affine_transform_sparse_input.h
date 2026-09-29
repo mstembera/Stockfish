@@ -59,7 +59,9 @@ class AffineTransformSparseInput {
     static constexpr IndexType PaddedOutputDimensions =
       ceil_to_multiple<IndexType>(OutputDimensions, MaxSimdWidth);
 
-#if (defined(USE_SSSE3) || defined(USE_LSX) || defined(USE_LASX) || (USE_NEON >= 8))
+#if defined(USE_AVX512)
+    static constexpr IndexType ChunkSize = 2;
+#elif (defined(USE_SSSE3) || defined(USE_LSX) || defined(USE_LASX) || (USE_NEON >= 8))
     static constexpr IndexType ChunkSize = 4;
 #else
     static constexpr IndexType ChunkSize = 1;
@@ -77,6 +79,16 @@ class AffineTransformSparseInput {
     }
 
     static constexpr IndexType get_weight_index_scrambled(IndexType i) {
+#if defined(USE_AVX512)
+        IndexType output = i / PaddedInputDimensions;
+        if (output < OutputDimensions / 32 * 32)
+        {
+            // Let lane-local unpacks produce consecutive groups of 16 outputs.
+            const IndexType lane = output % 32;
+            output = output / 32 * 32 + lane % 4 + lane % 16 / 4 * 8 + lane / 16 * 4;
+            i      = output * PaddedInputDimensions + i % PaddedInputDimensions;
+        }
+#endif
         return (i / ChunkSize) % (PaddedInputDimensions / ChunkSize) * OutputDimensions * ChunkSize
              + i / PaddedInputDimensions * ChunkSize + i % ChunkSize;
     }
@@ -205,42 +217,56 @@ class AffineTransformSparseInput {
 
         for (IndexType k = NumAccums; k < NumRegs; ++k)
             acc[k] = vec_zero();
-        #if defined(USE_VNNI)
-        while (start < end - 2)
-        {
-            const isize   i0  = *start++;
-            const isize   i1  = *start++;
-            const isize   i2  = *start++;
-            const invec_t in0 = vec_load_32(input + i0 * sizeof(i32));
-            const invec_t in1 = vec_load_32(input + i1 * sizeof(i32));
-            const invec_t in2 = vec_load_32(input + i2 * sizeof(i32));
-            const auto    col0 =
-              reinterpret_cast<const invec_t*>(&weights_cp[i0 * OutputDimensions * ChunkSize]);
-            const auto col1 =
-              reinterpret_cast<const invec_t*>(&weights_cp[i1 * OutputDimensions * ChunkSize]);
-            const auto col2 =
-              reinterpret_cast<const invec_t*>(&weights_cp[i2 * OutputDimensions * ChunkSize]);
-            for (IndexType k = 0; k < NumAccums; ++k)
+
+        auto accumulate_pair = [&](const u16* indices, outvec_t* sums, bool paired = true) {
+            const isize   i0     = indices[0];
+            const isize   i1     = paired ? indices[1] : i0;
+            const u32     packed = u32(load_as<u16>(input + i0 * ChunkSize))
+                                 | (paired ? u32(load_as<u16>(input + i1 * ChunkSize)) << 16 : 0);
+            const invec_t in     = vec_set_32(static_cast<i32>(packed));
+            const auto*   col0   = &weights_cp[i0 * OutputDimensions * ChunkSize];
+            const auto*   col1   = &weights_cp[i1 * OutputDimensions * ChunkSize];
+            for (IndexType k = 0; k + 1 < NumAccums; k += 2)
             {
-                vec_add_dpbusd_32(acc[k], in0, col0[k]);
-                vec_add_dpbusd_32(acc[k + NumAccums], in1, col1[k]);
-                vec_add_dpbusd_32(acc[k + 2 * NumAccums], in2, col2[k]);
+                const auto w0 = _mm512_loadu_si512(col0 + k * OutputSimdWidth * ChunkSize);
+                const auto w1 = _mm512_loadu_si512(col1 + k * OutputSimdWidth * ChunkSize);
+                vec_add_dpbusd_32(sums[k], in, _mm512_unpacklo_epi16(w0, w1));
+                vec_add_dpbusd_32(sums[k + 1], in, _mm512_unpackhi_epi16(w0, w1));
             }
+
+            if constexpr (NumAccums % 2 != 0)
+            {
+                const auto w0 = _mm512_cvtepu16_epi32(
+                  _mm256_loadu_si256(reinterpret_cast<const __m256i*>(col0) + NumAccums - 1));
+                const auto w1 = _mm512_cvtepu16_epi32(
+                  _mm256_loadu_si256(reinterpret_cast<const __m256i*>(col1) + NumAccums - 1));
+                vec_add_dpbusd_32(sums[NumAccums - 1], in,
+                                 _mm512_or_si512(w0, _mm512_slli_epi32(w1, 16)));
+            }
+        };
+
+        #if defined(USE_VNNI)
+        while (end - start >= 6)
+        {
+            accumulate_pair(start, acc);
+            accumulate_pair(start + 2, acc + NumAccums);
+            accumulate_pair(start + 4, acc + 2 * NumAccums);
+            start += 6;
         }
 
         for (IndexType k = 0; k < NumAccums; ++k)
             acc[k] = vec_add_32(vec_add_32(acc[k], acc[k + NumAccums]), acc[k + 2 * NumAccums]);
         #endif
 
-        while (start < end)
+        while (end - start >= 2)
         {
-            const isize   i  = *start++;
-            const invec_t in = vec_load_32(input + i * sizeof(i32));
-            const auto    col =
-              reinterpret_cast<const invec_t*>(&weights_cp[i * OutputDimensions * ChunkSize]);
-            for (IndexType k = 0; k < NumAccums; ++k)
-                vec_add_dpbusd_32(acc[k], in, col[k]);
+            accumulate_pair(start, acc);
+            start += 2;
         }
+
+        // Reuse the weights with a zero upper input pair for the odd tail.
+        if (start != end)
+            accumulate_pair(start, acc, false);
     #else
         static_assert(InputDimensions % 256 == 0);
 
