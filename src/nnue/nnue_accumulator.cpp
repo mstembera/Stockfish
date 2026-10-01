@@ -363,6 +363,52 @@ sf_always_inline Tile apply_threat_features(IndexType                          j
                 acc[k + 1]           = vec_sub_16(acc[k + 1], __lsx_vexth_h_b(weight));
             }
         }
+    #elif defined(__GNUC__) \
+      && (defined(USE_AVX512) || defined(USE_AVX2) || defined(USE_SSE41) || defined(USE_SSSE3))
+        for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+        {
+            // Keep widening next to arithmetic so each update needs only one scratch register.
+            vec_t weight;
+        #if defined(USE_AVX512) || defined(USE_AVX2)
+            if constexpr (sign == +1)
+                __asm__("vpmovsxbw {%2, %1|%1, %2}\n\t"
+                        "vpaddw {%1, %0, %0|%0, %0, %1}"
+                        : "+v"(acc[k]), "=&v"(weight)
+                        : "m"(column[k]));
+            else
+                __asm__("vpmovsxbw {%2, %1|%1, %2}\n\t"
+                        "vpsubw {%1, %0, %0|%0, %0, %1}"
+                        : "+v"(acc[k]), "=&v"(weight)
+                        : "m"(column[k]));
+        #elif defined(USE_SSE41)
+            if constexpr (sign == +1)
+                __asm__("pmovsxbw {%2, %1|%1, %2}\n\t"
+                        "paddw {%1, %0|%0, %1}"
+                        : "+x"(acc[k]), "=&x"(weight)
+                        : "m"(column[k]));
+            else
+                __asm__("pmovsxbw {%2, %1|%1, %2}\n\t"
+                        "psubw {%1, %0|%0, %1}"
+                        : "+x"(acc[k]), "=&x"(weight)
+                        : "m"(column[k]));
+        #else
+            // Duplicate each byte, then shift arithmetically to avoid a separate sign mask.
+            if constexpr (sign == +1)
+                __asm__("movq {%2, %1|%1, %2}\n\t"
+                        "punpcklbw {%1, %1|%1, %1}\n\t"
+                        "psraw {$8, %1|%1, 8}\n\t"
+                        "paddw {%1, %0|%0, %1}"
+                        : "+x"(acc[k]), "=&x"(weight)
+                        : "m"(column[k]));
+            else
+                __asm__("movq {%2, %1|%1, %2}\n\t"
+                        "punpcklbw {%1, %1|%1, %1}\n\t"
+                        "psraw {$8, %1|%1, 8}\n\t"
+                        "psubw {%1, %0|%0, %1}"
+                        : "+x"(acc[k]), "=&x"(weight)
+                        : "m"(column[k]));
+        #endif
+        }
     #else
         for (IndexType k = 0; k < Tiling::NumRegs; ++k)
             if constexpr (sign == +1)
@@ -379,10 +425,25 @@ template<int sign>
 sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data) {
     const auto* column = reinterpret_cast<const vec_t*>(data + j);
     for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+    #if defined(__GNUC__) \
+      && (defined(USE_AVX512) || defined(USE_AVX2) || defined(USE_SSE41) || defined(USE_SSSE3))
+        #if defined(USE_AVX512) || defined(USE_AVX2)
+        if constexpr (sign == +1)
+            __asm__("vpaddw {%1, %0, %0|%0, %0, %1}" : "+v"(acc[k]) : "m"(column[k]));
+        else
+            __asm__("vpsubw {%1, %0, %0|%0, %0, %1}" : "+v"(acc[k]) : "m"(column[k]));
+        #else
+        if constexpr (sign == +1)
+            __asm__("paddw {%1, %0|%0, %1}" : "+x"(acc[k]) : "m"(column[k]));
+        else
+            __asm__("psubw {%1, %0|%0, %1}" : "+x"(acc[k]) : "m"(column[k]));
+        #endif
+    #else
         if constexpr (sign == +1)
             acc[k] = vec_add_16(acc[k], column[k]);
         else
             acc[k] = vec_sub_16(acc[k], column[k]);
+    #endif
     return acc;
 }
 
