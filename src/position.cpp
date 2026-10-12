@@ -665,7 +665,6 @@ bool Position::legal(Move m) const {
     Color  us   = sideToMove;
     Square from = m.from_sq();
     Square to   = m.to_sq();
-    Piece  pc   = moved_piece(m);
 
     // Use a slower but simpler function for uncommon cases
     if (m.type_of() != NORMAL)
@@ -676,54 +675,47 @@ bool Position::legal(Move m) const {
 
     // If the 'from' square is not occupied by a piece belonging to the side to
     // move, the move is obviously not legal.
-    if (pc == NO_PIECE || color_of(pc) != us)
+    if (!(pieces(us) & from))
         return false;
 
-    // The destination square cannot be occupied by a friendly piece
-    if (pieces(us) & to)
-        return false;
+    const PieceType pt  = type_of(piece_on(from));
+    const Bitboard  occ = pieces();
+    Bitboard        targets;
 
     // Handle the special case of a pawn move
-    if (type_of(pc) == PAWN)
+    if (pt == PAWN)
     {
+        // Check if it's a valid capture, single push, or double push.
+        // A double push lands on the relative 4th rank only if both squares are empty.
+        Bitboard pushes = pawn_single_push_bb(us, square_bb(from)) & ~occ;
+        pushes |= pawn_single_push_bb(us, pushes) & ~occ & (us == WHITE ? Rank4BB : Rank5BB);
+
         // We have already handled promotion moves, so destination cannot be on the 8th/1st rank
-        if ((Rank8BB | Rank1BB) & to)
-            return false;
-
-        // Check if it's a valid capture, single push, or double push
-        const bool isCapture    = bool(attacks_bb(PAWN, from, us) & pieces(~us) & to);
-        const bool isSinglePush = (from + pawn_push(us) == to) && empty(to);
-        const bool isDoublePush = (from + 2 * pawn_push(us) == to)
-                               && (relative_rank(us, from) == RANK_2) && empty(to)
-                               && empty(to - pawn_push(us));
-
-        if (!(isCapture || isSinglePush || isDoublePush))
-            return false;
-    }
-    else if (!(attacks_bb(type_of(pc), from, pieces()) & to))
-        return false;
-
-
-    if (type_of(pc) != KING)
-    {
-        if (checkers())
-        {
-            // In double check, only a king move can evade
-            if (more_than_one(checkers()))
-                return false;
-
-            // The move must block the check or capture the checker
-            if (!(between_bb(square<KING>(us), lsb(checkers())) & to))
-                return false;
-        }
-        // When not in check, a non-king move is legal if and only if it is not pinned
-        // or it is moving along the ray towards or away from the king.
-        return !(blockers_for_king(us) & from) || line_bb(from, to) & pieces(us, KING);
+        targets = (pushes | (attacks_bb(PAWN, from, us) & pieces(~us))) & ~(Rank1BB | Rank8BB);
     }
     else
-        // If the moving piece is a king, check whether the destination square is
-        // attacked by the opponent.
-        return !(to & threats_by(ALL_PIECES));
+        // The destination square cannot be occupied by a friendly piece
+        targets = attacks_bb(pt, from, occ) & ~pieces(us);
+
+    if (!(targets & to))
+        return false;
+
+    // If the moving piece is a king, check whether the destination square is
+    // attacked by the opponent.
+    if (pt == KING)
+        return !(threats_by(ALL_PIECES) & to);
+
+    if (checkers())
+    {
+        // In double check, only a king move can evade.
+        // The move must block the check or capture the checker.
+        if (more_than_one(checkers()) || !(between_bb(square<KING>(us), lsb(checkers())) & to))
+            return false;
+    }
+
+    // When not in check, a non-king move is legal if and only if it is not pinned
+    // or it is moving along the ray towards or away from the king.
+    return !(blockers_for_king(us) & from) || (line_bb(from, to) & pieces(us, KING));
 }
 
 
