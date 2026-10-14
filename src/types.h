@@ -206,6 +206,7 @@ constexpr Value QueenValue  = 2538;
 // clang-format off
 enum PieceType : u8 {
     NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
+    LAZY_FLAG = 7,  // Not a piece; free per-type array slot used as "computed" flag
     ALL_PIECES = 0,
     PIECE_TYPE_NB = 8
 };

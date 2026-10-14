@@ -463,9 +463,16 @@ void Position::set_castling_right(Color c, Square rfrom) {
 }
 
 
-// Sets pinners and where stm can give check. Squares threatened by ~stm are
-// computed lazily by compute_threats().
+// Marks check info and threats as not computed; filled lazily on first use
 void Position::set_extra_bitboards() const {
+
+    st->checkSquares[LAZY_FLAG] = false;
+    st->threats[LAZY_FLAG]      = false;
+}
+
+
+// Sets pinners and where stm can give check
+void Position::compute_check_info() const {
 
     update_slider_blockers(WHITE);
     update_slider_blockers(BLACK);
@@ -480,13 +487,11 @@ void Position::set_extra_bitboards() const {
     st->checkSquares[QUEEN]  = st->checkSquares[BISHOP] | st->checkSquares[ROOK];
     st->checkSquares[KING]   = 0;
 
-    // King attacks are never empty, so zero marks the threats as not yet computed
-    st->threats[ALL_PIECES] = 0;
+    st->checkSquares[LAZY_FLAG] = true;
 }
 
 
-// Sets squares threatened by ~stm. Many nodes are cut off before needing them,
-// so they are only computed on first use.
+// Sets squares threatened by ~stm
 void Position::compute_threats() const {
 
     Bitboard occ            = pieces() ^ square<KING>(sideToMove);
@@ -496,6 +501,8 @@ void Position::compute_threats() const {
     st->threats[ALL_PIECES] |= st->threats[ROOK]   = xattacks_by(ROOK, ~sideToMove, occ);
     st->threats[ALL_PIECES] |= st->threats[QUEEN]  = xattacks_by(QUEEN, ~sideToMove, occ);
     st->threats[ALL_PIECES] |= st->threats[KING]   = xattacks_by(KING, ~sideToMove, occ);
+
+    st->threats[LAZY_FLAG] = true;
 }
 
 
@@ -922,8 +929,20 @@ void Position::do_move(Move                      m,
             // If there are no pawns attacking the ep square, ep is not possible.
             if (pawns)
             {
-                Square   ksq         = square<KING>(them);
-                Bitboard notBlockers = ~st->previous->blockersForKing[them];
+                Square   ksq = square<KING>(them);
+                Bitboard prevBlockers;
+
+                // Previous blockers may not be computed yet; board is still unchanged,
+                // so compute them into the new state (reset lazily later)
+                if (st->previous->checkSquares[LAZY_FLAG])
+                    prevBlockers = st->previous->blockersForKing[them];
+                else
+                {
+                    update_slider_blockers(them);
+                    prevBlockers = st->blockersForKing[them];
+                }
+
+                Bitboard notBlockers = ~prevBlockers;
                 bool     noDiscovery = (from & notBlockers) || file_of(from) == file_of(ksq);
 
                 // If the pawn gives discovered check, ep is never legal. Else, if at least one

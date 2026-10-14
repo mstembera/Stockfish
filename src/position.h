@@ -194,6 +194,7 @@ class Position {
     Key  compute_material_key() const;
     void set_state() const;
     void set_extra_bitboards() const;
+    void compute_check_info() const;
     void compute_threats() const;
 
     // Other helpers
@@ -309,18 +310,30 @@ inline Bitboard Position::xattacks_by(PieceType pt, Color c, Bitboard occupied) 
 }
 
 inline Bitboard Position::threats_by(PieceType pt) const {
-    if (!st->threats[ALL_PIECES])
+    if (!st->threats[LAZY_FLAG])
         compute_threats();
     return st->threats[pt];
 }
 
 inline Bitboard Position::checkers() const { return st->checkersBB; }
 
-inline Bitboard Position::blockers_for_king(Color c) const { return st->blockersForKing[c]; }
+inline Bitboard Position::blockers_for_king(Color c) const {
+    if (!st->checkSquares[LAZY_FLAG])
+        compute_check_info();
+    return st->blockersForKing[c];
+}
 
-inline Bitboard Position::pinners(Color c) const { return st->pinners[c]; }
+inline Bitboard Position::pinners(Color c) const {
+    if (!st->checkSquares[LAZY_FLAG])
+        compute_check_info();
+    return st->pinners[c];
+}
 
-inline Bitboard Position::check_squares(PieceType pt) const { return st->checkSquares[pt]; }
+inline Bitboard Position::check_squares(PieceType pt) const {
+    if (!st->checkSquares[LAZY_FLAG])
+        compute_check_info();
+    return st->checkSquares[pt];
+}
 
 inline Key Position::key() const { return adjust_key50(st->key); }
 
