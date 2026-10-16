@@ -59,7 +59,7 @@ namespace Stockfish::Eval::NNUE::SIMD {
 // into int16 lanes with one unpack + one maddubs (against a vector of ones)
 // instead of one sign-extension per row. See apply_feature_pair() in
 // nnue_accumulator.cpp and FeatureTransformer::WideningPairOrder.
-#if defined(USE_SSSE3)
+#if defined(USE_SSSE3) && !defined(__wasm__)
     #define USE_PAIRED_WIDENING_ADD
 #endif
 
@@ -86,6 +86,7 @@ using vec_i8_t = __m256i;
     // Inverse permuted at load time
     #define vec_packus_16(a, b) _mm512_packus_epi16(a, b)
     #define vec_set_8(a) _mm512_set1_epi8(a)
+    #define vec_xor(a, b) _mm512_xor_si512(a, b)
     #define vec_unpacklo_8(a, b) _mm512_unpacklo_epi8(a, b)
     #define vec_unpackhi_8(a, b) _mm512_unpackhi_epi8(a, b)
     #define vec_maddubs_16(a, b) _mm512_maddubs_epi16(a, b)
@@ -113,6 +114,7 @@ using vec_i8_t = __m128i;
     // Inverse permuted at load time
     #define vec_packus_16(a, b) _mm256_packus_epi16(a, b)
     #define vec_set_8(a) _mm256_set1_epi8(a)
+    #define vec_xor(a, b) _mm256_xor_si256(a, b)
     #define vec_unpacklo_8(a, b) _mm256_unpacklo_epi8(a, b)
     #define vec_unpackhi_8(a, b) _mm256_unpackhi_epi8(a, b)
     #define vec_maddubs_16(a, b) _mm256_maddubs_epi16(a, b)
@@ -139,6 +141,7 @@ using vec_i8_t = u64;
     #define vec_srai_16(a, b) _mm_srai_epi16(a, b)
     #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
     #define vec_set_8(a) _mm_set1_epi8(a)
+    #define vec_xor(a, b) _mm_xor_si128(a, b)
     #define vec_unpacklo_8(a, b) _mm_unpacklo_epi8(a, b)
     #define vec_unpackhi_8(a, b) _mm_unpackhi_epi8(a, b)
 

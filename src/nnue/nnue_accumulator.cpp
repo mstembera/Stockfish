@@ -373,16 +373,14 @@ sf_always_inline Tile apply_feature_single(IndexType j, Tile acc, const i8* data
     // The weight rows are stored in WideningPairOrder (see nnue_feature_transformer.h):
     // one full vector of int8 weights holds the lanes of acc[k] and acc[k + 1], so a
     // plain sign extension would yield the lanes in the wrong order for vectors wider
-    // than 128 bits. Unpacking the vector against zeros (zeros first) instead puts each
-    // weight in the high byte of its int16 lane, and the arithmetic shift sign-extends
-    // it; unpacking as (weight, zero) would only zero-extend the signed weights.
+    // than 128 bits. Unpacking the vector against itself puts each weight in the
+    // high byte of its int16 lane, and the arithmetic shift sign-extends it.
     static_assert(Tiling::NumRegs % 2 == 0);
-    const vec_t zero = vec_zero();
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
     {
         const vec_t weight = vec_load(reinterpret_cast<const vec_t*>(data + j) + k / 2);
-        const vec_t lo     = vec_srai_16(vec_unpacklo_8(zero, weight), 8);
-        const vec_t hi     = vec_srai_16(vec_unpackhi_8(zero, weight), 8);
+        const vec_t lo     = vec_srai_16(vec_unpacklo_8(weight, weight), 8);
+        const vec_t hi     = vec_srai_16(vec_unpackhi_8(weight, weight), 8);
         if constexpr (sign == +1)
         {
             acc[k]     = vec_add_16(acc[k], lo);
@@ -406,22 +404,33 @@ sf_always_inline Tile apply_feature_single(IndexType j, Tile acc, const i8* data
 
     #if defined(USE_PAIRED_WIDENING_ADD)
 
-// Adds (or subtracts) two int8 weight rows at once. Interleaving the bytes of
-// the two rows and multiplying the pairs by 1 with maddubs sums them straight
-// into int16 lanes, which needs one shuffle per two rows instead of one
-// sign-extension per row (both are shuffle-port bound on x86).
-template<int sign>
-sf_always_inline Tile apply_feature_pair(IndexType j, Tile acc, const i8* data0, const i8* data1) {
-    static_assert(sign == 1 || sign == -1);
+// Combine two int8 rows with one unpack/maddubs per output register.
+template<int sign0, int sign1 = sign0>
+sf_always_inline void apply_feature_pair(IndexType j, Tile& acc, const i8* data0, const i8* data1) {
+    static_assert(sign0 == 1 || sign0 == -1);
+    static_assert(sign1 == 1 || sign1 == -1);
     static_assert(Tiling::NumRegs % 2 == 0);
-    const vec_t ones = vec_set_8(1);
+    const vec_t multipliers = sign0 == sign1 ? vec_set_8(1) : vec_set_16(-255);
+
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
     {
         const vec_t w0 = vec_load(reinterpret_cast<const vec_t*>(data0 + j) + k / 2);
         const vec_t w1 = vec_load(reinterpret_cast<const vec_t*>(data1 + j) + k / 2);
-        const vec_t lo = vec_maddubs_16(ones, vec_unpacklo_8(w0, w1));
-        const vec_t hi = vec_maddubs_16(ones, vec_unpackhi_8(w0, w1));
-        if constexpr (sign == +1)
+        vec_t       lo = vec_unpacklo_8(w0, w1);
+        vec_t       hi = vec_unpackhi_8(w0, w1);
+        if constexpr (sign0 == sign1)
+        {
+            lo = vec_maddubs_16(multipliers, lo);
+            hi = vec_maddubs_16(multipliers, hi);
+        }
+        else
+        {
+            // Bias to unsigned bytes; {+1, -1} cancels the biases without saturation.
+            const vec_t bias = vec_set_8(-128);
+            lo = vec_maddubs_16(vec_xor(lo, bias), multipliers);
+            hi = vec_maddubs_16(vec_xor(hi, bias), multipliers);
+        }
+        if constexpr (sign0 == +1)
         {
             acc[k]     = vec_add_16(acc[k], lo);
             acc[k + 1] = vec_add_16(acc[k + 1], hi);
@@ -432,7 +441,6 @@ sf_always_inline Tile apply_feature_pair(IndexType j, Tile acc, const i8* data0,
             acc[k + 1] = vec_sub_16(acc[k + 1], hi);
         }
     }
-    return acc;
 }
 
     #endif
@@ -462,20 +470,52 @@ class WeightRows {
     template<int sign>
     sf_always_inline Tile apply(IndexType j, Tile acc) const {
         static_assert(sign == 1 || sign == -1);
-        int i = 0;
 #if defined(USE_PAIRED_WIDENING_ADD)
-        for (; i + 1 < count; i += 2)
-            acc = apply_feature_pair<sign>(j, acc, rows[i], rows[i + 1]);
-#endif
-        for (; i < count; ++i)
+        if (const i8* leftover = apply_pairs<sign>(j, acc))
+            acc = apply_feature_single<sign>(j, acc, leftover);
+#else
+        for (int i = 0; i < count; ++i)
             acc = apply_feature_single<sign>(j, acc, rows[i]);
+#endif
         return acc;
     }
+
+#if defined(USE_PAIRED_WIDENING_ADD)
+    template<int sign>
+    sf_always_inline const i8* apply_pairs(IndexType j, Tile& acc) const {
+        const int pairedCount = count & ~1;
+        for (int i = 0; i < pairedCount; i += 2)
+            apply_feature_pair<sign>(j, acc, rows[i], rows[i + 1]);
+        return count & 1 ? rows[pairedCount] : nullptr;
+    }
+#endif
 
    private:
     const i8* rows[MaxRows];
     int       count = 0;
 };
+
+// Combine opposite-sign leftovers instead of widening each separately.
+template<int MaxRows>
+sf_always_inline Tile apply_diff(IndexType                  j,
+                                Tile                       acc,
+                                const WeightRows<MaxRows>& removed,
+                                const WeightRows<MaxRows>& added) {
+#if defined(USE_PAIRED_WIDENING_ADD)
+    const i8* removedTail = removed.template apply_pairs<-1>(j, acc);
+    const i8* addedTail   = added.template apply_pairs<+1>(j, acc);
+    if (removedTail && addedTail)
+        apply_feature_pair<+1, -1>(j, acc, addedTail, removedTail);
+    else if (removedTail)
+        acc = apply_feature_single<-1>(j, acc, removedTail);
+    else if (addedTail)
+        acc = apply_feature_single<+1>(j, acc, addedTail);
+#else
+    acc = removed.template apply<-1>(j, acc);
+    acc = added.template apply<+1>(j, acc);
+#endif
+    return acc;
+}
 
 using PsqWeightRows = WeightRows<PSQFeatureSet::MaxActiveDimensions>;
 using AllWeightRows =
@@ -505,8 +545,7 @@ void apply_combined(Color                              perspective,
     {
         acc = load_tile(j, fromAcc.data());
 
-        acc = removed.apply<-1>(j, acc);
-        acc = added.apply<+1>(j, acc);
+        acc = apply_diff(j, acc, removed, added);
 
         store_tile(j, toAcc.data(), acc);
     }
@@ -823,8 +862,7 @@ void update_accumulator_hybrid(Color                     perspective,
     {
         acc = load_tile(j, newEntry.accumulation.data());
 
-        acc = newEntryRemoved.apply<-1>(j, acc);
-        acc = newEntryAdded.apply<+1>(j, acc);
+        acc = apply_diff(j, acc, newEntryRemoved, newEntryAdded);
 
         store_tile(j, newEntry.accumulation.data(), acc);
 
@@ -836,8 +874,7 @@ void update_accumulator_hybrid(Color                     perspective,
         acc = apply<-1>(j, acc, oldEntry.accumulation.data());
 
         // ... then we adjust
-        acc = removed.apply<-1>(j, acc);
-        acc = added.apply<+1>(j, acc);
+        acc = apply_diff(j, acc, removed, added);
 
         store_tile(j, toAcc.data(), acc);
     }
@@ -904,8 +941,7 @@ void update_accumulator_refresh_cache(Color                     perspective,
     {
         acc = load_tile(j, entry.accumulation.data());
 
-        acc = entryRemoved.apply<-1>(j, acc);
-        acc = entryAdded.apply<+1>(j, acc);
+        acc = apply_diff(j, acc, entryRemoved, entryAdded);
 
         store_tile(j, &entry.accumulation[0], acc);
 
