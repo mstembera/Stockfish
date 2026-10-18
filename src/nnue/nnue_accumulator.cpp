@@ -258,7 +258,7 @@ sf_always_inline void increment_index(IndexType& j) { j += __riscv_vsetvl_e16m8(
 
 template<int sign>
 sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data) {
-    static_assert(sign == 1 || sign == -1);
+    static_assert(sign == +1 || sign == -1);
     usize      vl       = __riscv_vsetvl_e16m8(Dimensions - j);
     vint16m8_t data_vec = __riscv_vle16_v_i16m8(data, vl);
     if constexpr (sign == +1)
@@ -270,7 +270,7 @@ sf_always_inline Tile apply(IndexType j, Tile acc, const i16* data) {
 
 template<int sign>
 sf_always_inline Tile apply_feature_single(IndexType j, Tile acc, const i8* data) {
-    static_assert(sign == 1 || sign == -1);
+    static_assert(sign == +1 || sign == -1);
     usize     vl         = __riscv_vsetvl_e16m8(Dimensions - j);
     vint8m4_t weight_vec = __riscv_vle8_v_i8m4(data, vl);
     if constexpr (sign == +1)
@@ -337,7 +337,7 @@ sf_always_inline Tile apply([[maybe_unused]] IndexType j, Tile acc, const i16* d
 
 template<int sign>
 sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile acc, const i8* data) {
-    static_assert(sign == 1 || sign == -1);
+    static_assert(sign == +1 || sign == -1);
     [[maybe_unused]] auto* column = reinterpret_cast<const vec_i8_t*>(data);
     #ifdef USE_NEON
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
@@ -402,7 +402,7 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
 
 template<int sign>
 sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* data1) {
-    static_assert(sign == 1 || sign == -1);
+    static_assert(sign == +1 || sign == -1);
     static_assert(Tiling::NumRegs % 2 == 0);
     const vec_t ones = vec_set_8(1);
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
@@ -433,7 +433,7 @@ sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* da
 template<int sign, bool Incremental = false>
 sf_always_inline Tile
 apply_features(IndexType j, Tile acc, const u16* indices, int count, const i8* weights) {
-    static_assert(sign == 1 || sign == -1);
+    static_assert(sign == +1 || sign == -1);
     if constexpr (Incremental)
     {
         assert(count >= 0 && count <= 2);
