@@ -293,16 +293,16 @@ sf_always_inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) 
     assert(pt != PAWN && is_ok(s));
 
 #ifdef USE_DUAL_HYPERBOLA_QUINT
-    [[maybe_unused]] const auto [bishop, rook] = dual_magic(s).both_attacks_bb(occupied);
-
     switch (pt)
     {
     case BISHOP :
-        return bishop;
+        return dual_magic(s).both_attacks_bb(occupied).first;
     case ROOK :
-        return rook;
-    case QUEEN :
+        return dual_magic(s).both_attacks_bb(occupied).second;
+    case QUEEN : {
+        const auto [bishop, rook] = dual_magic(s).both_attacks_bb(occupied);
         return bishop | rook;
+    }
     default :
         return PseudoAttacks[pt][s];
     }
