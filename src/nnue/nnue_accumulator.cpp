@@ -381,24 +381,13 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
 
 #endif
 
-template<int sign, bool Incremental = false>
+template<int sign>
 sf_always_inline Tile apply_psq_features(IndexType                       j,
                                          Tile                            acc,
                                          const PSQFeatureSet::IndexList& list,
                                          const FeatureTransformer&       ft) {
     static_assert(sign == 1 || sign == -1);
     const auto* weights = &ft.weights[j];
-    if constexpr (Incremental)
-    {
-        assert(list.size() == 1 || list.size() == 2);
-        // Use the loop below for scalar builds to avoid spurious GCC uninitialized warnings.
-#if defined(VECTOR) || defined(USE_RVV)
-        acc = apply_feature_single<sign>(j, acc, &weights[usize(list[0]) * Dimensions]);
-        if (list.size() > 1)
-            acc = apply_feature_single<sign>(j, acc, &weights[usize(list[1]) * Dimensions]);
-        return acc;
-#endif
-    }
     for (int i = 0; i < list.ssize(); ++i)
         acc = apply_feature_single<sign>(j, acc, &weights[usize(list[i]) * Dimensions]);
     return acc;
@@ -418,6 +407,7 @@ sf_always_inline Tile apply_threat_features(IndexType                          j
     return acc;
 }
 
+template<int RemovedCount, int AddedCount>
 void apply_combined(Color                              perspective,
                     const FeatureTransformer&          featureTransformer,
                     const AccumulatorState&            from,
@@ -427,8 +417,17 @@ void apply_combined(Color                              perspective,
                     const ThreatFeatureSet::IndexList& thrAdded,
                     const ThreatFeatureSet::IndexList& thrRemoved) {
 
+    static_assert(RemovedCount == 1 || RemovedCount == 2);
+    static_assert(AddedCount == 1 || AddedCount == 2);
     const auto& fromAcc = from.accumulation[perspective];
     auto&       toAcc   = to.accumulation[perspective];
+
+    std::array<const i8*, RemovedCount> removedWeights;
+    std::array<const i8*, AddedCount>   addedWeights;
+    for (int i = 0; i < RemovedCount; ++i)
+        removedWeights[i] = &featureTransformer.weights[usize(psqRemoved[i]) * Dimensions];
+    for (int i = 0; i < AddedCount; ++i)
+        addedWeights[i] = &featureTransformer.weights[usize(psqAdded[i]) * Dimensions];
 
     Tile acc;
 
@@ -436,14 +435,61 @@ void apply_combined(Color                              perspective,
     {
         acc = load_tile(j, fromAcc.data());
 
-        acc = apply_psq_features<-1, true>(j, acc, psqRemoved, featureTransformer);
-        acc = apply_psq_features<+1, true>(j, acc, psqAdded, featureTransformer);
+#if defined(USE_AVX512) || defined(USE_AVX2)
+        // Keep the tile in registers, including the four-feature case.
+    #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC unroll 16
+    #endif
+        for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+        {
+            for (const auto* weights : removedWeights)
+                acc[k] = vec_sub_16(
+                  acc[k], vec_convert_8_16(reinterpret_cast<const vec_i8_t*>(weights + j)[k]));
+            for (const auto* weights : addedWeights)
+                acc[k] = vec_add_16(
+                  acc[k], vec_convert_8_16(reinterpret_cast<const vec_i8_t*>(weights + j)[k]));
+        }
+#else
+        for (const auto* weights : removedWeights)
+            acc = apply_feature_single<-1>(j, acc, weights + j);
+        for (const auto* weights : addedWeights)
+            acc = apply_feature_single<+1>(j, acc, weights + j);
+#endif
 
         acc = apply_threat_features<-1>(j, acc, thrRemoved, featureTransformer);
         acc = apply_threat_features<+1>(j, acc, thrAdded, featureTransformer);
 
         store_tile(j, toAcc.data(), acc);
     }
+}
+
+void apply_combined(Color                              perspective,
+                    const FeatureTransformer&          featureTransformer,
+                    const AccumulatorState&            from,
+                    AccumulatorState&                  to,
+                    const PSQFeatureSet::IndexList&    psqAdded,
+                    const PSQFeatureSet::IndexList&    psqRemoved,
+                    const ThreatFeatureSet::IndexList& thrAdded,
+                    const ThreatFeatureSet::IndexList& thrRemoved) {
+    assert(psqRemoved.size() == 1 || psqRemoved.size() == 2);
+    assert(psqAdded.size() == 1 || psqAdded.size() == 2);
+
+    // Dispatch once; feature counts and row addresses stay fixed across tiles.
+    if (psqRemoved.size() == 1)
+    {
+        if (psqAdded.size() == 1)
+            apply_combined<1, 1>(perspective, featureTransformer, from, to, psqAdded, psqRemoved,
+                                 thrAdded, thrRemoved);
+        else
+            apply_combined<1, 2>(perspective, featureTransformer, from, to, psqAdded, psqRemoved,
+                                 thrAdded, thrRemoved);
+    }
+    else if (psqAdded.size() == 1)
+        apply_combined<2, 1>(perspective, featureTransformer, from, to, psqAdded, psqRemoved,
+                             thrAdded, thrRemoved);
+    else
+        apply_combined<2, 2>(perspective, featureTransformer, from, to, psqAdded, psqRemoved,
+                             thrAdded, thrRemoved);
 }
 
 template<bool Forward>
