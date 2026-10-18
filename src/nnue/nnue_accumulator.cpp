@@ -338,7 +338,7 @@ sf_always_inline Tile apply([[maybe_unused]] IndexType j, Tile acc, const i16* d
 template<int sign>
 sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile acc, const i8* data) {
     static_assert(sign == 1 || sign == -1);
-    auto* column = reinterpret_cast<const vec_i8_t*>(data);
+    [[maybe_unused]] auto* column = reinterpret_cast<const vec_i8_t*>(data);
     #ifdef USE_NEON
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
     {
@@ -369,6 +369,25 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
             acc[k + 1]           = vec_sub_16(acc[k + 1], __lsx_vexth_h_b(weight));
         }
     }
+    #elif defined(USE_PAIRED_WIDENING_ADD)
+    static_assert(Tiling::NumRegs % 2 == 0);
+    const vec_t zero = vec_zero();
+    for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+    {
+        const vec_t weight = vec_load(reinterpret_cast<const vec_t*>(data) + k / 2);
+        const vec_t lo     = vec_srai_16(vec_unpacklo_8(zero, weight), 8);
+        const vec_t hi     = vec_srai_16(vec_unpackhi_8(zero, weight), 8);
+        if constexpr (sign == +1)
+        {
+            acc[k]     = vec_add_16(acc[k], lo);
+            acc[k + 1] = vec_add_16(acc[k + 1], hi);
+        }
+        else
+        {
+            acc[k]     = vec_sub_16(acc[k], lo);
+            acc[k + 1] = vec_sub_16(acc[k + 1], hi);
+        }
+    }
     #else
     for (IndexType k = 0; k < Tiling::NumRegs; ++k)
         if constexpr (sign == +1)
@@ -379,29 +398,77 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
     return acc;
 }
 
+    #if defined(USE_PAIRED_WIDENING_ADD)
+
+template<int sign>
+sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* data1) {
+    static_assert(sign == 1 || sign == -1);
+    static_assert(Tiling::NumRegs % 2 == 0);
+    const vec_t ones = vec_set_8(1);
+    for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+    {
+        const vec_t w0 = vec_load(reinterpret_cast<const vec_t*>(data0) + k / 2);
+        const vec_t w1 = vec_load(reinterpret_cast<const vec_t*>(data1) + k / 2);
+        const vec_t lo = vec_maddubs_16(ones, vec_unpacklo_8(w0, w1));
+        const vec_t hi = vec_maddubs_16(ones, vec_unpackhi_8(w0, w1));
+        if constexpr (sign == +1)
+        {
+            acc[k]     = vec_add_16(acc[k], lo);
+            acc[k + 1] = vec_add_16(acc[k + 1], hi);
+        }
+        else
+        {
+            acc[k]     = vec_sub_16(acc[k], lo);
+            acc[k + 1] = vec_sub_16(acc[k + 1], hi);
+        }
+    }
+    return acc;
+}
+
+    #endif
+
 #endif
 
+// The weight-table base already includes the tile offset.
 template<int sign, bool Incremental = false>
+sf_always_inline Tile
+apply_features(IndexType j, Tile acc, const u16* indices, int count, const i8* weights) {
+    static_assert(sign == 1 || sign == -1);
+    if constexpr (Incremental)
+    {
+        assert(count >= 0 && count <= 2);
+        // Use the loop below for scalar builds to avoid spurious GCC uninitialized warnings.
+#if defined(VECTOR) || defined(USE_RVV)
+    #if defined(USE_PAIRED_WIDENING_ADD)
+        if (count == 2)
+            return apply_feature_pair<sign>(acc, &weights[usize(indices[0]) * Dimensions],
+                                           &weights[usize(indices[1]) * Dimensions]);
+    #endif
+        if (count > 0)
+            acc = apply_feature_single<sign>(j, acc, &weights[usize(indices[0]) * Dimensions]);
+        if (count > 1)
+            acc = apply_feature_single<sign>(j, acc, &weights[usize(indices[1]) * Dimensions]);
+        return acc;
+#endif
+    }
+
+    int i = 0;
+#if defined(USE_PAIRED_WIDENING_ADD)
+    for (; i + 1 < count; i += 2)
+        acc = apply_feature_pair<sign>(acc, &weights[usize(indices[i]) * Dimensions],
+                                      &weights[usize(indices[i + 1]) * Dimensions]);
+#endif
+    for (; i < count; ++i)
+        acc = apply_feature_single<sign>(j, acc, &weights[usize(indices[i]) * Dimensions]);
+    return acc;
+}
+
+template<int sign>
 sf_always_inline Tile apply_psq_features(IndexType                       j,
                                          Tile                            acc,
                                          const PSQFeatureSet::IndexList& list,
                                          const FeatureTransformer&       ft) {
-    static_assert(sign == 1 || sign == -1);
-    const auto* weights = &ft.weights[j];
-    if constexpr (Incremental)
-    {
-        assert(list.size() == 1 || list.size() == 2);
-        // Use the loop below for scalar builds to avoid spurious GCC uninitialized warnings.
-#if defined(VECTOR) || defined(USE_RVV)
-        acc = apply_feature_single<sign>(j, acc, &weights[usize(list[0]) * Dimensions]);
-        if (list.size() > 1)
-            acc = apply_feature_single<sign>(j, acc, &weights[usize(list[1]) * Dimensions]);
-        return acc;
-#endif
-    }
-    for (int i = 0; i < list.ssize(); ++i)
-        acc = apply_feature_single<sign>(j, acc, &weights[usize(list[i]) * Dimensions]);
-    return acc;
+    return apply_features<sign>(j, acc, list.begin(), list.ssize(), &ft.weights[j]);
 }
 
 template<int sign>
@@ -409,13 +476,39 @@ sf_always_inline Tile apply_threat_features(IndexType                          j
                                             Tile                               acc,
                                             const ThreatFeatureSet::IndexList& list,
                                             const FeatureTransformer&          ft) {
-    static_assert(sign == 1 || sign == -1);
+    return apply_features<sign>(j, acc, list.begin(), list.ssize(), &ft.threatAndPpWeights[j]);
+}
 
-    const auto* weights = &ft.threatAndPpWeights[j];
-    for (int i = 0; i < list.ssize(); ++i)
-        acc = apply_feature_single<sign>(
-          j, acc, reinterpret_cast<const i8*>(&weights[usize(list[i]) * Dimensions]));
-    return acc;
+template<int sign, bool Incremental = false>
+sf_always_inline Tile apply_combined_features(IndexType                          j,
+                                              Tile                               acc,
+                                              const PSQFeatureSet::IndexList&    psq,
+                                              const ThreatFeatureSet::IndexList& thr,
+                                              const FeatureTransformer&          ft) {
+    if constexpr (Incremental)
+        assert(psq.size() == 1 || psq.size() == 2);
+
+    const auto* psqWeights = &ft.weights[j];
+    const auto* thrWeights = &ft.threatAndPpWeights[j];
+    int         psqCount  = psq.ssize();
+    int         thrBegin  = 0;
+#if defined(USE_PAIRED_WIDENING_ADD)
+    // Keep the last odd psq row paired with the first threat/pp row of the same sign.
+    if (psqCount % 2 != 0 && thr.size() > 0)
+    {
+        --psqCount;
+        thrBegin = 1;
+    }
+#endif
+
+    acc = apply_features<sign, Incremental>(j, acc, psq.begin(), psqCount, psqWeights);
+#if defined(USE_PAIRED_WIDENING_ADD)
+    if (thrBegin)
+        acc = apply_feature_pair<sign>(acc, &psqWeights[usize(psq[psqCount]) * Dimensions],
+                                      &thrWeights[usize(thr[0]) * Dimensions]);
+#endif
+    return apply_features<sign>(j, acc, thr.begin() + thrBegin, thr.ssize() - thrBegin,
+                                thrWeights);
 }
 
 void apply_combined(Color                              perspective,
@@ -436,11 +529,8 @@ void apply_combined(Color                              perspective,
     {
         acc = load_tile(j, fromAcc.data());
 
-        acc = apply_psq_features<-1, true>(j, acc, psqRemoved, featureTransformer);
-        acc = apply_psq_features<+1, true>(j, acc, psqAdded, featureTransformer);
-
-        acc = apply_threat_features<-1>(j, acc, thrRemoved, featureTransformer);
-        acc = apply_threat_features<+1>(j, acc, thrAdded, featureTransformer);
+        acc = apply_combined_features<-1, true>(j, acc, psqRemoved, thrRemoved, featureTransformer);
+        acc = apply_combined_features<+1, true>(j, acc, psqAdded, thrAdded, featureTransformer);
 
         store_tile(j, toAcc.data(), acc);
     }
@@ -759,11 +849,9 @@ void update_accumulator_hybrid(Color                     perspective,
         acc = apply<-1>(j, acc, &oldEntry.accumulation[j]);
 
         // ... then we adjust
-        acc = apply_psq_features<+1>(j, acc, oldRemove, featureTransformer);
-        acc = apply_psq_features<-1>(j, acc, oldAdd, featureTransformer);
-
-        acc = apply_threat_features<-1>(j, acc, thrRemoved, featureTransformer);
-        acc = apply_threat_features<+1>(j, acc, thrAdded, featureTransformer);
+        // The old entry's removed psq features have to be added back, its added ones removed
+        acc = apply_combined_features<-1>(j, acc, oldAdd, thrRemoved, featureTransformer);
+        acc = apply_combined_features<+1>(j, acc, oldRemove, thrAdded, featureTransformer);
 
         store_tile(j, toAcc.data(), acc);
     }
