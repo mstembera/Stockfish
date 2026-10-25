@@ -525,15 +525,6 @@ sf_always_inline Tile apply_combined_features(IndexType                         
 }
 
 #if defined(USE_PAIRED_WIDENING_ADD)
-sf_always_inline const i8* streaming_second_row(const PSQFeatureSet::IndexList&    psq,
-                                                const ThreatFeatureSet::IndexList& thr,
-                                                const FeatureTransformer&          ft) {
-    if (psq.size() == 2)
-        return &ft.weights[usize(psq[1]) * Dimensions];
-
-    return thr.size() > 0 ? &ft.threatAndPpWeights[usize(thr[0]) * Dimensions] : nullptr;
-}
-
 template<int RemovedCount, int AddedCount>
 void apply_combined_streaming(const i16* from,
                               i16*       to,
@@ -584,10 +575,20 @@ void apply_combined(Color                              perspective,
     // Stream when each sign fits in one row pair; otherwise amortize the threat loops over tiles.
     if (psqRemoved.size() + thrRemoved.size() <= 2 && psqAdded.size() + thrAdded.size() <= 2)
     {
+        auto second_row = [&](const PSQFeatureSet::IndexList&    psq,
+                              const ThreatFeatureSet::IndexList& thr) -> const i8* {
+            if (psq.size() == 2)
+                return &featureTransformer.weights[usize(psq[1]) * Dimensions];
+
+            return thr.size() > 0
+                   ? &featureTransformer.threatAndPpWeights[usize(thr[0]) * Dimensions]
+                   : nullptr;
+        };
+
         const auto* r0 = &featureTransformer.weights[usize(psqRemoved[0]) * Dimensions];
-        const auto* r1 = streaming_second_row(psqRemoved, thrRemoved, featureTransformer);
+        const auto* r1 = second_row(psqRemoved, thrRemoved);
         const auto* a0 = &featureTransformer.weights[usize(psqAdded[0]) * Dimensions];
-        const auto* a1 = streaming_second_row(psqAdded, thrAdded, featureTransformer);
+        const auto* a1 = second_row(psqAdded, thrAdded);
 
         if (r1)
         {
@@ -596,19 +597,20 @@ void apply_combined(Color                              perspective,
             else
                 apply_combined_streaming<2, 1>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
         }
-        else if (a1)
-            apply_combined_streaming<1, 2>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
         else
-            apply_combined_streaming<1, 1>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
+        {
+            if (a1)
+                apply_combined_streaming<1, 2>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
+            else
+                apply_combined_streaming<1, 1>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
+        }
         return;
     }
 #endif
 
-    Tile acc;
-
     for (IndexType j = 0; j < Dimensions; increment_index(j))
     {
-        acc = load_tile(j, fromAcc.data());
+        Tile acc = load_tile(j, fromAcc.data());
 
         acc = apply_combined_features<-1, true>(j, acc, psqRemoved, thrRemoved, featureTransformer);
         acc = apply_combined_features<+1, true>(j, acc, psqAdded, thrAdded, featureTransformer);
@@ -914,11 +916,9 @@ void update_accumulator_hybrid(Color                     perspective,
     const auto& fromAcc = computed.accumulation[perspective];
     auto&       toAcc   = target.accumulation[perspective];
 
-    Tile acc;
-
     for (IndexType j = 0; j < Dimensions; increment_index(j))
     {
-        acc = load_tile(j, newEntry.accumulation.data());
+        Tile acc = load_tile(j, newEntry.accumulation.data());
 
         acc = apply_psq_features<-1>(j, acc, newRemove, featureTransformer);
         acc = apply_psq_features<+1>(j, acc, newAdd, featureTransformer);
@@ -971,11 +971,9 @@ void update_accumulator_refresh_cache(Color                     perspective,
 
     accumulator.computed[perspective] = true;
 
-    Tile acc;
-
     for (IndexType j = 0; j < Dimensions; increment_index(j))
     {
-        acc = load_tile(j, entry.accumulation.data());
+        Tile acc = load_tile(j, entry.accumulation.data());
 
         acc = apply_psq_features<-1>(j, acc, removed, featureTransformer);
         acc = apply_psq_features<+1>(j, acc, added, featureTransformer);
