@@ -380,8 +380,8 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
     for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
     {
         const vec_t weight = vec_load(reinterpret_cast<const vec_t*>(data) + k / 2);
-        const vec_t lo     = vec_srai_16(vec_unpacklo_8(zero, weight), 8);
-        const vec_t hi     = vec_srai_16(vec_unpackhi_8(zero, weight), 8);
+        const vec_t lo     = vec_unpacklo_8(weight, zero);
+        const vec_t hi     = vec_unpackhi_8(weight, zero);
         if constexpr (sign == +1)
         {
             acc[k]     = vec_add_16(acc[k], lo);
@@ -419,8 +419,8 @@ sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* da
     {
         const vec_t w0 = vec_load(reinterpret_cast<const vec_t*>(data0) + k / 2);
         const vec_t w1 = vec_load(reinterpret_cast<const vec_t*>(data1) + k / 2);
-        const vec_t lo = vec_maddubs_16(ones, vec_unpacklo_8(w0, w1));
-        const vec_t hi = vec_maddubs_16(ones, vec_unpackhi_8(w0, w1));
+        const vec_t lo = vec_maddubs_16(vec_unpacklo_8(w0, w1), ones);
+        const vec_t hi = vec_maddubs_16(vec_unpackhi_8(w0, w1), ones);
         if constexpr (sign == +1)
         {
             acc[k]     = vec_add_16(acc[k], lo);
@@ -438,6 +438,21 @@ sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* da
     #endif
 
 #endif
+
+// Remove the +128 bias of the stored weight rows (see FeatureTransformer::WeightBias),
+// given the net number of rows added. Done once per tile instead of once per row.
+sf_always_inline Tile unbias(Tile acc, [[maybe_unused]] int rows) {
+#if defined(USE_PAIRED_WIDENING_ADD)
+    if (rows != 0)
+    {
+        // i16 wraparound is harmless: the final accumulator values fit
+        const vec_t bias = vec_set_16(i16(-FeatureTransformer::WeightBias * rows));
+        for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+            acc[k] = vec_add_16(acc[k], bias);
+    }
+#endif
+    return acc;
+}
 
 // The weight-table base already includes the tile offset.
 template<int sign, bool Incremental = false>
@@ -530,6 +545,8 @@ void apply_combined(Color                              perspective,
 
     const auto& fromAcc = from.accumulation[perspective];
     auto&       toAcc   = to.accumulation[perspective];
+    const int   netRows =
+      psqAdded.ssize() + thrAdded.ssize() - psqRemoved.ssize() - thrRemoved.ssize();
 
     Tile acc;
 
@@ -539,6 +556,7 @@ void apply_combined(Color                              perspective,
 
         acc = apply_combined_features<-1, true>(j, acc, psqRemoved, thrRemoved, featureTransformer);
         acc = apply_combined_features<+1, true>(j, acc, psqAdded, thrAdded, featureTransformer);
+        acc = unbias(acc, netRows);
 
         store_tile(j, toAcc.data(), acc);
     }
@@ -841,6 +859,10 @@ void update_accumulator_hybrid(Color                     perspective,
     const auto& fromAcc = computed.accumulation[perspective];
     auto&       toAcc   = target.accumulation[perspective];
 
+    const int newNetRows = newAdd.ssize() - newRemove.ssize();
+    const int oldNetRows =
+      oldRemove.ssize() + thrAdded.ssize() - oldAdd.ssize() - thrRemoved.ssize();
+
     Tile acc;
 
     for (IndexType j = 0; j < Dimensions; increment_index(j))
@@ -849,6 +871,7 @@ void update_accumulator_hybrid(Color                     perspective,
 
         acc = apply_psq_features<-1>(j, acc, newRemove, featureTransformer);
         acc = apply_psq_features<+1>(j, acc, newAdd, featureTransformer);
+        acc = unbias(acc, newNetRows);
 
         store_tile(j, newEntry.accumulation.data(), acc);
 
@@ -863,6 +886,7 @@ void update_accumulator_hybrid(Color                     perspective,
         // The old entry's removed psq features have to be added back, its added ones removed
         acc = apply_combined_features<-1>(j, acc, oldAdd, thrRemoved, featureTransformer);
         acc = apply_combined_features<+1>(j, acc, oldRemove, thrAdded, featureTransformer);
+        acc = unbias(acc, oldNetRows);
 
         store_tile(j, toAcc.data(), acc);
     }
@@ -898,6 +922,8 @@ void update_accumulator_refresh_cache(Color                     perspective,
 
     accumulator.computed[perspective] = true;
 
+    const int psqNetRows = added.ssize() - removed.ssize();
+
     Tile acc;
 
     for (IndexType j = 0; j < Dimensions; increment_index(j))
@@ -906,10 +932,12 @@ void update_accumulator_refresh_cache(Color                     perspective,
 
         acc = apply_psq_features<-1>(j, acc, removed, featureTransformer);
         acc = apply_psq_features<+1>(j, acc, added, featureTransformer);
+        acc = unbias(acc, psqNetRows);
 
         store_tile(j, &entry.accumulation[0], acc);
 
         acc = apply_threat_features<+1>(j, acc, active, featureTransformer);
+        acc = unbias(acc, active.ssize());
 
         store_tile(j, accumulator.accumulation[perspective].data(), acc);
     }

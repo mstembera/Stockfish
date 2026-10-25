@@ -47,10 +47,11 @@ constexpr std::array<usize, Len> invert_permutation(const std::array<usize, Len>
 
 // Divide a byte region of size TotalSize to chunks of size
 // BlockSize, and permute the blocks by a given order
-template<usize BlockSize, typename T, usize N, usize OrderSize>
+template<usize BlockSize, bool FlipSign = false, typename T, usize N, usize OrderSize>
 void permute(std::array<T, N>& data, const std::array<usize, OrderSize>& order) {
     constexpr usize TotalSize = N * sizeof(T);
 
+    static_assert(!FlipSign || sizeof(T) == 1);
     static_assert(TotalSize % (BlockSize * OrderSize) == 0,
                   "ChunkSize * OrderSize must perfectly divide TotalSize");
 
@@ -72,7 +73,11 @@ void permute(std::array<T, N>& data, const std::array<usize, OrderSize>& order) 
             std::copy(value_chunk, value_chunk + BlockSize, buffer_chunk);
         }
 
-        std::copy(std::begin(buffer), std::end(buffer), values);
+        if constexpr (FlipSign)
+            std::transform(std::begin(buffer), std::end(buffer), values,
+                           [](std::byte b) { return b ^ std::byte{0x80}; });
+        else
+            std::copy(std::begin(buffer), std::end(buffer), values);
     }
 }
 
@@ -127,6 +132,10 @@ class FeatureTransformer {
     static constexpr auto InversePackusEpi16Order = invert_permutation(PackusEpi16Order);
 
 #if defined(USE_PAIRED_WIDENING_ADD)
+    // Biased u8 rows allow zero-extension and maddubs(rows, ones).
+    // Fuse the sign flip with permutation; accumulators remove the bias per tile.
+    static constexpr int WeightBias = 128;
+
     // The int8 weight rows are consumed one full vector register (sizeof(vec_t)
     // bytes) at a time: unpack{lo,hi}_epi8 interleave the bytes of two rows and
     // maddubs against a vector of ones sums each pair into an int16 lane. Both
@@ -144,6 +153,8 @@ class FeatureTransformer {
     }();
 
     static constexpr auto InverseWideningPairOrder = invert_permutation(WideningPairOrder);
+#else
+    static constexpr int WeightBias = 0;
 #endif
 
     static constexpr u32 combine_hash(std::initializer_list<u32> hashes) {
@@ -165,9 +176,9 @@ class FeatureTransformer {
 
     void permute_weights() {
         permute<16>(biases, PackusEpi16Order);
-        permute<8>(weights, PackusEpi16Order);
+        permute<8, (WeightBias != 0)>(weights, PackusEpi16Order);
 
-        permute<8>(threatAndPpWeights, PackusEpi16Order);
+        permute<8, (WeightBias != 0)>(threatAndPpWeights, PackusEpi16Order);
 
 #if defined(USE_PAIRED_WIDENING_ADD)
         // With 128-bit vectors the order is the identity
@@ -189,8 +200,8 @@ class FeatureTransformer {
 #endif
 
         permute<16>(biases, InversePackusEpi16Order);
-        permute<8>(weights, InversePackusEpi16Order);
-        permute<8>(threatAndPpWeights, InversePackusEpi16Order);
+        permute<8, (WeightBias != 0)>(weights, InversePackusEpi16Order);
+        permute<8, (WeightBias != 0)>(threatAndPpWeights, InversePackusEpi16Order);
     }
 
     ThreatWeightType* threatWeightData() { return threatAndPpWeights.data(); }
