@@ -405,27 +405,22 @@ sf_always_inline Tile apply_feature_single([[maybe_unused]] IndexType j, Tile ac
 
     #if defined(USE_PAIRED_WIDENING_ADD)
 
-template<int sign>
-sf_always_inline void apply_feature_pair(vec_t& acc0, vec_t& acc1, vec_t w0, vec_t w1) {
-    static_assert(sign == +1 || sign == -1);
-    const vec_t ones = vec_set_8(1);
-    const vec_t lo   = vec_maddubs_16(ones, vec_unpacklo_8(w0, w1));
-    const vec_t hi   = vec_maddubs_16(ones, vec_unpackhi_8(w0, w1));
-    if constexpr (sign == +1)
-    {
-        acc0 = vec_add_16(acc0, lo);
-        acc1 = vec_add_16(acc1, hi);
-    }
-    else
-    {
-        acc0 = vec_sub_16(acc0, lo);
-        acc1 = vec_sub_16(acc1, hi);
-    }
+// acc += add - sub in one maddubs per half. Bias both rows to u8 so maddubs' unsigned
+// operand is valid; the bias cancels and |add - sub| <= 255 can't saturate.
+sf_always_inline void apply_feature_diff(vec_t& acc0, vec_t& acc1, vec_t add, vec_t sub) {
+    const vec_t bias  = vec_set_8(-128);
+    const vec_t signs = vec_set_16(-255);  // i8 pairs (+1, -1)
+    const vec_t ua    = vec_xor(add, bias);
+    const vec_t us    = vec_xor(sub, bias);
+    acc0              = vec_add_16(acc0, vec_maddubs_16(vec_unpacklo_8(ua, us), signs));
+    acc1              = vec_add_16(acc1, vec_maddubs_16(vec_unpackhi_8(ua, us), signs));
 }
 
 template<int sign>
 sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* data1) {
+    static_assert(sign == 1 || sign == -1);
     static_assert(Tiling::NumRegs % 2 == 0);
+    const vec_t ones = vec_set_8(1);
         #if defined(__clang__)
             #pragma clang loop unroll(full)
         #elif defined(__GNUC__)
@@ -435,7 +430,18 @@ sf_always_inline Tile apply_feature_pair(Tile acc, const i8* data0, const i8* da
     {
         const vec_t w0 = vec_load(reinterpret_cast<const vec_t*>(data0) + k / 2);
         const vec_t w1 = vec_load(reinterpret_cast<const vec_t*>(data1) + k / 2);
-        apply_feature_pair<sign>(acc[k], acc[k + 1], w0, w1);
+        const vec_t lo = vec_maddubs_16(ones, vec_unpacklo_8(w0, w1));
+        const vec_t hi = vec_maddubs_16(ones, vec_unpackhi_8(w0, w1));
+        if constexpr (sign == +1)
+        {
+            acc[k]     = vec_add_16(acc[k], lo);
+            acc[k + 1] = vec_add_16(acc[k + 1], hi);
+        }
+        else
+        {
+            acc[k]     = vec_sub_16(acc[k], lo);
+            acc[k + 1] = vec_sub_16(acc[k + 1], hi);
+        }
     }
     return acc;
 }
@@ -525,31 +531,18 @@ sf_always_inline Tile apply_combined_features(IndexType                         
 }
 
 #if defined(USE_PAIRED_WIDENING_ADD)
-template<int RemovedCount, int AddedCount>
-void apply_combined_streaming(const i16* from,
-                              i16*       to,
-                              const i8*  removed0,
-                              const i8*  removed1,
-                              const i8*  added0,
-                              const i8*  added1) {
-    static_assert(RemovedCount == 1 || RemovedCount == 2);
-    static_assert(AddedCount == 1 || AddedCount == 2);
+void apply_combined_streaming(const i16* from, i16* to, const i8* removed, const i8* added) {
     static_assert(Dimensions % sizeof(vec_t) == 0);
     const auto* source = reinterpret_cast<const vec_t*>(from);
     auto*       target = reinterpret_cast<vec_t*>(to);
-    const auto* r0     = reinterpret_cast<const vec_t*>(removed0);
-    const auto* r1     = reinterpret_cast<const vec_t*>(removed1);
-    const auto* a0     = reinterpret_cast<const vec_t*>(added0);
-    const auto* a1     = reinterpret_cast<const vec_t*>(added1);
+    const auto* r      = reinterpret_cast<const vec_t*>(removed);
+    const auto* a      = reinterpret_cast<const vec_t*>(added);
 
     for (IndexType k = 0; k < Dimensions / sizeof(vec_t); ++k)
     {
         vec_t lo = vec_load(source + 2 * k);
         vec_t hi = vec_load(source + 2 * k + 1);
-        apply_feature_pair<-1>(lo, hi, vec_load(r0 + k),
-                               RemovedCount == 2 ? vec_load(r1 + k) : vec_zero());
-        apply_feature_pair<+1>(lo, hi, vec_load(a0 + k),
-                               AddedCount == 2 ? vec_load(a1 + k) : vec_zero());
+        apply_feature_diff(lo, hi, vec_load(a + k), vec_load(r + k));
         vec_store(target + 2 * k, lo);
         vec_store(target + 2 * k + 1, hi);
     }
@@ -572,38 +565,13 @@ void apply_combined(Color                              perspective,
     auto&       toAcc   = to.accumulation[perspective];
 
 #if defined(USE_PAIRED_WIDENING_ADD)
-    // Stream when each sign fits in one row pair; otherwise amortize the threat loops over tiles.
-    if (psqRemoved.size() + thrRemoved.size() <= 2 && psqAdded.size() + thrAdded.size() <= 2)
+    // Stream the 1-removed 1-added case; otherwise amortize the loops over tiles.
+    if (psqRemoved.size() == 1 && psqAdded.size() == 1 && thrRemoved.size() == 0
+        && thrAdded.size() == 0)
     {
-        auto second_row = [&](const PSQFeatureSet::IndexList&    psq,
-                              const ThreatFeatureSet::IndexList& thr) -> const i8* {
-            if (psq.size() == 2)
-                return &featureTransformer.weights[usize(psq[1]) * Dimensions];
-
-            return thr.size() > 0
-                   ? &featureTransformer.threatAndPpWeights[usize(thr[0]) * Dimensions]
-                   : nullptr;
-        };
-
-        const auto* r0 = &featureTransformer.weights[usize(psqRemoved[0]) * Dimensions];
-        const auto* r1 = second_row(psqRemoved, thrRemoved);
-        const auto* a0 = &featureTransformer.weights[usize(psqAdded[0]) * Dimensions];
-        const auto* a1 = second_row(psqAdded, thrAdded);
-
-        if (r1)
-        {
-            if (a1)
-                apply_combined_streaming<2, 2>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
-            else
-                apply_combined_streaming<2, 1>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
-        }
-        else
-        {
-            if (a1)
-                apply_combined_streaming<1, 2>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
-            else
-                apply_combined_streaming<1, 1>(fromAcc.data(), toAcc.data(), r0, r1, a0, a1);
-        }
+        apply_combined_streaming(fromAcc.data(), toAcc.data(),
+                                 &featureTransformer.weights[usize(psqRemoved[0]) * Dimensions],
+                                 &featureTransformer.weights[usize(psqAdded[0]) * Dimensions]);
         return;
     }
 #endif
