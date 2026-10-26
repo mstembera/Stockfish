@@ -783,6 +783,8 @@ Value Search::Worker::search(
     SearchedList capturesSearched;
     SearchedList quietsSearched;
 
+    Bitboard causalSquares = 0;
+
     // Step 1. Initialize node
     ss->inCheck   = pos.checkers();
     priorCapture  = pos.captured_piece();
@@ -1339,6 +1341,8 @@ moves_loop:  // When in check, search starts here
         // Step 17. Make the move
         do_move(pos, move, st, givesCheck, capture, ss);
 
+        (ss + 1)->refutation = Move::none();
+
         // Add extension to new depth
         newDepth += extension;
 
@@ -1389,6 +1393,10 @@ moves_loop:  // When in check, search starts here
         // Scale up reductions for expected ALL nodes
         if (allNode)
             r += r * 276 / (256 * depth + 268);
+
+        if (causalSquares && !capture && !givesCheck && move != ttData.move
+            && !(causalSquares & (square_bb(move.from_sq()) | square_bb(move.to_sq()))))
+            r += 512;
 
         // When seeking a mate, reduce non-checking moves more and checking moves less
         if (seekMate && r > 0)
@@ -1469,6 +1477,15 @@ moves_loop:  // When in check, search starts here
         // principal variation or transposition table.
         if (threads.stop.load(std::memory_order_relaxed))
             return VALUE_ZERO;
+
+        if (!capture && value <= alpha && (ss + 1)->refutation)
+        {
+            const Move  ref = (ss + 1)->refutation;
+            const Piece pc  = pos.piece_on(ref.from_sq());
+            causalSquares   = square_bb(ref.from_sq()) | square_bb(ref.to_sq());
+            if (pc != NO_PIECE)
+                causalSquares |= Attacks::attacks_bb(pc, ref.to_sq(), pos.pieces());
+        }
 
         if (rootNode)
         {
@@ -1563,6 +1580,7 @@ moves_loop:  // When in check, search starts here
                 {
                     // (*Scaler) Infrequent and small updates scale well
                     ss->cutoffCnt += (extension < 2) || PvNode;
+                    ss->refutation = move;
                     assert(value >= beta);  // Fail high
                     break;
                 }
