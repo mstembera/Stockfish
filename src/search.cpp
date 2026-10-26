@@ -214,6 +214,9 @@ void Search::Worker::start_searching() {
     main_manager()->tm.init(limits, rootPos.side_to_move(), rootPos.game_ply(), options,
                             main_manager()->originalTimeAdjust);
     tt.new_search();
+
+    main_manager()->surprise =
+      main_manager()->expectedKey && rootPos.key() != main_manager()->expectedKey;
     main_manager()->updates.onStart();
 
     if (rootMoves.empty())
@@ -271,6 +274,17 @@ void Search::Worker::start_searching() {
     std::string ponder;
     if (bestThread->rootMoves[0].pv.size() > 1)
         ponder = UCIEngine::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
+
+    main_manager()->expectedKey = 0;
+    if (bestThread->rootMoves[0].pv.size() > 1)
+    {
+        StateInfo st1, st2;
+        rootPos.do_move(bestThread->rootMoves[0].pv[0], st1);
+        rootPos.do_move(bestThread->rootMoves[0].pv[1], st2);
+        main_manager()->expectedKey = rootPos.key();
+        rootPos.undo_move(bestThread->rootMoves[0].pv[1]);
+        rootPos.undo_move(bestThread->rootMoves[0].pv[0]);
+    }
 
     auto bestmove = UCIEngine::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
     main_manager()->updates.onBestmove(bestmove, ponder);
@@ -612,8 +626,10 @@ bool Search::Worker::iterative_deepening() {
             double highBestMoveEffort = std::clamp(
               interpolate(i64(nodesEffort), i64(75800), i64(104510), 0.969, 0.714), 0.693, 0.838);
 
+            double surpriseFactor = mainThread->surprise ? 1.2 : 1.0;
+
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
-                             * bestMoveInstability * highBestMoveEffort;
+                             * bestMoveInstability * highBestMoveEffort * surpriseFactor;
 
             if (rootMoves.size() == 1)
                 // Cap used time to 0.5s for a better viewer experience
@@ -782,8 +798,6 @@ Value Search::Worker::search(
 
     SearchedList capturesSearched;
     SearchedList quietsSearched;
-
-    Bitboard causalSquares = 0;
 
     // Step 1. Initialize node
     ss->inCheck   = pos.checkers();
@@ -1341,8 +1355,6 @@ moves_loop:  // When in check, search starts here
         // Step 17. Make the move
         do_move(pos, move, st, givesCheck, capture, ss);
 
-        (ss + 1)->refutation = Move::none();
-
         // Add extension to new depth
         newDepth += extension;
 
@@ -1393,10 +1405,6 @@ moves_loop:  // When in check, search starts here
         // Scale up reductions for expected ALL nodes
         if (allNode)
             r += r * 276 / (256 * depth + 268);
-
-        if (causalSquares && !capture && !givesCheck && move != ttData.move
-            && !(causalSquares & (square_bb(move.from_sq()) | square_bb(move.to_sq()))))
-            r += 512;
 
         // When seeking a mate, reduce non-checking moves more and checking moves less
         if (seekMate && r > 0)
@@ -1477,15 +1485,6 @@ moves_loop:  // When in check, search starts here
         // principal variation or transposition table.
         if (threads.stop.load(std::memory_order_relaxed))
             return VALUE_ZERO;
-
-        if (!capture && value <= alpha && (ss + 1)->refutation)
-        {
-            const Move  ref = (ss + 1)->refutation;
-            const Piece pc  = pos.piece_on(ref.from_sq());
-            causalSquares   = square_bb(ref.from_sq()) | square_bb(ref.to_sq());
-            if (pc != NO_PIECE)
-                causalSquares |= Attacks::attacks_bb(pc, ref.to_sq(), pos.pieces());
-        }
 
         if (rootNode)
         {
@@ -1580,7 +1579,6 @@ moves_loop:  // When in check, search starts here
                 {
                     // (*Scaler) Infrequent and small updates scale well
                     ss->cutoffCnt += (extension < 2) || PvNode;
-                    ss->refutation = move;
                     assert(value >= beta);  // Fail high
                     break;
                 }

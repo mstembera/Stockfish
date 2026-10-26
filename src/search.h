@@ -130,7 +130,6 @@ struct Stack {
     int                         cutoffCnt;
     int                         reduction;
     int                         priorNMPFailHigh;
-    Move                        refutation;
 };
 
 
@@ -305,6 +304,9 @@ class SearchManager {
     Value                bestPreviousScore;
     Value                bestPreviousAverageScore;
     bool                 stopOnPonderhit;
+
+    Key  expectedKey = 0;
+    bool surprise    = false;
 
     const UpdateContext& updates;
 };
