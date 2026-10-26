@@ -214,9 +214,6 @@ void Search::Worker::start_searching() {
     main_manager()->tm.init(limits, rootPos.side_to_move(), rootPos.game_ply(), options,
                             main_manager()->originalTimeAdjust);
     tt.new_search();
-
-    main_manager()->surprise =
-      main_manager()->expectedKey && rootPos.key() != main_manager()->expectedKey;
     main_manager()->updates.onStart();
 
     if (rootMoves.empty())
@@ -274,17 +271,6 @@ void Search::Worker::start_searching() {
     std::string ponder;
     if (bestThread->rootMoves[0].pv.size() > 1)
         ponder = UCIEngine::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
-
-    main_manager()->expectedKey = 0;
-    if (bestThread->rootMoves[0].pv.size() > 1)
-    {
-        StateInfo st1, st2;
-        rootPos.do_move(bestThread->rootMoves[0].pv[0], st1);
-        rootPos.do_move(bestThread->rootMoves[0].pv[1], st2);
-        main_manager()->expectedKey = rootPos.key();
-        rootPos.undo_move(bestThread->rootMoves[0].pv[1]);
-        rootPos.undo_move(bestThread->rootMoves[0].pv[0]);
-    }
 
     auto bestmove = UCIEngine::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
     main_manager()->updates.onBestmove(bestmove, ponder);
@@ -626,10 +612,8 @@ bool Search::Worker::iterative_deepening() {
             double highBestMoveEffort = std::clamp(
               interpolate(i64(nodesEffort), i64(75800), i64(104510), 0.969, 0.714), 0.693, 0.838);
 
-            double surpriseFactor = mainThread->surprise ? 1.2 : 1.0;
-
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
-                             * bestMoveInstability * highBestMoveEffort * surpriseFactor;
+                             * bestMoveInstability * highBestMoveEffort;
 
             if (rootMoves.size() == 1)
                 // Cap used time to 0.5s for a better viewer experience

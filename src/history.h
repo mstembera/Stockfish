@@ -224,18 +224,24 @@ struct SharedHistories {
         return pawnHistory[pos.pawn_key() & pawnHistSizeMinus1];
     }
 
+    static Key corr_phase_salt(const Position& pos) {
+        constexpr Key Salts[4] = {0x9E3779B97F4A7C15ULL, 0xC2B2AE3D27D4EB4FULL,
+                                  0x165667B19E3779F9ULL, 0xD6E8FEB86659FD93ULL};
+        return Salts[unsigned(pos.count<ALL_PIECES>() - 1) / 8];
+    }
+
     auto& pawn_correction_entry(const Position& pos) {
-        return correctionHistory[pos.pawn_key() & sizeMinus1];
+        return correctionHistory[(pos.pawn_key() ^ corr_phase_salt(pos)) & sizeMinus1];
     }
     const auto& pawn_correction_entry(const Position& pos) const {
-        return correctionHistory[pos.pawn_key() & sizeMinus1];
+        return correctionHistory[(pos.pawn_key() ^ corr_phase_salt(pos)) & sizeMinus1];
     }
 
     auto& minor_piece_correction_entry(const Position& pos) {
-        return correctionHistory[pos.minor_piece_key() & sizeMinus1];
+        return correctionHistory[(pos.minor_piece_key() ^ corr_phase_salt(pos)) & sizeMinus1];
     }
     const auto& minor_piece_correction_entry(const Position& pos) const {
-        return correctionHistory[pos.minor_piece_key() & sizeMinus1];
+        return correctionHistory[(pos.minor_piece_key() ^ corr_phase_salt(pos)) & sizeMinus1];
     }
 
     template<Color c>
