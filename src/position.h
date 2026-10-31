@@ -368,16 +368,7 @@ inline bool Position::capture(Move m) const {
 // generation is needed to avoid the generation of duplicate moves.
 inline bool Position::capture_stage(Move m) const {
     assert(m.is_ok());
-
-    const MoveType mt = m.type_of();
-
-    if (mt == NORMAL)
-        return !empty(m.to_sq());
-
-    if (mt == PROMOTION)
-        return !empty(m.to_sq()) || m.promotion_type() == QUEEN;
-
-    return mt == EN_PASSANT;
+    return capture(m) || (m.type_of() == PROMOTION && m.promotion_type() == QUEEN);
 }
 
 inline Piece Position::captured_piece() const { return st->capturedPiece; }
@@ -440,8 +431,7 @@ inline void Position::swap_piece(Square s, Piece pc, DirtyThreats* const dts) {
 
 inline void Position::do_move(Move m, StateInfo& newSt) {
     new (&scratchDirties.dirtyThreats) DirtyThreats;
-    new (&scratchDirties.dirtyPawnPairs) DirtyPawnPairs;
-    do_move(m, newSt, gives_check(m), scratchDirties, nullptr);
+    do_move(m, newSt, gives_check(m), scratchDirties);
 }
 
 inline StateInfo* Position::state() const { return st; }

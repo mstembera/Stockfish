@@ -81,11 +81,13 @@ struct MoveSorter {
 
         // Because values and moves are stored separately, we need to reassemble the ExtMoves
         auto write = [&](int offset, const __m512i indices) {
-            const __m512i extMoves = _mm512_permutex2var_epi32(sortedMoves, indices, sortedValues);
-            const isize   storeCount = count - offset;
+            const isize storeCount = count - offset;
 
             if (storeCount > 0)
+            {
+                const __m512i extMoves = _mm512_permutex2var_epi32(sortedMoves, indices, sortedValues);
                 _mm512_mask_storeu_epi64(moves + offset, (1 << storeCount) - 1, extMoves);
+            }
         };
 
         write(0, _mm512_setr_epi32(0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23));
@@ -98,12 +100,13 @@ struct MoveSorter {
 // Sort moves in descending order up to and including a given limit.
 // The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
+
+    if (end - begin <= 1)
+        return;
+
     ExtMove *sortedEnd = begin, *p = begin + 1;
 
 #ifdef USE_AVX512
-    if (begin == end)
-        return;
-
     MoveSorter sorter(*begin);
     for (; p < end; ++p)
     {
@@ -158,10 +161,7 @@ MovePicker::MovePicker(const Position&              p,
     depth(d),
     ply(pl) {
 
-    if (pos.checkers())
-        first_stage = EVASION;
-    else
-        first_stage = depth > 0 ? GOOD_CAPTURE : QSEARCH;
+    first_stage = pos.checkers() ? EVASION : depth > 0 ? GOOD_CAPTURE : QSEARCH;
 
     stage = ttm && pos.legal(ttm) ? TT : INIT_FIRST_STAGE;
 }
@@ -188,7 +188,7 @@ ExtMove* MovePicker::generate_and_score() {
 
     static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
 
-    Color us = pos.side_to_move();
+    const Color us = pos.side_to_move();
 
     [[maybe_unused]] Bitboard threatByLesser[KING + 1];
     if constexpr (Type == QUIETS)
@@ -201,10 +201,8 @@ ExtMove* MovePicker::generate_and_score() {
         threatByLesser[KING]  = 0;
     }
 
-    MoveList<Type> ml(pos);  // move generation
-
     ExtMove* it = cur;
-    for (auto move : ml)
+    for (Move move : MoveList<Type>(pos))
     {
         ExtMove& m = *it++;
         m          = move;
@@ -217,7 +215,7 @@ ExtMove* MovePicker::generate_and_score() {
 
         if constexpr (Type == CAPTURES)
             m.value = (*captureHistory)[pc][to][type_of(capturedPiece)]
-                    + 7 * int(PieceValue[capturedPiece]);
+                    + 7 * PieceValue[capturedPiece];
 
         else if constexpr (Type == QUIETS)
         {
@@ -287,10 +285,8 @@ dispatch:
     case INIT_FIRST_STAGE :
         cur = endBadMoves = moves;
 
-        if (first_stage == EVASION)
-            endCur = generate_and_score<EVASIONS>();
-        else
-            endCur = generate_and_score<CAPTURES>();
+        endCur = first_stage == EVASION ? generate_and_score<EVASIONS>()
+                                        : generate_and_score<CAPTURES>();
 
         partial_insertion_sort(cur, endCur, std::numeric_limits<int>::min());
 
@@ -298,13 +294,13 @@ dispatch:
         goto dispatch;
 
     case GOOD_CAPTURE :
-        if (select([&]() {
+        if (Move move = select([&]() {
                 if (pos.see_ge(*cur, -cur->value / 18))
                     return true;
                 *endBadMoves++ = *cur;
                 return false;
             }))
-            return *(cur - 1);
+            return move;
 
         endBadCaptures = endBadMoves;
 
@@ -320,13 +316,13 @@ dispatch:
             [[fallthrough]];
 
         case GOOD_QUIET :
-            if (select([&]() {
+            if (Move move = select([&]() {
                     if (cur->value > goodQuietThreshold)
                         return true;
                     *endBadMoves++ = *cur;
                     return false;
                 }))
-                return *(cur - 1);
+                return move;
         }
 
         // Prepare the pointers to loop over the bad captures
@@ -353,10 +349,7 @@ dispatch:
 void MovePicker::skip_quiet_moves() {
     skipQuiets = true;
     if (stage == BAD_MOVES || stage == GOOD_QUIET)
-    {
-        endCur      = endBadCaptures;  // discards any quiet moves in the current stage
-        endBadMoves = endBadCaptures;  // discards bad quiet moves
-    }
+        endCur = endBadMoves = endBadCaptures;  // discards current-stage and bad quiet moves
 }
 
 }  // namespace Stockfish
