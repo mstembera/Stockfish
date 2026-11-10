@@ -75,8 +75,8 @@ static void append_indices_impl(Color perspective,
                                 Bitboard pawnsW,
                                 Bitboard pawnsB,
                                 PP_3Wide::IndexList* const (&out)[N],
-                                [[maybe_unused]] const ThreatWeightType* prefetchBase,
-                                [[maybe_unused]] IndexType               prefetchStride) {
+                                const ThreatWeightType* prefetchBase,
+                                IndexType               prefetchStride) {
     static_assert(N == 1 || N == 2);
 
     if (!updated)
@@ -121,7 +121,14 @@ static void append_indices_impl(Color perspective,
             // 80 + 8 * (16 - P) + 2 * P + P * (P - 1) / 2, for P <= 16 pawns.
             // Updates have at most 96 threats + 120 pairs. Both fit in 256 entries
             // including the 15 extra lanes written by an unmasked store.
-            _mm256_storeu_epi16(out[i]->make_space(n), feats);
+            u16* write = out[i]->make_space(n);
+            _mm256_storeu_epi16(write, feats);
+
+            if (prefetchBase)
+                for (int k = 0; k < n; ++k)
+                    prefetch<PrefetchRw::READ, PrefetchLoc::LOW>(
+                      reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(prefetchBase)
+                                                    + uintptr_t(write[k]) * prefetchStride));
         }
 #else
         const Color aCol = (pawnsB & a) ? BLACK : WHITE;
