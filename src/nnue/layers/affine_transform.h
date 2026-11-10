@@ -31,9 +31,8 @@
 /*
   This file contains the definition for a fully connected layer (aka affine transform).
 
-    - expected use-case is for when PaddedInputDimensions == 32 and InputDimensions <= 32.
-      - that's why AVX512 is hard to implement
     - expected use-case is small layers
+    - single-output layers use AVX512 when the padded input size is a multiple of 64
     - inputs are processed in chunks of 4, weights are respectively transposed
     - accumulation happens directly to int32s
 */
@@ -312,6 +311,27 @@ class AffineTransform {
     #undef vec_load_32
     #undef vec_add_dpbusd_32
         }
+    #if defined(USE_AVX512)
+        else if constexpr (OutputDimensions == 1 && PaddedInputDimensions % 64 == 0)
+        {
+            constexpr IndexType NumChunks   = PaddedInputDimensions / 64;
+            const auto          inputVector = reinterpret_cast<const __m512i*>(input);
+            const auto          row         = reinterpret_cast<const __m512i*>(weights);
+            __m512i             sum0        = _mm512_setzero_si512();
+            __m512i             sum1        = _mm512_setzero_si512();
+
+            // Split the high-latency dot products into separate dependency chains
+            for (IndexType j = 0; j + 1 < NumChunks; j += 2)
+            {
+                SIMD::m512_add_dpbusd_epi32(sum0, inputVector[j], row[j]);
+                SIMD::m512_add_dpbusd_epi32(sum1, inputVector[j + 1], row[j + 1]);
+            }
+            if constexpr (NumChunks % 2 != 0)
+                SIMD::m512_add_dpbusd_epi32(sum0, inputVector[NumChunks - 1], row[NumChunks - 1]);
+
+            output[0] = SIMD::m512_hadd(_mm512_add_epi32(sum0, sum1), biases[0]);
+        }
+    #endif
         else if constexpr (OutputDimensions == 1)
         {
     #if defined(USE_AVX2)
