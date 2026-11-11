@@ -516,12 +516,12 @@ void Position::set_state() const {
         {
             st->nonPawnKey[color_of(pc)] ^= Zobrist::psq[pc][s];
 
+            if (type_of(pc) <= BISHOP || type_of(pc) == KING)
+                st->minorPieceKey ^= Zobrist::psq[pc][s];
+
             if (type_of(pc) != KING)
             {
                 st->nonPawnMaterial[color_of(pc)] += PieceValue[pc];
-
-                if (type_of(pc) <= BISHOP)
-                    st->minorPieceKey ^= Zobrist::psq[pc][s];
             }
         }
     }
@@ -960,7 +960,7 @@ void Position::do_move(
     {
         st->nonPawnKey[us] ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
 
-        if (type_of(pc) <= BISHOP)
+        if (type_of(pc) <= BISHOP || type_of(pc) == KING)
             st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
     }
 
