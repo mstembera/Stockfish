@@ -496,6 +496,7 @@ void Position::set_state() const {
 
     st->key               = 0;
     st->minorPieceKey     = 0;
+    st->majorPieceKey     = 0;
     st->nonPawnKey[WHITE] = st->nonPawnKey[BLACK] = 0;
     st->pawnKey                                   = Zobrist::noPawns;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
@@ -515,6 +516,9 @@ void Position::set_state() const {
         else
         {
             st->nonPawnKey[color_of(pc)] ^= Zobrist::psq[pc][s];
+
+            if (type_of(pc) >= ROOK)
+                st->majorPieceKey ^= Zobrist::psq[pc][s];
 
             if (type_of(pc) != KING)
             {
@@ -832,6 +836,7 @@ void Position::do_move(
 
         k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         st->nonPawnKey[us] ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+        st->majorPieceKey ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
         captured = NO_PIECE;
     }
     else if (captured)
@@ -865,6 +870,9 @@ void Position::do_move(
 
             if (type_of(captured) <= BISHOP)
                 st->minorPieceKey ^= Zobrist::psq[captured][capsq];
+
+            if (type_of(captured) >= ROOK)
+                st->majorPieceKey ^= Zobrist::psq[captured][capsq];
         }
 
         dp.remove_pc = captured;
@@ -945,6 +953,9 @@ void Position::do_move(
             if (pt <= BISHOP)
                 st->minorPieceKey ^= Zobrist::psq[promotion][to];
 
+            if (pt >= ROOK)
+                st->majorPieceKey ^= Zobrist::psq[promotion][to];
+
             // Update material
             st->nonPawnMaterial[us] += PieceValue[promotion];
         }
@@ -962,6 +973,9 @@ void Position::do_move(
 
         if (type_of(pc) <= BISHOP)
             st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+
+        if (type_of(pc) >= ROOK)
+            st->majorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
     }
 
     // Update the key with the final value
@@ -972,6 +986,7 @@ void Position::do_move(
         prefetch(&history->pawn_entry(*this)[pc][to]);
         prefetch(&history->pawn_correction_entry(*this));
         prefetch(&history->minor_piece_correction_entry(*this));
+        prefetch(&history->major_piece_correction_entry(*this));
         prefetch(&history->nonpawn_correction_entry<WHITE>(*this));
         prefetch(&history->nonpawn_correction_entry<BLACK>(*this));
     }
