@@ -240,7 +240,7 @@ inline Piece Position::piece_on(Square s) const {
 
 inline const std::array<Piece, SQUARE_NB>& Position::piece_array() const { return board; }
 
-inline bool Position::empty(Square s) const { return piece_on(s) == NO_PIECE; }
+inline bool Position::empty(Square s) const { return !((pieces() >> s) & 1); }
 
 inline Piece Position::moved_piece(Move m) const { return piece_on(m.from_sq()); }
 
