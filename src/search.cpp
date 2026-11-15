@@ -917,6 +917,8 @@ Value Search::Worker::search(
                 if (depth >= 7 && ttData.move && pos.legal(ttData.move)
                     && !is_decisive(ttData.value))
                 {
+                    // Overlap the child TT fetch with do_move().
+                    prefetch(tt.get_cluster(pos.prefetch_key(ttData.move)));
                     pos.do_move(ttData.move, st);
                     Key nextPosKey                             = pos.key();
                     auto [ttHitNext, ttDataNext, ttWriterNext] = tt.probe(nextPosKey);
@@ -1279,6 +1281,9 @@ moves_loop:  // When in check, search starts here
         {
             Value singularBeta  = ttData.value - (59 + 66 * (ss->ttPv && !PvNode)) * depth / 63;
             Depth singularDepth = newDepth / 2;
+
+            // Give the child TT fetch a head start before the excluded search.
+            prefetch(tt.get_cluster(pos.prefetch_key(move)));
 
             ss->excludedMove = move;
             value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
