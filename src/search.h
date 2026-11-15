@@ -127,6 +127,7 @@ struct Stack {
     bool                        ttPv;
     bool                        ttHit;
     bool                        followPV;
+    bool                        captureToAttacked;
     int                         cutoffCnt;
     int                         reduction;
     int                         priorNMPFailHigh;

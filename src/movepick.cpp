@@ -202,7 +202,10 @@ ExtMove* MovePicker::generate_and_score() {
         threatByLesser[KING]  = 0;
     }
 
-    MoveList<Type> ml(pos);  // move generation
+    const MoveList<Type> ml(pos);  // move generation
+
+    [[maybe_unused]] const Bitboard threats =
+      Type == CAPTURES && ml.size() ? pos.threats_by(ALL_PIECES) : 0;
 
     const auto* mainHist = Type != CAPTURES ? &(*mainHistory)[us] : nullptr;
     const auto* pawnHist = Type == QUIETS ? &sharedHistory->pawn_entry(pos) : nullptr;
@@ -215,7 +218,7 @@ ExtMove* MovePicker::generate_and_score() {
       Type == QUIETS && ply < LOW_PLY_HISTORY_SIZE ? &(*lowPlyHistory)[ply] : nullptr;
 
     ExtMove* it = cur;
-    for (auto move : ml)
+    for (const Move move : ml)
     {
         ExtMove& m = *it++;
         m          = move;
@@ -227,8 +230,8 @@ ExtMove* MovePicker::generate_and_score() {
         const Piece     capturedPiece = pos.piece_on(to);
 
         if constexpr (Type == CAPTURES)
-            m.value =
-              (*captureHistory)[pc][to][type_of(capturedPiece)] + 7 * PieceValue[capturedPiece];
+            m.value = (*captureHistory)[pc][to][bool(threats & to)][type_of(capturedPiece)]
+                    + 7 * PieceValue[capturedPiece];
 
         else if constexpr (Type == QUIETS)
         {

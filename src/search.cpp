@@ -676,6 +676,8 @@ void Search::Worker::do_move(Position&    pos,
         prefetch(&(*(ss - 1)->continuationCorrectionHistory)[pc][to]);
         prefetch(&(*(ss - 3)->continuationCorrectionHistory)[pc][to]);
         prefetch(&(*(ss - 5)->continuationCorrectionHistory)[pc][to]);
+
+        ss->captureToAttacked = capture && bool(pos.threats_by(ALL_PIECES) & to);
     }
 
     ++nodes;
@@ -696,6 +698,7 @@ void Search::Worker::do_move(Position&    pos,
 
 void Search::Worker::do_null_move(Position& pos, StateInfo& st, Stack* const ss) {
     pos.do_null_move(st);
+    ss->captureToAttacked             = false;
     ss->currentMove                   = Move::null();
     ss->continuationHistory           = &continuationHistory[0][0][NO_PIECE][0];
     ss->continuationCorrectionHistory = &continuationCorrectionHistory[NO_PIECE][0];
@@ -1205,8 +1208,10 @@ moves_loop:  // When in check, search starts here
 
             if (capture || givesCheck)
             {
-                Piece capturedPiece = pos.piece_on(move.to_sq());
-                int   captHist = captureHistory[movedPiece][move.to_sq()][type_of(capturedPiece)];
+                const bool  toAttacked    = bool(pos.threats_by(ALL_PIECES) & move.to_sq());
+                const Piece capturedPiece = pos.piece_on(move.to_sq());
+                const int   captHist =
+                  captureHistory[movedPiece][move.to_sq()][toAttacked][type_of(capturedPiece)];
 
                 // Futility pruning for captures
                 if (!givesCheck && lmrDepth < 8)
@@ -1371,7 +1376,8 @@ moves_loop:  // When in check, search starts here
 
         if (capture)
             ss->statScore = 873 * int(PieceValue[pos.captured_piece()]) / 128
-                          + captureHistory[movedPiece][move.to_sq()][type_of(pos.captured_piece())];
+                          + captureHistory[movedPiece][move.to_sq()][ss->captureToAttacked]
+                                          [type_of(pos.captured_piece())];
         else
             ss->statScore =
               (2252 * mainHistory[us][move.raw()] + 1126 * (*contHist[0])[movedPiece][move.to_sq()]
@@ -1636,7 +1642,8 @@ moves_loop:  // When in check, search starts here
 
         Piece capturedPiece = pos.captured_piece();
         assert(capturedPiece != NO_PIECE);
-        captureHistory[pos.piece_on(prevSq)][prevSq][type_of(capturedPiece)] << 892;
+        captureHistory[pos.piece_on(prevSq)][prevSq][(ss - 1)->captureToAttacked]
+                      [type_of(capturedPiece)] << 892;
     }
 
     if (PvNode)
@@ -1994,6 +2001,7 @@ void update_all_stats(const Position& pos,
 
     CapturePieceToHistory& captureHistory = workerThread.captureHistory;
     Piece                  movedPiece     = pos.moved_piece(bestMove);
+    const Bitboard         threats        = pos.threats_by(ALL_PIECES);
     PieceType              capturedPiece;
 
     int bonus =
@@ -2020,7 +2028,8 @@ void update_all_stats(const Position& pos,
     {
         // Increase stats for the best move in case it was a capture move
         capturedPiece = type_of(pos.piece_on(bestMove.to_sq()));
-        captureHistory[movedPiece][bestMove.to_sq()][capturedPiece] << bonus * 1427 / 1024;
+        captureHistory[movedPiece][bestMove.to_sq()][bool(threats & bestMove.to_sq())]
+                      [capturedPiece] << bonus * 1427 / 1024;
     }
 
     // Extra penalty for a quiet early move that was not a TT move in
@@ -2029,11 +2038,12 @@ void update_all_stats(const Position& pos,
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq, -malus * 713 / 1024);
 
     // Decrease stats for all non-best capture moves
-    for (Move move : capturesSearched)
+    for (const Move move : capturesSearched)
     {
         movedPiece    = pos.moved_piece(move);
         capturedPiece = type_of(pos.piece_on(move.to_sq()));
-        captureHistory[movedPiece][move.to_sq()][capturedPiece] << -malus * 1489 / 1024;
+        captureHistory[movedPiece][move.to_sq()][bool(threats & move.to_sq())][capturedPiece]
+          << -malus * 1489 / 1024;
     }
 }
 
