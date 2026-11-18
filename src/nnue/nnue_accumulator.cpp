@@ -618,14 +618,26 @@ void apply_combined(Color                              perspective,
     for (int i = 0; i < AddedCount; ++i)
         addedWeights[i] = &psqWeights[usize(psqAdded[i]) * Dimensions];
 
-    for (IndexType j = 0; j < Dimensions; increment_index(j))
+    if (RemovedCount == 1 && AddedCount == 1 && thrRemoved.size() == 0 && thrAdded.size() == 0)
     {
-        Tile acc = load_tile(j, fromAcc.data());
+        for (IndexType j = 0; j < Dimensions; increment_index(j))
+        {
+            Tile acc = load_tile(j, fromAcc.data());
+            acc = apply_odd_features(j, acc, removedWeights[0] + j, addedWeights[0] + j);
+            store_tile(j, toAcc.data(), acc);
+        }
+    }
+    else
+    {
+        for (IndexType j = 0; j < Dimensions; increment_index(j))
+        {
+            Tile acc = load_tile(j, fromAcc.data());
 
-        acc = apply_combined_features(j, acc, removedWeights, thrRemoved, addedWeights, thrAdded,
-                                      featureTransformer, psqWeights);
+            acc = apply_combined_features(j, acc, removedWeights, thrRemoved, addedWeights,
+                                          thrAdded, featureTransformer, psqWeights);
 
-        store_tile(j, toAcc.data(), acc);
+            store_tile(j, toAcc.data(), acc);
+        }
     }
 }
 
