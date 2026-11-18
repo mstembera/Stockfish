@@ -985,6 +985,35 @@ void update_accumulator_hybrid(Color                     perspective,
     target.computed[perspective] = true;
 }
 
+// Cache the two most recent pawn structures for each perspective and king orientation.
+const i16* refresh_pawn_pair_sum(Color perspective, const Position& pos,
+                                 const FeatureTransformer& ft, AccumulatorCaches& cache) {
+    const std::array pawns{pos.pieces(WHITE, PAWN), pos.pieces(BLACK, PAWN)};
+    const bool mirrored = OrientTBL[pos.square<KING>(perspective)] != 0;
+    AccumulatorCaches::PawnPairSet& set = cache.pawnPairSets[perspective][mirrored];
+    i16 (&sums)[2][L1] = cache.pawnPairSums[perspective][mirrored];
+
+    if (set.pawns[set.recent] != pawns)
+    {
+        set.recent ^= 1;
+        if (set.pawns[set.recent] != pawns)
+        {
+            PairFeatureSet::IndexList pairs;
+            PairFeatureSet::append_active_indices(perspective, pos, pairs);
+
+            // A miss must overwrite the old sum even if there are no active pairs.
+            alignas(CacheLineSize) static constexpr i16 zero[Dimensions]{};
+            for (IndexType j = 0; j < Dimensions; increment_index(j))
+            {
+                Tile tile = apply_threat_features<+1>(j, load_tile(j, zero), pairs, ft);
+                store_tile(j, sums[set.recent], tile);
+            }
+            set.pawns[set.recent] = pawns;
+        }
+    }
+    return sums[set.recent];
+}
+
 // HalfKA data comes from the Finny table entry, while the threats are built
 // from the active threat features
 void update_accumulator_refresh_cache(Color                     perspective,
@@ -1007,7 +1036,12 @@ void update_accumulator_refresh_cache(Color                     perspective,
 
     ThreatFeatureSet::IndexList active;
     ThreatFeatureSet::append_active_indices(perspective, pos, active);
-    PairFeatureSet::append_active_indices(perspective, pos, active);
+    // With few pawns there are few pairs, cheaper to apply directly than via the cached sum
+    const i16* pairSum = nullptr;
+    if (pos.count<PAWN>() >= 4)
+        pairSum = refresh_pawn_pair_sum(perspective, pos, featureTransformer, cache);
+    else
+        PairFeatureSet::append_active_indices(perspective, pos, active);
 
     accumulator.computed[perspective] = true;
 
@@ -1020,6 +1054,8 @@ void update_accumulator_refresh_cache(Color                     perspective,
         store_tile(j, &entry.accumulation[0], acc);
 
         acc = apply_threat_features<+1>(j, acc, active, featureTransformer);
+        if (pairSum)
+            acc = apply<+1>(j, acc, pairSum + j);
 
         store_tile(j, accumulator.accumulation[perspective].data(), acc);
     }

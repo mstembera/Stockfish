@@ -72,8 +72,18 @@ struct AccumulatorCaches {
         }
     };
 
+    struct PawnPairSet {
+        std::array<Bitboard, COLOR_NB> pawns[2];
+        unsigned                       recent;
+    };
+
+    std::array<std::array<PawnPairSet, 2>, COLOR_NB> pawnPairSets;  // Perspective, king orientation
+    alignas(CacheLineSize) i16 pawnPairSums[COLOR_NB][2][2][L1]; // perspective, king orient, slot, accum lane
+
     template<typename Network>
     void clear(const Network& network) {
+        pawnPairSets = {};  // Empty pawn tags cannot hit; leave the sums untouched
+
         for (auto& entries2D : entries)
             for (auto& entries1D : entries2D)
                 for (auto& entry : entries1D)
