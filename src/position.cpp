@@ -640,8 +640,7 @@ void Position::compute_threats() const {
 // The function is only used when a new position is set up
 void Position::set_state() const {
 
-    st->key               = sideToMove;
-    st->minorPieceKey     = 0ULL;
+    st->key = sideToMove;
     st->nonPawnKey[WHITE] = st->nonPawnKey[BLACK] = 0ULL;
     st->pawnKey                                   = 0ULL;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
@@ -663,12 +662,7 @@ void Position::set_state() const {
             st->nonPawnKey[color_of(pc)] ^= Zobrist::psq[pc][s];
 
             if (type_of(pc) != KING)
-            {
                 st->nonPawnMaterial[color_of(pc)] += PieceValue[pc];
-
-                if (type_of(pc) <= BISHOP)
-                    st->minorPieceKey ^= Zobrist::psq[pc][s];
-            }
         }
     }
 
@@ -1006,9 +1000,6 @@ void Position::do_move(Move m, bool givesCheck, Dirties& dirties, const SharedHi
         {
             st->nonPawnMaterial[them] -= PieceValue[captured];
             st->nonPawnKey[them] ^= Zobrist::psq[captured][capsq];
-
-            if (type_of(captured) <= BISHOP)
-                st->minorPieceKey ^= Zobrist::psq[captured][capsq];
         }
 
         dp.remove_pc = captured;
@@ -1086,9 +1077,6 @@ void Position::do_move(Move m, bool givesCheck, Dirties& dirties, const SharedHi
                              ^ Zobrist::psq[pc][8 + pieceCount[pc] - 1];
             st->nonPawnKey[us] ^= Zobrist::psq[promotion][to];
 
-            if (pt <= BISHOP)
-                st->minorPieceKey ^= Zobrist::psq[promotion][to];
-
             // Update material
             st->nonPawnMaterial[us] += PieceValue[promotion];
         }
@@ -1101,21 +1089,17 @@ void Position::do_move(Move m, bool givesCheck, Dirties& dirties, const SharedHi
     }
 
     else
-    {
         st->nonPawnKey[us] ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
 
-        if (type_of(pc) <= BISHOP)
-            st->minorPieceKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
-    }
-
-    // Update the key with the final value
+    // History prefetches need the new side to move.
     st->key = k;
+    sideToMove = them;
 
     if (history)
     {
         prefetch(&history->pawn_entry(*this)[pc][to]);
         prefetch(&history->pawn_correction_entry(*this));
-        prefetch(&history->minor_piece_correction_entry(*this));
+        prefetch(&history->all_nonpawn_correction_entry(*this));
         prefetch(&history->nonpawn_correction_entry<WHITE>(*this));
         prefetch(&history->nonpawn_correction_entry<BLACK>(*this));
     }
@@ -1144,8 +1128,6 @@ void Position::do_move(Move m, bool givesCheck, Dirties& dirties, const SharedHi
 
     // Calculate checkers bitboard (if move gives check)
     st->checkersBB = givesCheck ? attackers_to(square<KING>(them)) & pieces(us) : 0;
-
-    sideToMove = ~sideToMove;
 
     // Update king attacks used for fast check detection
     set_extra_bitboards();
