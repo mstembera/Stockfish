@@ -117,6 +117,10 @@ namespace {
 
 constexpr std::string_view PieceToChar(" PNBRQK  pnbrqk");
 
+constexpr bool contributes_to_nbq_key(PieceType pt) {
+    return pt == KNIGHT || pt == BISHOP || pt == QUEEN;
+}
+
 static constexpr Piece Pieces[] = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
                                    B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
 
@@ -568,7 +572,8 @@ void Position::compute_threats() const {
 // The function is only used when a new position is set up
 void Position::set_state() const {
 
-    st->key = 0;
+    st->key               = 0;
+    st->nbqKey            = 0;
     st->nonPawnKey[WHITE] = st->nonPawnKey[BLACK] = 0;
     st->pawnKey                                   = Zobrist::noPawns;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
@@ -590,7 +595,12 @@ void Position::set_state() const {
             st->nonPawnKey[color_of(pc)] ^= Zobrist::psq[pc][s];
 
             if (type_of(pc) != KING)
+            {
                 st->nonPawnMaterial[color_of(pc)] += PieceValue[pc];
+
+                if (contributes_to_nbq_key(type_of(pc)))
+                    st->nbqKey ^= Zobrist::psq[pc][s];
+            }
         }
     }
 
@@ -932,6 +942,9 @@ void Position::do_move(
         {
             st->nonPawnMaterial[them] -= PieceValue[captured];
             st->nonPawnKey[them] ^= Zobrist::psq[captured][capsq];
+
+            if (contributes_to_nbq_key(type_of(captured)))
+                st->nbqKey ^= Zobrist::psq[captured][capsq];
         }
 
         dp.remove_pc = captured;
@@ -1009,6 +1022,9 @@ void Position::do_move(
                              ^ Zobrist::psq[pc][8 + pieceCount[pc] - 1];
             st->nonPawnKey[us] ^= Zobrist::psq[promotion][to];
 
+            if (contributes_to_nbq_key(pt))
+                st->nbqKey ^= Zobrist::psq[promotion][to];
+
             // Update material
             st->nonPawnMaterial[us] += PieceValue[promotion];
         }
@@ -1021,7 +1037,12 @@ void Position::do_move(
     }
 
     else
+    {
         st->nonPawnKey[us] ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+
+        if (contributes_to_nbq_key(type_of(pc)))
+            st->nbqKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+    }
 
     // Update the key with the final value
     st->key = k;
@@ -1030,7 +1051,7 @@ void Position::do_move(
     {
         prefetch(&history->pawn_entry(*this)[pc][to]);
         prefetch(&history->pawn_correction_entry(*this));
-        prefetch(&history->all_nonpawn_correction_entry(*this));
+        prefetch(&history->nbq_correction_entry(*this));
         prefetch(&history->nonpawn_correction_entry<WHITE>(*this));
         prefetch(&history->nonpawn_correction_entry<BLACK>(*this));
     }
