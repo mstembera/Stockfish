@@ -985,33 +985,54 @@ void update_accumulator_hybrid(Color                     perspective,
     target.computed[perspective] = true;
 }
 
-// Cache the two most recent pawn structures for each perspective and king orientation.
-const i16* refresh_pawn_pair_sum(Color perspective, const Position& pos,
-                                 const FeatureTransformer& ft, AccumulatorCaches& cache) {
-    const std::array pawns{pos.pieces(WHITE, PAWN), pos.pieces(BLACK, PAWN)};
-    const bool mirrored = OrientTBL[pos.square<KING>(perspective)] != 0;
+// Cache the most recently added pawn structures for each perspective and king orientation.
+const i16* refresh_pawn_pair_sum(Color                     perspective,
+                                 Square                    ksq,
+                                 const Position&           pos,
+                                 const FeatureTransformer& ft,
+                                 AccumulatorCaches&        cache) {
+    constexpr unsigned Ways = AccumulatorCaches::PawnPairSet::Ways;
+
+    const std::array<Bitboard, COLOR_NB> pawns{pos.pieces(WHITE, PAWN), pos.pieces(BLACK, PAWN)};
+    const bool mirrored = OrientTBL[ksq] != 0;
     AccumulatorCaches::PawnPairSet& set = cache.pawnPairSets[perspective][mirrored];
-    i16 (&sums)[2][L1] = cache.pawnPairSums[perspective][mirrored];
 
-    if (set.pawns[set.recent] != pawns)
+    // Find the way with the fewest changed pawns. Packing the count above the way
+    // index avoids unpredictable branches.
+    unsigned nearest = ~0U;
+    for (unsigned i = 0; i < Ways; ++i)
     {
-        set.recent ^= 1;
-        if (set.pawns[set.recent] != pawns)
-        {
-            PairFeatureSet::IndexList pairs;
-            PairFeatureSet::append_active_indices(perspective, pos, pairs);
-
-            // A miss must overwrite the old sum even if there are no active pairs.
-            alignas(CacheLineSize) static constexpr i16 zero[Dimensions]{};
-            for (IndexType j = 0; j < Dimensions; increment_index(j))
-            {
-                Tile tile = apply_threat_features<+1>(j, load_tile(j, zero), pairs, ft);
-                store_tile(j, sums[set.recent], tile);
-            }
-            set.pawns[set.recent] = pawns;
-        }
+        const std::array<Bitboard, COLOR_NB>& old = set.pawns[i];
+        const unsigned changed =
+          popcount(old[WHITE] ^ pawns[WHITE]) + popcount(old[BLACK] ^ pawns[BLACK]);
+        nearest = std::min(nearest, changed * Ways + i);
     }
-    return sums[set.recent];
+    const unsigned source = nearest % Ways;
+    if (nearest < Ways)  // Nothing changed
+        return set.sums[source].data();
+
+    // Replace the oldest way
+    const unsigned slot = set.next;
+    set.next            = (slot + 1) % Ways;
+
+    const std::array<Bitboard, COLOR_NB>& old = set.pawns[source];
+    const DirtyPawnPairs diff{{old[WHITE], old[BLACK]}, {pawns[WHITE], pawns[BLACK]}};
+    PairFeatureSet::IndexList removed, added;
+    PairFeatureSet::append_changed_indices(perspective, ksq, diff, removed, added,
+                                           &ft.threatAndPpWeights[0], Dimensions);
+
+    // A miss must overwrite the old sum even if no pairs changed.
+    const i16* from = set.sums[source].data();
+    i16*       to   = set.sums[slot].data();
+    for (IndexType j = 0; j < Dimensions; increment_index(j))
+    {
+        Tile acc = load_tile(j, from);
+        acc      = apply_threat_features<-1>(j, acc, removed, ft);
+        acc      = apply_threat_features<+1>(j, acc, added, ft);
+        store_tile(j, to, acc);
+    }
+    set.pawns[slot] = pawns;
+    return to;
 }
 
 // HalfKA data comes from the Finny table entry, while the threats are built
@@ -1039,7 +1060,7 @@ void update_accumulator_refresh_cache(Color                     perspective,
     // With few pawns there are few pairs, cheaper to apply directly than via the cached sum
     const i16* pairSum = nullptr;
     if (pos.count<PAWN>() >= 4)
-        pairSum = refresh_pawn_pair_sum(perspective, pos, featureTransformer, cache);
+        pairSum = refresh_pawn_pair_sum(perspective, ksq, pos, featureTransformer, cache);
     else
         PairFeatureSet::append_active_indices(perspective, pos, active);
 
