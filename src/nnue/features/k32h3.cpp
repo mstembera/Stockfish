@@ -129,7 +129,8 @@ bool K32H3::requires_refresh(const DiffType& diff,
                              Color           perspective,
                              int             blockBefore,
                              int             blockAfter) {
-    return diff.pc == make_piece(perspective, KING) || blockBefore != blockAfter;
+    return (diff.pc == make_piece(perspective, KING) && diff.from != diff.to)
+        || blockBefore != blockAfter;
 }
 
 }  // namespace Stockfish::Eval::NNUE::Features
