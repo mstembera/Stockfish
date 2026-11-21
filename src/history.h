@@ -65,8 +65,6 @@ struct StatsEntry {
    public:
     void operator=(const T& v) { entry = v; }
 
-    void fill(T val) { *this = val; }
-
     operator T() const { return entry; }
 
     void operator<<(int bonus) {
@@ -160,11 +158,14 @@ struct CorrectionBundle {
     StatsEntry<T, D, true> pawn;
     StatsEntry<T, D, true> nonPawnWhite;
     StatsEntry<T, D, true> nonPawnBlack;
+    StatsEntry<T, D, true> allNonPawnBySide[COLOR_NB];
 
     void fill(T val) {
-        pawn         = val;
-        nonPawnWhite = val;
-        nonPawnBlack = val;
+        pawn                    = val;
+        nonPawnWhite            = val;
+        nonPawnBlack            = val;
+        allNonPawnBySide[WHITE] = val;
+        allNonPawnBySide[BLACK] = val;
     }
 };
 
@@ -188,9 +189,6 @@ struct CorrHistTypedef<Continuation> {
 using UnifiedCorrectionHistory =
   DynStats<CorrectionBundle<i16, CORRECTION_HISTORY_LIMIT>, CORRHIST_BASE_SIZE>;
 
-using AllNonPawnCorrectionHistory =
-  DynStats<StatsEntry<i16, CORRECTION_HISTORY_LIMIT, true>, COLOR_NB * CORRHIST_BASE_SIZE>;
-
 template<CorrHistType T>
 using CorrectionHistory = typename Detail::CorrHistTypedef<T>::type;
 
@@ -207,13 +205,11 @@ struct ContinuationHistoryBlock {
 struct SharedHistories {
     SharedHistories(usize threadCount) :
         correctionHistory(threadCount),
-        allNonPawnCorrectionHistory(threadCount),
         continuationHistoryBlock(make_unique_large_page<ContinuationHistoryBlock>()),
         pawnHistory(threadCount) {
         assert((threadCount & (threadCount - 1)) == 0 && threadCount != 0);
-        sizeMinus1               = correctionHistory.get_size() - 1;
-        allNonPawnCorrSizeMinus1 = allNonPawnCorrectionHistory.get_size() - 1;
-        pawnHistSizeMinus1       = pawnHistory.get_size() - 1;
+        sizeMinus1         = correctionHistory.get_size() - 1;
+        pawnHistSizeMinus1 = pawnHistory.get_size() - 1;
     }
 
     auto& continuationHistory() { return continuationHistoryBlock->table; }
@@ -235,10 +231,12 @@ struct SharedHistories {
     }
 
     auto& all_nonpawn_correction_entry(const Position& pos) {
-        return allNonPawnCorrectionHistory[pos.non_pawn_key() & allNonPawnCorrSizeMinus1];
+        const Key pieceHash = pos.non_pawn_key() >> 1;
+        return correctionHistory[pieceHash & sizeMinus1].allNonPawnBySide[pos.side_to_move()];
     }
     const auto& all_nonpawn_correction_entry(const Position& pos) const {
-        return allNonPawnCorrectionHistory[pos.non_pawn_key() & allNonPawnCorrSizeMinus1];
+        const Key pieceHash = pos.non_pawn_key() >> 1;
+        return correctionHistory[pieceHash & sizeMinus1].allNonPawnBySide[pos.side_to_move()];
     }
 
     template<Color c>
@@ -251,13 +249,12 @@ struct SharedHistories {
     }
 
     UnifiedCorrectionHistory               correctionHistory;
-    AllNonPawnCorrectionHistory            allNonPawnCorrectionHistory;
     LargePagePtr<ContinuationHistoryBlock> continuationHistoryBlock;
     PawnHistory                            pawnHistory;
 
 
    private:
-    usize sizeMinus1, allNonPawnCorrSizeMinus1, pawnHistSizeMinus1;
+    usize sizeMinus1, pawnHistSizeMinus1;
 };
 
 }  // namespace Stockfish
