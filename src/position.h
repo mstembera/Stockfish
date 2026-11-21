@@ -184,7 +184,7 @@ class Position {
 
     void put_piece(Piece pc, Square s, DirtyThreats* const dts = nullptr);
     void remove_piece(Square s, DirtyThreats* const dts = nullptr);
-    void swap_piece(Square s, Piece pc, DirtyThreats* const dts = nullptr);
+    void swap_piece(Square s, Piece pc);
 
    private:
     // Initialization helpers (used while setting up a position)
@@ -195,13 +195,18 @@ class Position {
     void compute_threats() const;
 
     // Other helpers
-    template<bool ComputeRay = true>
     void update_piece_threats(Piece               pc,
                               bool                putPiece,
                               Square              s,
                               DirtyThreats* const dts,
                               Bitboard            noRaysContaining = -1ULL) const;
+    void swap_piece_threats(Piece               oldPc,
+                            Piece               newPc,
+                            Square              s,
+                            DirtyThreats* const dts,
+                            Bitboard            unblockedRay) const;
     void move_piece(Square from, Square to, DirtyThreats* const dts = nullptr);
+    void capture_piece(Square from, Square to, Piece toPc, DirtyThreats& dts);
     template<bool Do>
     void do_castling(Color               us,
                      Square              from,
@@ -393,7 +398,8 @@ inline void Position::put_piece(Piece pc, Square s, DirtyThreats* const dts) {
         update_piece_threats(pc, true, s, dts);
 }
 
-inline void Position::remove_piece(Square s, DirtyThreats* const dts) {
+// Forced: GCC's inline budget otherwise leaves it out of line in capture_piece()
+sf_always_inline void Position::remove_piece(Square s, DirtyThreats* const dts) {
     Piece pc = board[s];
 
     if (dts)
@@ -424,18 +430,26 @@ inline void Position::move_piece(Square from, Square to, DirtyThreats* const dts
         update_piece_threats(pc, true, to, dts, fromTo);
 }
 
-inline void Position::swap_piece(Square s, Piece pc, DirtyThreats* const dts) {
-    Piece old = board[s];
+inline void Position::capture_piece(Square from, Square to, Piece toPc, DirtyThreats& dts) {
+    const Piece pc       = board[from];
+    const Piece captured = board[to];
 
+    // The moving piece shields the captured piece from whatever is behind from, so those
+    // threats never exist: they are neither added here nor removed in swap_piece_threats().
+    update_piece_threats(pc, false, from, &dts, from | to);
+
+    remove_piece(to);
+    move_piece(from, to);
+
+    if (pc != toPc)
+        swap_piece(to, toPc);
+
+    swap_piece_threats(captured, toPc, to, &dts, Attacks::ray_pass_bb(to, from));
+}
+
+inline void Position::swap_piece(Square s, Piece pc) {
     remove_piece(s);
-
-    if (dts)
-        update_piece_threats<false>(old, false, s, dts);
-
     put_piece(pc, s);
-
-    if (dts)
-        update_piece_threats<false>(pc, true, s, dts);
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) {

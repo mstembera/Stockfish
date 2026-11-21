@@ -107,7 +107,7 @@ struct alignas(32) DualMagic {
     // reside in different bytes). Rank attacks cannot. Thus, for rank attacks
     // only, we use a compact lookup table indexed by the 6 inner bits of the rank's
     // occupancy (the edge squares never affect the attack set).
-    std::pair<Bitboard, Bitboard> both_attacks_bb(Bitboard occupied) const {
+    sf_always_inline std::pair<Bitboard, Bitboard> both_attacks_bb(Bitboard occupied) const {
         // Byteswap within 128-bit elements
         const auto bswap = [](__m256i v) {
             return _mm256_shuffle_epi8(v, _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,

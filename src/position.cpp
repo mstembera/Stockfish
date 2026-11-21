@@ -1129,10 +1129,7 @@ void Position::do_move(
         const Piece toPc = m.type_of() == PROMOTION ? make_piece(us, m.promotion_type()) : pc;
 
         if (captured && m.type_of() != EN_PASSANT)
-        {
-            remove_piece(from, &dts);
-            swap_piece(to, toPc, &dts);
-        }
+            capture_piece(from, to, toPc, dts);
         else if (pc == toPc)
             move_piece(from, to, &dts);
         else
@@ -1258,7 +1255,6 @@ inline void add_dirty_threat(DirtyThreats* const dts,
     dts->list.push_back({pc, threatened, s, threatenedSq, putPiece});
 }
 
-#ifdef USE_AVX512ICL
 // Given a DirtyThreat template and bit offsets to insert the piece type and square, write the threats
 // present at the given bitboard.
 template<int SqShift, int PcShift>
@@ -1266,6 +1262,7 @@ void write_multiple_dirties(const Position& p,
                             Bitboard        mask,
                             DirtyThreat     dt_template,
                             DirtyThreats*   dts) {
+#ifdef USE_AVX512ICL
     static_assert(sizeof(DirtyThreat) == 4);
 
     const __m512i board    = _mm512_loadu_si512(p.piece_array().data());
@@ -1273,7 +1270,7 @@ void write_multiple_dirties(const Position& p,
     assert(dt_count <= 16);
 
     const __m512i template_v = _mm512_set1_epi32(dt_template.raw());
-    auto*         write      = dts->list.make_space(dt_count);
+    DirtyThreat*  write      = dts->list.make_space(dt_count);
 
     // Extract the list of squares and upconvert to 32 bits. There are never more than 16
     // incoming threats so this is sufficient.
@@ -1290,20 +1287,63 @@ void write_multiple_dirties(const Position& p,
     const __m512i dirties =
       _mm512_ternarylogic_epi32(template_v, threat_squares, threat_pieces, 254 /* A | B | C */);
     _mm512_storeu_si512(write, dirties);
-}
+#else
+    while (mask)
+    {
+        const Square sq = pop_lsb(mask);
+        const Piece  pc = p.piece_on(sq);
+        assert(pc != NO_PIECE);
+
+        dts->list.push_back(dt_template.raw() | (u32(sq) << SqShift) | (u32(pc) << PcShift));
+    }
 #endif
+}
 
 constexpr bool can_slider_threat(Piece pc, Piece slider) {
     return type_of(pc) != QUEEN || type_of(slider) == QUEEN;
 }
 
-template<bool ComputeRay>
+// Writes the threats pc emits from s and those it receives from knights, pawns and the given
+// sliders, leaving out any along skip.
+sf_always_inline void write_direct_threats(const Position& p,
+                                           Piece           pc,
+                                           Square          s,
+                                           bool            add,
+                                           Bitboard        bAttacks,
+                                           Bitboard        rAttacks,
+                                           Bitboard        sliders,
+                                           Bitboard        skip,
+                                           DirtyThreats*   dts) {
+    const PieceType pt = type_of(pc);
+    assert(pt != KING);
+
+    const Bitboard occupiedNoK = p.pieces() ^ p.pieces(KING);
+    const Bitboard targets     = pt == PAWN                 ? p.pieces(KNIGHT, ROOK)
+                               : pt == BISHOP || pt == ROOK ? (occupiedNoK ^ p.pieces(QUEEN))
+                                                            : occupiedNoK;
+    const Bitboard attacks     = pt == BISHOP ? bAttacks
+                               : pt == ROOK   ? rAttacks
+                               : pt == QUEEN  ? (bAttacks | rAttacks)
+                               : pt == PAWN   ? PseudoAttacks[color_of(pc)][s]
+                                              : PseudoAttacks[pt][s];
+    Bitboard       incoming    = (PseudoAttacks[KNIGHT][s] & p.pieces(KNIGHT))
+                               | (pt == QUEEN ? sliders & p.pieces(QUEEN) : sliders);
+
+    if (pt == KNIGHT || pt == ROOK)
+        incoming |= (attacks_bb(PAWN, s, WHITE) & p.pieces(BLACK, PAWN))
+                  | (attacks_bb(PAWN, s, BLACK) & p.pieces(WHITE, PAWN));
+
+    write_multiple_dirties<DirtyThreat::ThreatenedSqOffset, DirtyThreat::ThreatenedPcOffset>(
+      p, attacks & targets & ~skip, {pc, NO_PIECE, s, Square(0), add}, dts);
+    write_multiple_dirties<DirtyThreat::PcSqOffset, DirtyThreat::PcOffset>(
+      p, incoming & ~skip, {NO_PIECE, pc, Square(0), s, add}, dts);
+}
+
 void Position::update_piece_threats(Piece               pc,
                                     bool                putPiece,
                                     Square              s,
                                     DirtyThreats* const dts,
-                                    // Silence spurious warning on GCC 10
-                                    [[maybe_unused]] Bitboard noRaysContaining) const {
+                                    Bitboard            noRaysContaining) const {
     const Bitboard occupied         = pieces();
     const auto [bAttacks, rAttacks] = both_attacks_bb(s, occupied);
     const Bitboard  sliderAttacks   = bAttacks | rAttacks;
@@ -1322,7 +1362,8 @@ void Position::update_piece_threats(Piece               pc,
             const Bitboard discovered = ray & sliderAttacks & occupiedNoK;
 
             assert(!more_than_one(discovered));
-            if (discovered && (ray & noRaysContaining) != noRaysContaining)
+            // The slider's own square counts as part of its ray
+            if (discovered && ((ray | sliderSq) & noRaysContaining) != noRaysContaining)
             {
                 const Square threatenedSq = lsb(discovered);
                 const Piece  threatenedPc = piece_on(threatenedSq);
@@ -1338,63 +1379,37 @@ void Position::update_piece_threats(Piece               pc,
     // Kings emit no direct threats
     if (pt == KING)
     {
-        if constexpr (ComputeRay)
-            process_sliders(false);
+        process_sliders(false);
         return;
     }
 
-    const Bitboard threatTargets = pt == PAWN                 ? pieces(KNIGHT, ROOK)
-                                 : pt == BISHOP || pt == ROOK ? pieces(PAWN, KNIGHT, BISHOP, ROOK)
-                                                              : occupiedNoK;
-    Bitboard       threatened    = (pt == BISHOP  ? bAttacks
-                                    : pt == ROOK  ? rAttacks
-                                    : pt == QUEEN ? sliderAttacks
-                                    : pt == PAWN  ? PseudoAttacks[color_of(pc)][s]
-                                                  : PseudoAttacks[pt][s])
-                        & threatTargets;
-    Bitboard incomingThreats = PseudoAttacks[KNIGHT][s] & pieces(KNIGHT);
-
-    if (pt == KNIGHT || pt == ROOK)
-        incomingThreats |= (attacks_bb(PAWN, s, WHITE) & pieces(BLACK, PAWN))
-                         | (attacks_bb(PAWN, s, BLACK) & pieces(WHITE, PAWN));
-
 #ifdef USE_AVX512ICL
-    write_multiple_dirties<DirtyThreat::ThreatenedSqOffset, DirtyThreat::ThreatenedPcOffset>(
-      *this, threatened, {pc, NO_PIECE, s, Square(0), putPiece}, dts);
-
-    const Bitboard directSliders = pt == QUEEN ? sliders & pieces(QUEEN) : sliders;
-    write_multiple_dirties<DirtyThreat::PcSqOffset, DirtyThreat::PcOffset>(
-      *this, directSliders | incomingThreats, {NO_PIECE, pc, Square(0), s, putPiece}, dts);
+    write_direct_threats(*this, pc, s, putPiece, bAttacks, rAttacks, sliders, 0, dts);
 
     // For ICL, direct threats were written above
-    if constexpr (ComputeRay)
-        process_sliders(false);
+    process_sliders(false);
 #else
-    while (threatened)
-    {
-        Square threatenedSq = pop_lsb(threatened);
-        Piece  threatenedPc = piece_on(threatenedSq);
-        assert(threatenedSq != s);
-        assert(threatenedPc != NO_PIECE);
-
-        add_dirty_threat(dts, putPiece, pc, threatenedPc, s, threatenedSq);
-    }
-
-    if constexpr (ComputeRay)
-        process_sliders(true);
-    else
-        incomingThreats |= pt == QUEEN ? sliders & pieces(QUEEN) : sliders;
-
-    while (incomingThreats)
-    {
-        Square srcSq = pop_lsb(incomingThreats);
-        Piece  srcPc = piece_on(srcSq);
-        assert(srcSq != s);
-        assert(srcPc != NO_PIECE);
-
-        add_dirty_threat(dts, putPiece, srcPc, pc, srcSq, s);
-    }
+    write_direct_threats(*this, pc, s, putPiece, bAttacks, rAttacks, 0, 0, dts);
+    process_sliders(true);
 #endif
+}
+
+// Fused threat update when replacing oldPc with newPc on square s without changing occupancy.
+// unblockedRay runs from s through the square the capturing piece left: oldPc was shielded
+// from the pieces on it, so update_piece_threats() skipped those threats and so must we.
+void Position::swap_piece_threats(Piece               oldPc,
+                                  Piece               newPc,
+                                  Square              s,
+                                  DirtyThreats* const dts,
+                                  Bitboard            unblockedRay) const {
+    const auto [bAttacks, rAttacks] = both_attacks_bb(s, pieces());
+    const Bitboard sliders = (pieces(BISHOP, QUEEN) & bAttacks) | (pieces(ROOK, QUEEN) & rAttacks);
+
+    write_direct_threats(*this, oldPc, s, false, bAttacks, rAttacks, sliders, unblockedRay, dts);
+
+    // Kings emit no direct threats
+    if (type_of(newPc) != KING)
+        write_direct_threats(*this, newPc, s, true, bAttacks, rAttacks, sliders, 0, dts);
 }
 
 Key Position::prefetch_key(Move m) const {
