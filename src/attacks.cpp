@@ -44,35 +44,17 @@ static constexpr Bitboard line_mask(Square sq, Direction d1, Direction d2) {
     return mask;
 }
 
-// Sliding attacks within a rank, indexed by the slider's file and the
-// 6 inner bits of the rank occupancy (edge squares never affect the
-// attack set), yielding the 8-bit attack set on that rank
-alignas(64) constexpr auto RankAttacks = []() {
-    std::array<std::array<u8, 64>, FILE_NB> table{};
-    for (int file = 0; file < 8; ++file)
-        for (int occ6 = 0; occ6 < 64; ++occ6)
-            table[file][occ6] = u8(sliding_attack(ROOK, Square(file), occ6 << 1));
+extern constexpr DualMagicTable DualMagics = [] {
+    DualMagicTable table{};
+    for (Square s = SQ_A1; s <= SQ_H8; ++s)
+        table.masks[s] = {line_mask(s, NORTH_EAST, SOUTH_WEST),
+                          line_mask(s, NORTH_WEST, SOUTH_EAST), file_bb(s) ^ s, square_bb(s)};
+
+    for (int occ = 0; occ < 128; occ += 2)
+        for (int file = 0; file < FILE_NB; ++file)
+            table.rankAttacks[occ * 4 + file] = u8(sliding_attack(ROOK, Square(file), occ));
     return table;
 }();
-
-static constexpr auto make_dual_magics() {
-    std::array<DualMagic, SQUARE_NB> magics{};
-    for (Square s = SQ_A1; s <= SQ_H8; ++s)
-    {
-        DualMagic& m        = magics[s];
-        m.maskFile          = line_mask(s, NORTH, SOUTH);
-        m.maskDiag          = line_mask(s, NORTH_EAST, SOUTH_WEST);
-        m.maskNone          = 0;
-        m.maskAntidiag      = line_mask(s, NORTH_WEST, SOUTH_EAST);
-        m.r                 = square_bb(s) * 2;
-        m.rr                = square_bb(Square(63 - int(s))) * 2;
-        m.rankAttacksLookup = RankAttacks[int(file_of(s))].data();
-        m.shift             = 8 * int(rank_of(s));
-    }
-    return magics;
-}
-
-alignas(64) extern constexpr std::array<DualMagic, SQUARE_NB> DualMagics = make_dual_magics();
 
 void init() {
 

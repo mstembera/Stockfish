@@ -52,93 +52,85 @@ inline Bitboard byteswap_bb(Bitboard b) {
 // Sliding attacks by hyperbola quintessence,
 // see https://www.chessprogramming.org/Hyperbola_Quintessence
 struct alignas(32) DualMagic {
-    // file, diagonal, antidiagonal, unused
-    Bitboard maskFile, maskDiag, maskAntidiag, maskNone;
-    // Precomputed 2 * square_bb(sq), 2 * reverse(square_bb(sq))
-    Bitboard r, rr;
-
-    const u8* RESTRICT rankAttacksLookup;
-    // 8 * rank_of(sq)
-    int shift;
-
-    // We always compute [bishop, rook] attacks at once, then rely on
-    // compiler's DCE and CSE to eliminate unneeded re-computations or extractions.
-    //
-    // When using hyperbola quintessence, file, diagonal and antidiagonal attacks
-    // can use a byte reversal rather than a full bit reversal (because all squares
-    // reside in different bytes). Rank attacks cannot. Thus, for rank attacks
-    // only, we use a compact lookup table indexed by the 6 inner bits of the rank's
-    // occupancy (the edge squares never affect the attack set).
-    std::pair<Bitboard, Bitboard> both_attacks_bb(Bitboard occupied) const {
-
-        Bitboard rowOccupancy = rankAttacksLookup[(occupied >> (shift + 1)) & 0x3f];
-        Bitboard rankAttacks  = rowOccupancy << shift;
-
-#ifdef USE_AVX2
-        // Byteswap within 128-bit elements
-        const auto bswap = [](__m256i v) {
-            return _mm256_shuffle_epi8(v, _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-                                                          13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                                          10, 11, 12, 13, 14, 15));
-        };
-
-        // Each lane contains a mask and we follow the scalar algorithm below
-        const __m256i mask = _mm256_load_si256(reinterpret_cast<const __m256i*>(this));
-        const __m256i rs   = _mm256_set1_epi64x(r);
-        const __m256i rrs  = _mm256_set1_epi64x(rr);
-
-        __m256i o      = _mm256_and_si256(mask, _mm256_set1_epi64x(occupied));
-        __m256i fwd    = _mm256_sub_epi64(o, rs);
-        __m256i rev    = bswap(_mm256_sub_epi64(bswap(o), rrs));
-        __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
-
-        // Lane 0: rook attacks (file only); lanes 1 and 2: bishop attacks
-        const __m256i rookBishop =
-          _mm256_or_si256(result, _mm256_permute4x64_epi64(result, _MM_SHUFFLE(3, 1, 2, 0)));
-
-        // [bishop, rook]
-        return {_mm_extract_epi64(_mm256_castsi256_si128(rookBishop), 1),
-                _mm_cvtsi128_si64(_mm256_castsi256_si128(result)) + rankAttacks};
-#elif defined(__wasm_simd128__)
-        // Byteswap within each 64-bit lane
-        const auto bswap = [](v128_t v) {
-            return wasm_i8x16_shuffle(v, v, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
-        };
-
-        const v128_t occ = wasm_i64x2_splat(i64(occupied));
-        const v128_t rs  = wasm_i64x2_splat(i64(r));
-        const v128_t rrs = wasm_i64x2_splat(i64(rr));
-
-        // Two lanes of the scalar algorithm below
-        const auto hyperbola2 = [&](v128_t mask) {
-            const v128_t o   = wasm_v128_and(mask, occ);
-            const v128_t fwd = wasm_i64x2_sub(o, rs);
-            const v128_t rev = bswap(wasm_i64x2_sub(bswap(o), rrs));
-            return wasm_v128_and(wasm_v128_xor(fwd, rev), mask);
-        };
-
-        // Bishop: [diagonal, antidiagonal]; rook: [file, none]. A query for one
-        // piece type then computes only one vector.
-        const v128_t diags = hyperbola2(wasm_v128_load(&maskDiag));
-        const v128_t file  = hyperbola2(wasm_v128_load64_zero(&maskFile));
-
-        // [bishop, rook]
-        return {Bitboard(wasm_i64x2_extract_lane(diags, 0) | wasm_i64x2_extract_lane(diags, 1)),
-                Bitboard(wasm_i64x2_extract_lane(file, 0)) + rankAttacks};
-#else
-        const auto hyperbola = [&](Bitboard mask) {
-            Bitboard o = occupied & mask;
-            return ((o - r) ^ byteswap_bb(byteswap_bb(o) - rr)) & mask;
-        };
-
-        // [bishop, rook]
-        return {hyperbola(maskDiag) | hyperbola(maskAntidiag), hyperbola(maskFile) + rankAttacks};
-#endif
-    }
+    Bitboard maskDiag, maskAntidiag, maskFile, square;
 };
 
-extern const std::array<DualMagic, SQUARE_NB> DualMagics;
-inline const DualMagic&                       dual_magic(Square s) { return DualMagics[s]; }
+struct alignas(64) DualMagicTable {
+    DualMagic masks[SQUARE_NB];
+    u8        rankAttacks[64 * FILE_NB];
+};
+
+extern const DualMagicTable DualMagics;
+
+// We always compute [bishop, rook] attacks at once, then rely on
+// compiler's DCE and CSE to eliminate unneeded re-computations or extractions.
+//
+// File, diagonal and antidiagonal attacks can use a byte reversal because all
+// squares reside in different bytes. Rank attacks instead use the six inner
+// occupancy bits (edge blockers never change the attack set).
+sf_always_inline std::pair<Bitboard, Bitboard> both_attacks_bb(Square s, Bitboard occupied) {
+    const DualMagic& m = DualMagics.masks[s];
+    // Masking in place leaves occ6 * 2, hence the scale of 4 rather than 8.
+    const int      shift = int(s) & 56;
+    const Bitboard rank  = DualMagics.rankAttacks[((occupied >> shift) & 0x7e) * 4 + file_of(s)];
+    const Bitboard rankAttacks = rank << shift;
+
+#ifdef USE_AVX2
+    // Byteswap within each 64-bit lane
+    const auto bswap = [](__m256i v) {
+        return _mm256_shuffle_epi8(v, _mm256_set_epi8(
+          8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7,
+          8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7));
+    };
+
+    // Each lane contains a mask and we follow the scalar algorithm below
+    const __m256i mask = _mm256_load_si256(reinterpret_cast<const __m256i*>(&m));
+    const __m256i rs   = _mm256_set1_epi64x(m.square);
+    const __m256i rrs  = bswap(rs);
+
+    const __m256i o      = _mm256_and_si256(mask, _mm256_set1_epi64x(occupied));
+    const __m256i fwd    = _mm256_sub_epi64(o, rs);
+    const __m256i rev    = bswap(_mm256_sub_epi64(bswap(o), rrs));
+    const __m256i result = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
+
+    const __m128i diagonals = _mm256_castsi256_si128(result);
+    const __m128i bishop    = _mm_or_si128(diagonals, _mm_srli_si128(diagonals, 8));
+    const __m128i file      = _mm256_extracti128_si256(result, 1);
+    return {_mm_cvtsi128_si64(bishop), _mm_cvtsi128_si64(file) | rankAttacks};
+#elif defined(__wasm_simd128__)
+    // Byteswap within each 64-bit lane
+    const auto bswap = [](v128_t v) {
+        return wasm_i8x16_shuffle(v, v, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
+    };
+
+    const v128_t occ = wasm_i64x2_splat(i64(occupied));
+    const v128_t rs  = wasm_i64x2_splat(i64(m.square));
+    const v128_t rrs = bswap(rs);
+
+    // Two lanes of the scalar algorithm below
+    const auto hyperbola2 = [&](v128_t mask) {
+        const v128_t o   = wasm_v128_and(mask, occ);
+        const v128_t fwd = wasm_i64x2_sub(o, rs);
+        const v128_t rev = bswap(wasm_i64x2_sub(bswap(o), rrs));
+        return wasm_v128_and(wasm_v128_xor(fwd, rev), mask);
+    };
+
+    // Bishop: [diagonal, antidiagonal]; rook: [file, none]. A query for one
+    // piece type then computes only one vector.
+    const v128_t diags = hyperbola2(wasm_v128_load(&m.maskDiag));
+    const v128_t file  = hyperbola2(wasm_v128_load64_zero(&m.maskFile));
+    return {Bitboard(wasm_i64x2_extract_lane(diags, 0) | wasm_i64x2_extract_lane(diags, 1)),
+            Bitboard(wasm_i64x2_extract_lane(file, 0)) | rankAttacks};
+#else
+    const Bitboard rr = byteswap_bb(m.square);
+    const auto hyperbola = [&](Bitboard mask) {
+        const Bitboard o = occupied & mask;
+        return ((o - m.square) ^ byteswap_bb(byteswap_bb(o) - rr)) & mask;
+    };
+
+    return {hyperbola(m.maskDiag) | hyperbola(m.maskAntidiag), hyperbola(m.maskFile) | rankAttacks};
+#endif
+}
 
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
@@ -263,7 +255,7 @@ sf_always_inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) 
 
     assert(pt != PAWN && is_ok(s));
 
-    [[maybe_unused]] const auto [bishop, rook] = dual_magic(s).both_attacks_bb(occupied);
+    [[maybe_unused]] const auto [bishop, rook] = both_attacks_bb(s, occupied);
 
     switch (pt)
     {
@@ -276,10 +268,6 @@ sf_always_inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) 
     default :
         return PseudoAttacks[pt][s];
     }
-}
-
-inline std::pair<Bitboard, Bitboard> both_attacks_bb(Square s, Bitboard occupied) {
-    return dual_magic(s).both_attacks_bb(occupied);
 }
 
 }  // namespace Stockfish::Attacks
