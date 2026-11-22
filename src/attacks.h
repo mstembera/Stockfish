@@ -143,8 +143,6 @@ inline const DualMagic&                       dual_magic(Square s) { return Dual
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard inverse_RayPassBB[SQUARE_NB][SQUARE_NB];
-extern Bitboard DiagBB[SQUARE_NB];
-extern Bitboard AntiDiagBB[SQUARE_NB];
 
 // horizontal/vertical/diagonal line passing through s1 and s2
 inline Bitboard line_bb(Square s1, Square s2) {
@@ -165,14 +163,14 @@ inline Bitboard ray_pass_bb(Square s1, Square s2) {
     return inverse_RayPassBB[s2][s1];
 }
 
-inline Bitboard diag_bb(Square s) {
+inline Bitboard diag_mask_bb(Square s) {
     assert(is_ok(s));
-    return DiagBB[s];
+    return dual_magic(s).maskDiag;
 }
 
-inline Bitboard antidiag_bb(Square s) {
+inline Bitboard antidiag_mask_bb(Square s) {
     assert(is_ok(s));
-    return AntiDiagBB[s];
+    return dual_magic(s).maskAntidiag;
 }
 
 // Returns the bitboard of target square for the given step
