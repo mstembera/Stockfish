@@ -57,12 +57,13 @@ struct MoveSorter {
         const __m512i move  = _mm512_set1_epi32(m.raw());
         const __m512i value = _mm512_set1_epi32(m.value);
 
-        // Mask of all elements except the insertion point
-        assert(m.value != std::numeric_limits<int>::min());
-        const u16 expand = _kadd_mask16(_mm512_cmplt_epi32_mask(sortedValues, value), -1);
+        assert(m.value > std::numeric_limits<int>::min());
+        const u16 below = _mm512_cmplt_epi32_mask(sortedValues, value);
 
-        sortedValues = _mm512_mask_expand_epi32(value, expand, sortedValues);
-        sortedMoves  = _mm512_mask_expand_epi32(move, expand, sortedMoves);
+        // min picks the new score at the insertion point and the previous lane's score after it.
+        const __m512i predecessors = _mm512_alignr_epi32(sortedValues, value, 15);
+        sortedValues = _mm512_mask_min_epi32(sortedValues, below, value, predecessors);
+        sortedMoves  = _mm512_mask_expand_epi32(move, _kadd_mask16(below, -1), sortedMoves);
     }
 
     void write_sorted(ExtMove* moves, isize count) const {
