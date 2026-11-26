@@ -121,8 +121,8 @@ Move* generate_pawn_moves(const Position& pos, Move* moveList, Bitboard target) 
     const Bitboard pawnsOn7        = pos.pieces(Us, PAWN) & TRank7BB;
     const Bitboard pawnsNotOn7     = pos.pieces(Us, PAWN) & ~TRank7BB;
     const Bitboard pushable        = ~pinned | file_bb(ksq);
-    const Bitboard canCaptureLeft  = ~pinned | Attacks::antidiag_bb(ksq);
-    const Bitboard canCaptureRight = ~pinned | Attacks::diag_bb(ksq);
+    const Bitboard canCaptureLeft  = ~pinned | Attacks::antidiag_mask_bb(ksq);
+    const Bitboard canCaptureRight = ~pinned | Attacks::diag_mask_bb(ksq);
 
     // Single and double pawn pushes, no promotions
     if constexpr (Type != CAPTURES)
