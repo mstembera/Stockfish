@@ -45,27 +45,17 @@ enum Stages : i8 {
 namespace {
 
 #ifdef USE_AVX512
-// Load the Move, and the ExtMove value, into all lanes of 512-bit registers
-static void splat_extmove(const ExtMove& m, __m512i& move, __m512i& value) {
-    move  = _mm512_set1_epi32(m.raw());
-    value = _mm512_set1_epi32(m.value);
-}
-
 // Sorts up to 16 moves.
 struct MoveSorter {
     static constexpr int MAX_ELEMENTS = 16;
-    __m512i              sortedValues, sortedMoves;
 
-    explicit MoveSorter(const ExtMove& first) {
-        splat_extmove(first, sortedMoves, sortedValues);
-
-        // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
-        sortedValues = _mm512_mask_set1_epi32(sortedValues, ~1, std::numeric_limits<int>::min());
-    }
+    // Set the uninitialized move values to INT_MIN, so that they sort less than any other move
+    __m512i sortedValues = _mm512_set1_epi32(std::numeric_limits<int>::min());
+    __m512i sortedMoves  = _mm512_setzero_si512();
 
     void insert(const ExtMove& m) {
-        __m512i move, value;
-        splat_extmove(m, move, value);
+        const __m512i move  = _mm512_set1_epi32(m.raw());
+        const __m512i value = _mm512_set1_epi32(m.value);
 
         // Mask of all elements except the insertion point
         assert(m.value != std::numeric_limits<int>::min());
@@ -105,22 +95,20 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
     if (end - begin <= 1)
         return;
 
-    ExtMove *sortedEnd = begin, *p = begin + 1;
+    ExtMove *sortedEnd = begin, *p = begin;
 
 #ifdef USE_AVX512
-    MoveSorter sorter(*begin);
+    MoveSorter sorter;
     for (; p < end; ++p)
-    {
         if (p->value >= limit)
         {
-            if (sortedEnd - begin + 1 >= MoveSorter::MAX_ELEMENTS)  // sorter full
+            if (sortedEnd - begin >= MoveSorter::MAX_ELEMENTS)  // sorter full
                 break;
 
             sorter.insert(*p);
-            *p = *++sortedEnd;
+            *p = *sortedEnd++;
         }
-    }
-    sorter.write_sorted(begin, sortedEnd - begin + 1);
+    sorter.write_sorted(begin, sortedEnd - begin);
     // Use scalar implementation for any remaining elements
 #endif
 
@@ -128,8 +116,8 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
         if (p->value >= limit)
         {
             ExtMove tmp = *p, *q;
-            *p          = *++sortedEnd;
-            for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+            *p          = *sortedEnd;
+            for (q = sortedEnd++; q != begin && *(q - 1) < tmp; --q)
                 *q = *(q - 1);
             *q = tmp;
         }
