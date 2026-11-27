@@ -1103,8 +1103,8 @@ profile-build: net config-sanity objclean profileclean
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) $(profile_make)
 	@echo ""
 	@echo "Step 2/4. Running benchmark for pgo-build ..."
-	$(PGOBENCH) > PGOBENCH.out 2>&1
-	tail -n 4 PGOBENCH.out
+	$(PGOBENCH) > "$(scratch_prefix)PGOBENCH.out" 2>&1
+	tail -n 4 "$(scratch_prefix)PGOBENCH.out"
 	@echo ""
 	@echo "Step 3/4. Building optimized executable ..."
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) objclean
@@ -1208,11 +1208,13 @@ clean: objclean profileclean universalclean
 objclean:
 	@rm -f stockfish stockfish.exe \
 	  $(foreach ext,cmd cmd.tmp,$(addsuffix .$(ext),.stockfish .stockfish.exe .stockfish.js)) \
+	  $(foreach ext,cmd cmd.tmp,$(addprefix $(TEMP_DIR)/.,$(addsuffix .$(ext),$(OBJS) stockfish stockfish.exe stockfish.js))) \
 	  $(foreach dir,. syzygy nnue nnue/features,$(addprefix $(dir)/,*.o .*.o.cmd .*.o.cmd.tmp))
 
 # clean auxiliary profiling files
 profileclean:
 	@rm -rf profdir
+	@rm -f $(TEMP_DIR)/PGOBENCH.out $(TEMP_DIR)/stockfish.profdata $(call link_scratch,$(TEMP_DIR)/stockfish)
 	@rm -f bench.txt *.gcda *.gcno ./syzygy/*.gcda ./nnue/*.gcda ./nnue/features/*.gcda *.s PGOBENCH.out
 	@rm -f stockfish.profdata *.profraw
 	@rm -f stockfish.*args*
@@ -1329,7 +1331,7 @@ escape_cmd = \
   $(subst $(backslash),$$(backslash),\
   $(subst $$,$$$$,$(1)))))
 
-cmd_file = $(dir $(1)).$(notdir $(1)).cmd
+cmd_file = $(or $(and $(filter ./,$(dir $(1))),$(scratch_prefix)),$(dir $(1))).$(notdir $(1)).cmd
 cmd_record = $(call shell_quote,$(1)) $(call shell_quote,$(compiler_path)) $(call shell_quote,$(compiler_version))$(if $(2), $(call shell_quote,$(2)))
 check_force = $(if $(and $(wildcard $@),$(findstring $(1),$(saved_cmd_$@)),$(findstring $(saved_cmd_$@),$(1))),,FORCE)
 
@@ -1338,6 +1340,7 @@ make_inspection = $(strip $(foreach mode,n q t,$(findstring $(mode),$(make_short
 
 build_and_record = $(if $(findstring s,$(make_short_flags)),,printf '%s\n' $(call shell_quote,$(1)) &&) \
 	record=$(call shell_quote,$(call cmd_file,$@)) && \
+	{ [ -d "$${record%/*}" ] || mkdir -p "$${record%/*}"; } && \
 	rm -f "$$record" "$$record.tmp" && \
 	$(1) && \
 	$(if $(3),test -s "$$record.tmp" &&) \
@@ -1347,6 +1350,7 @@ build_and_record = $(if $(findstring s,$(make_short_flags)),,printf '%s\n' $(cal
 
 # Locate universal outputs before loading their command records.
 TEMP_DIR             := temp_builds
+scratch_prefix       := $(if $(filter true,$(UNIVERSAL_SLICE)),,$(TEMP_DIR)/)
 UNIVERSAL_EXE        := $(EXE)
 
 ifeq ($(UNIVERSAL_BUILD),true)
@@ -1388,6 +1392,8 @@ endif
 
 .SECONDEXPANSION:
 
+link_scratch = $(addprefix $(1),.ltrans* .lto* .wpa* .res) $(dir $(1))-lstdc++.res
+
 ifeq ($(UNIVERSAL_BUILD),false)
   link_cmd = $(CXX) -o $@ $(OBJS) $(LDFLAGS)$(if $(UNIVERSAL_SLICE_LDFLAGS), $(UNIVERSAL_SLICE_LDFLAGS))
 
@@ -1397,7 +1403,16 @@ $(EXE): $(OBJS) $$(call check_force,$$(call cmd_record,$$(link_cmd)))
   else
 	@$(call build_and_record,$(link_cmd))
   endif
+  ifeq ($(comp):$(filter true,$(UNIVERSAL_SLICE)),mingw:)
+# Move scratch only after linking; universal slices still consume the saved LTO object.
+	@for artifact in $(call link_scratch,$(basename $@)); do \
+	  if [ -f "$$artifact" ]; then mv -f "$$artifact" "$(TEMP_DIR)/" || exit 1; fi; \
+	done
+  endif
 endif
+
+$(TEMP_DIR):
+	@mkdir -p $@
 
 source_file = $(or $(firstword $(wildcard $*.cpp $(addsuffix /$*.cpp,$(SOURCE_DIRS)))),$*.cpp)
 compile_cmd = $(strip $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(git_metadata)) $(1) -c -o $@ $(source_file)
@@ -1421,6 +1436,8 @@ network.o nnue/network.o: $$(wildcard $$(network_file))
   endif
 endif
 
+clang-profile-use icx-profile-use: | $(patsubst %/,%,$(scratch_prefix))
+
 clang-profile-make:
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
 	EXTRACXXFLAGS='-fprofile-generate ' \
@@ -1428,9 +1445,9 @@ clang-profile-make:
 	all
 
 clang-profile-use:
-	$(XCRUN) $(LLVM_PROFDATA) merge -output=stockfish.profdata *.profraw
+	$(XCRUN) $(LLVM_PROFDATA) merge -output="$(scratch_prefix)stockfish.profdata" *.profraw
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-use=stockfish.profdata' \
+	EXTRACXXFLAGS='-fprofile-use=$(scratch_prefix)stockfish.profdata' \
 	EXTRALDFLAGS='-fprofile-use ' \
 	all
 
@@ -1456,9 +1473,9 @@ icx-profile-make:
 	all
 
 icx-profile-use:
-	$(XCRUN) $(LLVM_PROFDATA) merge -output=stockfish.profdata *.profraw
+	$(XCRUN) $(LLVM_PROFDATA) merge -output="$(scratch_prefix)stockfish.profdata" *.profraw
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-instr-use=stockfish.profdata' \
+	EXTRACXXFLAGS='-fprofile-instr-use=$(scratch_prefix)stockfish.profdata' \
 	EXTRALDFLAGS='-fprofile-use ' \
 	all
 
@@ -1542,9 +1559,6 @@ build:         UOBJ_TGT := universal-object-nopgo
 build:         $(UNIVERSAL_EXE)
 profile-build: UOBJ_TGT := universal-object-pgo
 profile-build: $(UNIVERSAL_EXE)
-
-$(TEMP_DIR):
-	@mkdir -p $@
 
 # Download nnue files once in src/ (reused by every sub-arch via --embed-dir).
 $(NET_SENTINEL): | $(TEMP_DIR)
